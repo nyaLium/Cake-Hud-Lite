@@ -164,12 +164,11 @@ public final class SelfCheck {
         check(defaults.scale == 1.0, "默认缩放应为 1.0");
         check(defaults.verticalOffset == 0, "默认垂直偏移应为 0");
         check(defaults.opacity == 0.75, "默认透明度应为 0.75");
-        check(defaults.showBar && defaults.showNumbers && defaults.showArmor, "默认三个显示项应全开");
-        check(defaults.showHeartCounts, "默认应显示心数");
+        check(defaults.showBar, "默认应画血条");
         check(defaults.hideBelowNameScore, "默认应隐藏 below_name 分数");
-        check(defaults.hideEnemyBossBar, "默认应隐藏顶部敌人Boss条");
+        check(defaults.hideEnemyBossBar, "默认应隐藏上方 Boss 栏里的最近敌人信息");
+        check(defaults.hideTeamBossBar, "默认应隐藏上方 Boss 栏里的队伍血量");
         check(defaults.showTeammates, "默认应显示队友血量");
-        check(defaults.autoPartyBossbar, "默认应自动开启队伍条");
 
         check(EnemyHudConfig.normalize(null) != null, "normalize(null) 不能返回 null");
 
@@ -348,6 +347,27 @@ public final class SelfCheck {
         check(TeamBarTitle.parse("Someone (/)").isEmpty(), "队伍标记条不应解析出玩家");
         check(TeamBarTitle.parse("普通文本").isEmpty(), "普通文本不应解析出玩家");
         check(TeamBarTitle.parse("A (10/0)").isEmpty(), "上限为 0 的条目应丢弃");
+
+        // 宽松扫描：队伍条标题里夹着空槽残渣（@a 选择器与 score 渲染成空）时仍要能抠出玩家。
+        java.util.List<TeamBarTitle.Entry> loose =
+                TeamBarTitle.scanLoose("A (10/20) (/) B (30/40) (0/0) ");
+        check(loose.size() == 2, "宽松扫描条目数=" + loose.size());
+        if (loose.size() == 2) {
+            check("A".equals(loose.get(0).name) && loose.get(0).hp == 10 && loose.get(0).maxHp == 20,
+                    "宽松扫描第 1 条=" + loose.get(0).name);
+            check("B".equals(loose.get(1).name) && loose.get(1).hp == 30 && loose.get(1).maxHp == 40,
+                    "宽松扫描第 2 条=" + loose.get(1).name);
+        }
+        check(TeamBarTitle.scanLoose("高塔 (12/50)").size() == 1, "场景名也是合法形状");
+        check(TeamBarTitle.scanLoose(" (/) ").isEmpty(), "空槽残渣不该解析出条目");
+        check(TeamBarTitle.scanLoose("(0/0)").isEmpty(), "上限 0 不该解析出条目");
+        check(TeamBarTitle.scanLoose("").isEmpty(), "宽松扫描空串");
+        check(TeamBarTitle.scanLoose(null).isEmpty(), "宽松扫描 null");
+        // 敌人条括号里有 "HP " 前缀，数字解析直接失败 —— 宽松扫描也不会把它当队伍条目。
+        check(TeamBarTitle.scanLoose("Frost Wolf (HP 73/120)").isEmpty(),
+                "敌人条的 (HP x/y) 不该被宽松扫描当成队伍条目");
+        check(TeamBarTitle.scanLoose("Frost Wolf (73/120)").size() == 1,
+                "无 HP 前缀的 (x/y) 会被扫出来，但名字匹配不到玩家就不算队伍条");
     }
 
     // ── 基础设施 ──

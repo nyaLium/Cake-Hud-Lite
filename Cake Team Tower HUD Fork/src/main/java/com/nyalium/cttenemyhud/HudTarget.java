@@ -84,8 +84,6 @@ public final class HudTarget {
 
     private static boolean computeVisible(Minecraft mc, Entity entity) {
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
-        // 三个显示项全关时本 Mod 什么都不画，那就不要接管名称（否则名字会凭空消失）。
-        if (!cfg.showBar && !cfg.showNumbers && !cfg.showArmor) return false;
         if (!managed(mc, entity)) return false;
 
         Vec3 camPos = cameraPos(mc);

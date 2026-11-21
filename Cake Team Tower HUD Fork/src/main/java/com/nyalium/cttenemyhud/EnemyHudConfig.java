@@ -25,23 +25,15 @@ public final class EnemyHudConfig {
         public double opacity = 0.75;
         /** 文字是否带阴影。 */
         public boolean textShadow = true;
-        /** 是否画血条（原版 bossbar 纹理）。 */
+        /** 是否画血条（原版 bossbar 纹理）。心数 / 护甲永远显示，不再提供开关。 */
         public boolean showBar = true;
-        /** 是否画「当前血量/最大血量」文字。 */
-        public boolean showNumbers = true;
-        /** 血量数字优先画心数（红/魂/黑/蓝/碎），拆不出来时才退回「当前/最大」。 */
-        public boolean showHeartCounts = true;
-        /** 是否画护甲段（🛡Defence + 元素护甲）。 */
-        public boolean showArmor = true;
         /** 隐藏实体名称下方那条计分板分数（数据包的 HealthPercent 显示）。 */
         public boolean hideBelowNameScore = true;
-        /** 隐藏数据包挂在屏幕顶部的「最近敌人 Boss 条」（头顶已经画过了）。 */
+        /** 隐藏上方 Boss 栏里「最近敌人的信息」那一条（头顶已经画过了）。 */
         public boolean hideEnemyBossBar = true;
         /** 是否显示队友血量（绿色条）。自己永远不显示。 */
         public boolean showTeammates = true;
-        /** 自动执行 /trigger TogglePartyBossbar 打开队伍条（队友血量的数据源）。 */
-        public boolean autoPartyBossbar = true;
-        /** 隐藏屏幕顶部那条队伍血量条（数据照常读取）。 */
+        /** 隐藏上方 Boss 栏里「队伍血量」那一条（数据照常读取）。 */
         public boolean hideTeamBossBar = true;
         /** 玩家血条长度（原版名牌像素）。 */
         public double teamBarWidth = 100.0;

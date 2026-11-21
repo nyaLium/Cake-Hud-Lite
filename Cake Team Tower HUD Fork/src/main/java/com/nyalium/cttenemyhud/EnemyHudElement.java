@@ -67,7 +67,6 @@ public final class EnemyHudElement implements HudElement {
         if (!cfg.enabled) return;
         // 诅咒：与地图设定一致，整个 UI 隐藏；按需求不提供开关。
         if (CurseDetector.isActive(mc)) return;
-        if (!cfg.showBar && !cfg.showNumbers && !cfg.showArmor) return;
 
         Camera camera = mc.gameRenderer.mainCamera();
         Vec3 camPos = camera.position();
@@ -83,15 +82,10 @@ public final class EnemyHudElement implements HudElement {
         Scoreboard sb = mc.level.getScoreboard();
         Map<UUID, BossBarTracker.Bar> exact = BossBarTracker.resolve(mc, BossBarTracker.snapshot(mc));
 
-        // 队友：队伍条默认关，必要时自动开一次（带冷却与窗口限制）。
-        boolean teamBarPresent = cfg.showTeammates && BossBarTracker.hasTeamBar(mc);
-        if (cfg.showTeammates && cfg.autoPartyBossbar) {
-            if (teamBarPresent) {
-                PartyBossbarAutoToggle.tick(mc, true, false);
-            } else {
-                PartyBossbarAutoToggle.tick(mc, false, BossBarTracker.hasPersonalBar(mc));
-            }
-        }
+        // 队友：数据来自「队伍血量」这条 Boss 栏，条在才有数据。
+        // 注意：本 Mod 不再自己发 /trigger TogglePartyBossbar —— 那条命令只会给普通玩家
+        // 一 tick 的闪现（队友名单来自 @a[tag=PlayerHealthBossbar]，每 tick 清空重设），
+        // 反而让顶部 Boss 栏时不时闪一下，并在触发项未 enable 时刷聊天错误。
         Map<UUID, TeamBarTitle.Entry> teammates = cfg.showTeammates
                 ? BossBarTracker.resolveTeam(mc, BossBarTracker.teamEntriesCached(mc))
                 : Map.of();
@@ -191,10 +185,14 @@ public final class EnemyHudElement implements HudElement {
         }
     }
 
-    /** 玩家血条用独立的一套长度/缩放/偏移。 */
+    /**
+     * 玩家血条用独立的一套长度/缩放/偏移。
+     *
+     * <p>队友没有护甲数据、也拆不出四色心，所以这一行固定是「当前/最大」。</p>
+     */
     private static EnemyHudLayout.Options teamOptions(EnemyHudConfig.Cfg cfg) {
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
-        o.showNumbers = cfg.showNumbers;
+        o.showNumbers = true;
         o.showHearts = false;
         o.showArmor = false;
         o.showBar = cfg.showBar;
@@ -205,11 +203,12 @@ public final class EnemyHudElement implements HudElement {
         return o;
     }
 
+    /** 敌人：心数、护甲永久显示，只有血条可关。 */
     private static EnemyHudLayout.Options options(EnemyHudConfig.Cfg cfg) {
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
-        o.showNumbers = cfg.showNumbers;
-        o.showHearts = cfg.showHeartCounts;
-        o.showArmor = cfg.showArmor;
+        o.showNumbers = true;
+        o.showHearts = true;
+        o.showArmor = true;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.barWidth;
         o.verticalOffset = cfg.verticalOffset;

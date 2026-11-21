@@ -13,8 +13,7 @@ import net.minecraft.network.chat.Component;
 /**
  * 某一类设置的子界面（从 {@link EnemyHudConfigScreen} 点进来）。
  *
- * <p>左右两列排布，底部三个按钮：<b>返回</b>（回到总界面，改动保留）/
- * <b>完成</b>（写盘并关闭整套设置）/ <b>取消</b>（回滚到打开总界面时的快照并关闭）。</p>
+ * <p>左右两列排布，底部只有「返回」（回到总界面，改动保留；写盘由总界面的「完成」负责）。</p>
  */
 public final class EnemyHudSettingsScreen extends Screen {
 
@@ -23,10 +22,9 @@ public final class EnemyHudSettingsScreen extends Screen {
 
     private static final int ROW_HEIGHT = 20;
     private static final int ROW_GAP = 24;
-    private static final int TOP = 52;
+    private static final int TOP = 56;
     private static final int COLUMN_GAP = 12;
     private static final int ROW_WIDTH_MAX = 210;
-    private static final int BUTTON_GAP = 8;
 
     private final EnemyHudConfigScreen menu;
     private final Section section;
@@ -59,32 +57,14 @@ public final class EnemyHudSettingsScreen extends Screen {
         }
 
         int totalWidth = w * 2 + COLUMN_GAP;
-        int small = (totalWidth - BUTTON_GAP * 2) / 3;
-        int buttonY = Math.min(TOP + ROW_GAP * 5 + 8, this.height - ROW_HEIGHT - 8);
+        int buttonY = Math.min(TOP + ROW_GAP * 4 + 12, this.height - ROW_HEIGHT - 8);
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
-                .bounds(leftX, buttonY, small, ROW_HEIGHT).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> done())
-                .bounds(leftX + small + BUTTON_GAP, buttonY, small, ROW_HEIGHT).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> cancel())
-                .bounds(leftX + (small + BUTTON_GAP) * 2, buttonY,
-                        totalWidth - (small + BUTTON_GAP) * 2, ROW_HEIGHT).build());
+                .bounds(leftX + totalWidth / 2 - 60, buttonY, 120, ROW_HEIGHT).build());
     }
 
     /** 返回：改动保留，回到总界面。 */
     private void back() {
         this.minecraft.gui.setScreen(this.menu);
-    }
-
-    /** 完成：写盘并关闭整套设置。 */
-    private void done() {
-        EnemyHudConfig.save();
-        this.minecraft.gui.setScreen(this.menu.root());
-    }
-
-    /** 取消：回滚到打开总界面时的配置并关闭（不写盘）。 */
-    private void cancel() {
-        EnemyHudConfig.restore(this.menu.snapshot());
-        this.minecraft.gui.setScreen(this.menu.root());
     }
 
     // ── 通用设置 ──
@@ -101,6 +81,14 @@ public final class EnemyHudSettingsScreen extends Screen {
         addRenderableWidget(CycleButton.onOffBuilder(cfg.hideBelowNameScore)
                 .create(leftX, y, w, ROW_HEIGHT, key("hideBelowNameScore"),
                         (b, v) -> EnemyHudConfig.get().hideBelowNameScore = v));
+        y += ROW_GAP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideEnemyBossBar)
+                .create(leftX, y, w, ROW_HEIGHT, key("hideEnemyBossBar"),
+                        (b, v) -> EnemyHudConfig.get().hideEnemyBossBar = v));
+        y += ROW_GAP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideTeamBossBar)
+                .create(leftX, y, w, ROW_HEIGHT, key("hideTeamBossBar"),
+                        (b, v) -> EnemyHudConfig.get().hideTeamBossBar = v));
 
         y = TOP;
         addRenderableWidget(new ValueSlider(rightX, y, w, ROW_HEIGHT,
@@ -120,21 +108,10 @@ public final class EnemyHudSettingsScreen extends Screen {
         addRenderableWidget(CycleButton.onOffBuilder(cfg.showBar)
                 .create(leftX, y, w, ROW_HEIGHT, key("showBar"), (b, v) -> EnemyHudConfig.get().showBar = v));
         y += ROW_GAP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.showNumbers)
-                .create(leftX, y, w, ROW_HEIGHT, key("showNumbers"),
-                        (b, v) -> EnemyHudConfig.get().showNumbers = v));
-        y += ROW_GAP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.showHeartCounts)
-                .create(leftX, y, w, ROW_HEIGHT, key("showHeartCounts"),
-                        (b, v) -> EnemyHudConfig.get().showHeartCounts = v));
-        y += ROW_GAP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.showArmor)
-                .create(leftX, y, w, ROW_HEIGHT, key("showArmor"),
-                        (b, v) -> EnemyHudConfig.get().showArmor = v));
-        y += ROW_GAP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideEnemyBossBar)
-                .create(leftX, y, w, ROW_HEIGHT, key("hideEnemyBossBar"),
-                        (b, v) -> EnemyHudConfig.get().hideEnemyBossBar = v));
+        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
+                4.0, 128.0, 4.0, cfg.maxDistance,
+                v -> key("maxDistance", (int) Math.round(v)),
+                v -> EnemyHudConfig.get().maxDistance = v));
 
         y = TOP;
         addRenderableWidget(new ValueSlider(rightX, y, w, ROW_HEIGHT,
@@ -151,11 +128,6 @@ public final class EnemyHudSettingsScreen extends Screen {
                 -30.0, 0.0, 1.0, cfg.verticalOffset,
                 v -> key("verticalOffset", signed((int) Math.round(v))),
                 v -> EnemyHudConfig.get().verticalOffset = (int) Math.round(v)));
-        y += ROW_GAP;
-        addRenderableWidget(new ValueSlider(rightX, y, w, ROW_HEIGHT,
-                4.0, 128.0, 4.0, cfg.maxDistance,
-                v -> key("maxDistance", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().maxDistance = v));
     }
 
     // ── 玩家设置 ──
@@ -165,11 +137,6 @@ public final class EnemyHudSettingsScreen extends Screen {
         addRenderableWidget(CycleButton.onOffBuilder(cfg.showTeammates)
                 .create(leftX, y, w, ROW_HEIGHT, key("showTeammates"),
                         (b, v) -> EnemyHudConfig.get().showTeammates = v));
-        y += ROW_GAP;
-        // 顶部那条队伍血量 BossBar：配置里是「是否隐藏」，界面上按需求显示成「是否显示」。
-        addRenderableWidget(CycleButton.onOffBuilder(!cfg.hideTeamBossBar)
-                .create(leftX, y, w, ROW_HEIGHT, key("teamBossBar"),
-                        (b, v) -> EnemyHudConfig.get().hideTeamBossBar = !v));
         y += ROW_GAP;
         addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
                 4.0, 128.0, 4.0, cfg.teamMaxDistance,
@@ -197,8 +164,8 @@ public final class EnemyHudSettingsScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.title"),
-                this.width / 2, 12, 0xFFFFFFFF);
-        graphics.centeredText(this.font, this.title, this.width / 2, 28, 0xFFFFD060);
+                this.width / 2, 24, 0xFFFFFFFF);
+        graphics.centeredText(this.font, this.title, this.width / 2, 40, 0xFFFFD060);
     }
 
     @Override

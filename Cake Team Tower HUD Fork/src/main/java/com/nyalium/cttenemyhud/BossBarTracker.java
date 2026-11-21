@@ -180,32 +180,9 @@ public final class BossBarTracker {
 
     // ── 队伍条（队友血量） ──
 
-    /** 队伍血量条是否已经在客户端上。 */
+    /** 队伍血量条是否已经在客户端上（只读判定；本 Mod 不再主动 /trigger 开关它）。 */
     static boolean hasTeamBar(Minecraft mc) {
         return !teamEntries(mc).isEmpty();
-    }
-
-    /** 是否存在「自己」的血量条；用来判断玩家是否已进入对局。 */
-    static boolean hasPersonalBar(Minecraft mc) {
-        if (mc.gui == null || mc.gui.hud == null || mc.player == null) return false;
-        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
-        if (overlay == null) return false;
-        Map<UUID, BossEvent> bars;
-        try {
-            bars = ((BossHealthOverlayAccessor) (Object) overlay).cttEnemyHud$getBossBars();
-        } catch (Throwable t) {
-            return false;
-        }
-        if (bars == null || bars.isEmpty()) return false;
-        String playerName = mc.player.getName().getString();
-        if (playerName.isEmpty()) return false;
-        for (BossEvent bar : bars.values()) {
-            Component component = bar.getName();
-            if (component == null) continue;
-            String text = component.getString();
-            if (text.contains(playerName) && BossBarTitle.parse(text) != null) return true;
-        }
-        return false;
     }
 
     /** 从客户端 Boss 栏里找那条队伍血量条并解析出每个玩家的 当前/上限。 */
@@ -228,12 +205,11 @@ public final class BossBarTracker {
             if (component == null) continue;
             String text = component.getString();
             if (BossBarTitle.isEnemyBarText(text, playerName)) continue;
-            List<TeamBarTitle.Entry> parsed = TeamBarTitle.parse(text);
-            if (parsed.isEmpty()) continue;
-            // 「高塔 (12/50)」（数据包 floor 条）也是 名字 (x/y) 形状，
-            // 但它的名字是场景名，匹配不到任何真实玩家 —— 用它把两者分开。
-            if (!matchesAnyPlayer(mc, parsed)) continue;
-            return parsed;
+            // 严格整串解析；失败就宽松扫一遍（标题里夹着空槽残渣时仍能救回来）。
+            List<TeamBarTitle.Entry> strict = TeamBarTitle.parse(text);
+            if (!strict.isEmpty() && matchesAnyPlayer(mc, strict)) return strict;
+            List<TeamBarTitle.Entry> loose = TeamBarTitle.scanLoose(text);
+            if (!loose.isEmpty() && matchesAnyPlayer(mc, loose)) return loose;
         }
         return List.of();
     }
@@ -246,26 +222,38 @@ public final class BossBarTracker {
      * {@code floors/scenes/break_room_universal.mcfunction:397-402}）形状一模一样，
      * 只按形状判定会把「高塔层数」整条隐藏掉。所以这里再要求
      * <b>至少有一段名字能匹配到真实玩家</b>。</p>
+     *
+     * <p>名字的匹配来源有三个：本地玩家、视野内玩家实体、以及<b>玩家列表（Tab 名单）</b>。
+     * 最后一个很关键 —— 队伍条会列出不在渲染距离内的队友，只靠实体匹配会时灵时不灵，
+     * 表现就是「顶部那条队伍血量条时不时闪一下」。</p>
      */
-    public static boolean looksLikeTeamBar(Minecraft mc, String text) {        List<TeamBarTitle.Entry> parsed = TeamBarTitle.parse(text);
-        return !parsed.isEmpty() && matchesAnyPlayer(mc, parsed);
+    public static boolean looksLikeTeamBar(Minecraft mc, String text) {
+        if (text == null || text.isEmpty()) return false;
+        List<TeamBarTitle.Entry> strict = TeamBarTitle.parse(text);
+        if (!strict.isEmpty() && matchesAnyPlayer(mc, strict)) return true;
+        List<TeamBarTitle.Entry> loose = TeamBarTitle.scanLoose(text);
+        return !loose.isEmpty() && matchesAnyPlayer(mc, loose);
     }
 
     private static boolean matchesAnyPlayer(Minecraft mc, List<TeamBarTitle.Entry> entries) {
         if (mc == null || entries.isEmpty()) return false;
-        if (mc.player != null) {
-            for (TeamBarTitle.Entry entry : entries) {
-                if (nameMatches(mc.player, entry.name, false)) return true;
-            }
-        }
-        if (mc.level != null) {
-            for (Player player : mc.level.players()) {
-                for (TeamBarTitle.Entry entry : entries) {
-                    if (nameMatches(player, entry.name, false)) return true;
-                }
-            }
+        for (TeamBarTitle.Entry entry : entries) {
+            if (matchesPlayerName(mc, entry.name)) return true;
         }
         return false;
+    }
+
+    private static boolean matchesPlayerName(Minecraft mc, String name) {
+        if (name == null || name.isEmpty()) return false;
+        if (mc.player != null && nameMatches(mc.player, name, false)) return true;
+        if (mc.level != null) {
+            for (Player player : mc.level.players()) {
+                if (nameMatches(player, name, false)) return true;
+            }
+        }
+        // Tab 名单里的玩家（不在渲染距离内也算队友）。
+        var connection = mc.getConnection();
+        return connection != null && connection.getPlayerInfo(name) != null;
     }
 
     /** 队伍条解析结果的短缓存（{@link #isTeammate} 每帧会被问很多次）。 */
