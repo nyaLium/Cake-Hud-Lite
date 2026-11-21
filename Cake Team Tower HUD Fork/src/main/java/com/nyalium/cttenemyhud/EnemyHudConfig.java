@@ -65,6 +65,8 @@ public final class EnemyHudConfig {
         public int verticalOffset = 0;
         /** 被方块挡住视线时不绘制（防止隔墙看到血条）。 */
         public boolean hideBehindWalls = true;
+        /** 被更近的实体挡住时不绘制（防止后方血条压住前面的名字和模型）。 */
+        public boolean hideBehindEntities = true;
         /** 左上角打印每帧统计（排查用）。 */
         public boolean debug = false;
     }

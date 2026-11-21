@@ -13,6 +13,7 @@
   "ctt_enemy_hud.config.textShadow": "Text shadow",
   "ctt_enemy_hud.config.opacity": "Opacity: %s",
   "ctt_enemy_hud.config.hideBehindWalls": "Hide behind walls",
+  "ctt_enemy_hud.config.hideBehindEntities": "Hide behind entities",
   "ctt_enemy_hud.config.hideBelowNameScore": "Hide score under name tag",
   "ctt_enemy_hud.config.hideEnemyBossBar": "Hide top boss bar - nearest enemy info",
   "ctt_enemy_hud.config.hideTeamBossBar": "Hide top boss bar - party health",

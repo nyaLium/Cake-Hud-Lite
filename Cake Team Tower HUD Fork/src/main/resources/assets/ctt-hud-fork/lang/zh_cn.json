@@ -13,6 +13,7 @@
   "ctt_enemy_hud.config.textShadow": "文字阴影",
   "ctt_enemy_hud.config.opacity": "透明度：%s",
   "ctt_enemy_hud.config.hideBehindWalls": "被墙挡住时隐藏",
+  "ctt_enemy_hud.config.hideBehindEntities": "被其它实体挡住时隐藏",
   "ctt_enemy_hud.config.hideBelowNameScore": "隐藏名称下方的计分板分数",
   "ctt_enemy_hud.config.hideEnemyBossBar": "隐藏上方Boss栏 - 最近敌人的信息",
   "ctt_enemy_hud.config.hideTeamBossBar": "隐藏上方Boss栏 - 队伍血量",

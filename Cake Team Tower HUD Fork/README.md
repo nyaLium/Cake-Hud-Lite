@@ -2,7 +2,7 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.14.4**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.14.5**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 设置界面一纵排布（通用 / 敌人 / 玩家 / 恢复默认 + 底部完成）。
 
 | 项目 | 内容 |
@@ -12,7 +12,7 @@
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.14.4.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.14.5.jar` |
 
 ## 显示效果
 
@@ -279,6 +279,7 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 | `barWidth` | 敌人血条长度（原版名牌像素） | 50 ~ 150（默认 100） |
 | `scale` | 敌人整体缩放 | 0.75 ~ 1.50 |
 | `verticalOffset` | 敌人垂直微调，负值更高 | -30 ~ 0 |
+| `hideBehindEntities` | 被更近的实体挡住（屏幕矩形覆盖 ≥70%）时不绘制；解决「后方血条压住前面名字/模型」 | — |
 | `hideBehindWalls` | 被方块挡住视线时不画 | — |
 | `debug` | 左上角打印 `entities= / withData= / mates= / drawn=`（**仅配置文件，界面无此项**） | — |
 
@@ -308,7 +309,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.14.4.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.14.5.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 

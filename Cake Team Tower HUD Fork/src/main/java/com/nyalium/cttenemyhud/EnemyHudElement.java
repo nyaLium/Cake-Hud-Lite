@@ -54,6 +54,10 @@ public final class EnemyHudElement implements HudElement {
         double ppu;
         /** true = 队友（绿色条、无护甲）。 */
         boolean player;
+        /** 相机到实体锚点的距离，用于「近的盖远的」判定。 */
+        double depth;
+        /** 实体包围盒投影到屏幕后的矩形 {@code {x0,y0,x1,y1}}；投不出来时 null。 */
+        double[] screenBox;
     }
 
     @Override
@@ -144,6 +148,8 @@ public final class EnemyHudElement implements HudElement {
             p.gx = pt[0];
             p.gy = pt[1];
             p.ppu = ppu;
+            p.depth = camPos.distanceTo(anchor);
+            p.screenBox = projectBox(viewProj, camPos, entity, guiW, guiH);
             placements.add(p);
         }
 
@@ -174,9 +180,15 @@ public final class EnemyHudElement implements HudElement {
                 p.gy = pt[1];
                 p.ppu = ppu;
                 p.player = true;
+                p.depth = camPos.distanceTo(anchor);
+                p.screenBox = projectBox(viewProj, camPos, entity, guiW, guiH);
                 placements.add(p);
                 mateCount++;
             }
+        }
+
+        if (cfg.hideBehindEntities && placements.size() > 1) {
+            placements = dropOccluded(placements);
         }
 
         if (cfg.debug) {
@@ -303,6 +315,62 @@ public final class EnemyHudElement implements HudElement {
     }
 
     // ── 工具 ──
+
+    /**
+     * 丢掉「被更近的实体挡住」的那部分 HUD。
+     *
+     * <p>血条画在 GUI 层，天然盖在世界里的模型和名牌之上：站在后面、画面上已经被前面那只
+     * 挡住的怪不该再画自己的条，否则就会出现「后方血条压着前面的名字和模型」。
+     * 判定在屏幕空间做——实体包围盒投影矩形的覆盖率超过阈值就算看不见。</p>
+     *
+     * <p>只跟<b>更近</b>的实体比，所以先按距离从近到远排序，再逐个决定去留。</p>
+     */
+    private static List<Placement> dropOccluded(List<Placement> placements) {
+        List<Placement> byDepth = new ArrayList<>(placements);
+        byDepth.sort((a, b) -> Double.compare(a.depth, b.depth));
+        List<double[]> nearerBoxes = new ArrayList<>(byDepth.size());
+        List<Placement> kept = new ArrayList<>(byDepth.size());
+        for (Placement p : byDepth) {
+            if (p.screenBox != null
+                    && BoxOcclusion.hidden(p.screenBox, nearerBoxes, BoxOcclusion.DEFAULT_THRESHOLD)) {
+                continue;
+            }
+            kept.add(p);
+            if (p.screenBox != null) nearerBoxes.add(p.screenBox);
+        }
+        return kept;
+    }
+
+    /**
+     * 实体包围盒 → 屏幕矩形 {@code {x0, y0, x1, y1}}。
+     *
+     * <p>八个角点只要有一个落到相机后面（或投影失败）就返回 null：那种情况下
+     * 矩形没有意义，不如干脆不参与遮挡判定，避免误杀。</p>
+     */
+    private static double[] projectBox(Matrix4f viewProj, Vec3 camPos, Entity entity,
+                                       int guiW, int guiH) {
+        try {
+            net.minecraft.world.phys.AABB box = entity.getBoundingBox();
+            double[] out = new double[2];
+            double minX = Double.MAX_VALUE;
+            double minY = Double.MAX_VALUE;
+            double maxX = -Double.MAX_VALUE;
+            double maxY = -Double.MAX_VALUE;
+            for (int i = 0; i < 8; i++) {
+                double x = (i & 1) == 0 ? box.minX : box.maxX;
+                double y = (i & 2) == 0 ? box.minY : box.maxY;
+                double z = (i & 4) == 0 ? box.minZ : box.maxZ;
+                if (!project(viewProj, camPos, new Vec3(x, y, z), guiW, guiH, out)) return null;
+                minX = Math.min(minX, out[0]);
+                maxX = Math.max(maxX, out[0]);
+                minY = Math.min(minY, out[1]);
+                maxY = Math.max(maxY, out[1]);
+            }
+            return new double[]{minX, minY, maxX, maxY};
+        } catch (Throwable t) {
+            return null;
+        }
+    }
 
     private static int withAlpha(int rgb, int alpha) {
         return ((alpha & 0xFF) << 24) | (rgb & 0xFFFFFF);

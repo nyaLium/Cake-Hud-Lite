@@ -4,6 +4,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.resources.Identifier;
 
 /**
@@ -21,8 +22,10 @@ public final class CttEnemyHudClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         EnemyHudConfig.load();
-        // addLast：排在原版与其它 Mod 的全部 HUD 元素之后，敌人血条永远在最上层。
-        HudElementRegistry.addLast(
+        // 画在「提示信息」之下：OVERLAY_MESSAGE（动作栏）、标题、聊天、玩家列表都在它之后，
+        // 所以血条不会盖住这些 UI 文字；同时它仍在世界渲染之后，所以压得住模型与名牌。
+        HudElementRegistry.attachElementBefore(
+                VanillaHudElements.OVERLAY_MESSAGE,
                 Identifier.fromNamespaceAndPath(MOD_ID, "enemy_hud"),
                 new EnemyHudElement());
         // 吞掉本 Mod 自发 /trigger 的聊天回显（成功回显 + 「无法触发该计分项」）。

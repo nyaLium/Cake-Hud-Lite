@@ -95,6 +95,10 @@ public final class EnemyHudSettingsScreen extends Screen {
                 .create(rightX, y, w, ROW_HEIGHT, key("hideBehindWalls"),
                         (b, v) -> EnemyHudConfig.get().hideBehindWalls = v));
         y += ROW_GAP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideBehindEntities)
+                .create(rightX, y, w, ROW_HEIGHT, key("hideBehindEntities"),
+                        (b, v) -> EnemyHudConfig.get().hideBehindEntities = v));
+        y += ROW_GAP;
         addRenderableWidget(CycleButton.onOffBuilder(cfg.hideEnemyBossBar)
                 .create(rightX, y, w, ROW_HEIGHT, key("hideEnemyBossBar"),
                         (b, v) -> EnemyHudConfig.get().hideEnemyBossBar = v));

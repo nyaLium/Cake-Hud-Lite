@@ -17,6 +17,7 @@ public final class SelfCheck {
         armorEdgeCases();
         heartCountsAndRows();
         barOwnershipScoring();
+        screenOcclusion();
         payloadConversion();
         bossBarTitles();
         curseKeys();
@@ -167,6 +168,8 @@ public final class SelfCheck {
         check(defaults.verticalOffset == 0, "默认垂直偏移应为 0");
         check(defaults.opacity == 0.75, "默认透明度应为 0.75");
         check(defaults.showBar, "默认应画血条");
+        check(defaults.hideBehindWalls, "默认应忽略被墙挡住的怪");
+        check(defaults.hideBehindEntities, "默认应忽略被其它实体挡住的怪");
         check(defaults.hideBelowNameScore, "默认应隐藏 below_name 分数");
         check(defaults.hideEnemyBossBar, "默认应隐藏上方 Boss 栏里的最近敌人信息");
         check(defaults.hideTeamBossBar, "默认应隐藏上方 Boss 栏里的队伍血量");
@@ -369,6 +372,51 @@ public final class SelfCheck {
                 new int[8], 1.0f, HeartCounts.Kind.RED);
         check(bar.expectedPercent() == expected,
                 "expectedPercent(" + hp + "/" + maxHp + ")=" + bar.expectedPercent());
+    }
+
+    // ── 5b-2. 屏幕空间遮挡（后方的怪被前面的挡住就不画） ──
+
+    private static void screenOcclusion() {
+        java.util.List<double[]> none = java.util.List.of();
+        double[] self = {0, 0, 100, 100};
+
+        check(BoxOcclusion.coverage(self, none) == 0.0, "没有更近实体时覆盖率应为 0");
+        check(!BoxOcclusion.hidden(self, none, BoxOcclusion.DEFAULT_THRESHOLD), "没有遮挡不该隐藏");
+
+        double[] half = {0, 0, 50, 100};
+        check(Math.abs(BoxOcclusion.coverage(self, java.util.List.of(half)) - 0.5) < 1e-9,
+                "盖住一半时覆盖率应 0.5");
+        check(!BoxOcclusion.hidden(self, java.util.List.of(half), 0.7), "50% 不该隐藏");
+
+        double[] most = {0, 0, 80, 100};
+        check(BoxOcclusion.hidden(self, java.util.List.of(most), 0.7), "80% 应当隐藏");
+        check(!BoxOcclusion.hidden(self, java.util.List.of(most), 0.9), "阈值 0.9 时 80% 不该隐藏");
+
+        // 两块各盖 40%、互不重叠 → 合计 80%
+        double[] left = {0, 0, 40, 100};
+        double[] right = {40, 0, 80, 100};
+        check(Math.abs(BoxOcclusion.coverage(self, java.util.List.of(left, right)) - 0.8) < 1e-9,
+                "两段合计应 0.8");
+        check(BoxOcclusion.hidden(self, java.util.List.of(left, right), 0.7), "合计 80% 应隐藏");
+
+        // 完全重合的两个框仍然只算 100%，不会超过 1
+        check(BoxOcclusion.coverage(self, java.util.List.of(half, half)) == 1.0,
+                "重复覆盖应夹到 1.0");
+
+        // 完全错开 / 只有边界接触 / 退化矩形
+        double[] away = {200, 200, 300, 300};
+        check(BoxOcclusion.coverage(self, java.util.List.of(away)) == 0.0, "错开的框覆盖率 0");
+        double[] touching = {100, 0, 150, 100};
+        check(BoxOcclusion.coverage(self, java.util.List.of(touching)) == 0.0, "只贴边不算覆盖");
+        double[] flat = {0, 50, 100, 50};
+        check(BoxOcclusion.coverage(flat, java.util.List.of(most)) == 0.0, "零面积自身覆盖率 0");
+        check(BoxOcclusion.coverage(null, java.util.List.of(most)) == 0.0, "自身为 null 时 0");
+        check(BoxOcclusion.coverage(self, java.util.Collections.singletonList((double[]) null)) == 0.0,
+                "对比框为 null 时 0");
+
+        // 阈值非法 → 回落默认 0.70
+        check(BoxOcclusion.hidden(self, java.util.List.of(most), 0.0), "阈值 0 应回落默认并隐藏");
+        check(BoxOcclusion.hidden(self, java.util.List.of(most), 2.0), "阈值 2 应回落默认并隐藏");
     }
 
     // ── 5c. 服务端选装组件的数据换算 ──
