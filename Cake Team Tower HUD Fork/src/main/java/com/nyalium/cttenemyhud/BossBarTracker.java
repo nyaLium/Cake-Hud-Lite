@@ -43,22 +43,30 @@ final class BossBarTracker {
     /** 一条可解析的怪物 bar。 */
     static final class Bar {
         final String name;
+        /** 标题里的 {@code AllHearts}（全部心的总量）。 */
         final int hp;
+        /** 标题里的 {@code MaxHP}（红心上限）。 */
         final int maxHp;
         /** 本帧解析到的护甲段，下标同 {@link ArmourCache}：0=防御，1..7=元素。 */
         final int[] armour;
         /**
-         * 原始 bossbar 颜色。数据包用颜色表达「当前显示哪一类心」：
-         * 红/黄 = 魂心通道、紫 = 黑心通道、蓝 = 蓝心通道（见 p1_bossbar.mcfunction）。
+         * bar 自身的填充比例（{@code bossbar set ... value/max} 换算出来的 progress）。
+         * 数据包按「当前这一类心」设 value/max，所以它就是这一类心的剩余比例。
          */
-        final BossEvent.BossBarColor color;
+        final float progress;
+        /**
+         * 这条 bar 当前表现的是哪一类心。数据包用颜色表达通道
+         * （{@code targetting_enemy.mcfunction}：蓝 = 红心、黄 = 魂心）。
+         */
+        final HeartCounts.Kind kind;
 
-        Bar(String name, int hp, int maxHp, int[] armour, BossEvent.BossBarColor color) {
+        Bar(String name, int hp, int maxHp, int[] armour, float progress, HeartCounts.Kind kind) {
             this.name = name;
             this.hp = hp;
             this.maxHp = maxHp;
             this.armour = armour;
-            this.color = color;
+            this.progress = progress;
+            this.kind = kind;
         }
     }
 
@@ -99,9 +107,33 @@ final class BossBarTracker {
 
             BossBarTitle title = BossBarTitle.parse(text);
             if (title == null) continue;
-            out.add(new Bar(title.name, title.hp, title.maxHp, parseArmour(component), bar.getColor()));
+            out.add(new Bar(title.name, title.hp, title.maxHp, parseArmour(component),
+                    clampProgress(bar.getProgress()), kindOf(bar.getColor())));
         }
         return out;
+    }
+
+    /**
+     * 数据包的心通道 → 心类。
+     *
+     * <p>敌人条（{@code targetting} / {@code targetting_100N}）里
+     * {@code HeartValue=1} 是红心（颜色设为 {@code blue}）、{@code HeartValue=2}
+     * 是魂心（颜色 {@code yellow}）；敌人不会有黑心 / 蓝心，所以只需要这两条映射。</p>
+     */
+    static HeartCounts.Kind kindOf(BossEvent.BossBarColor color) {
+        if (color == null) return HeartCounts.Kind.UNKNOWN;
+        return switch (color) {
+            case BLUE -> HeartCounts.Kind.RED;
+            case YELLOW -> HeartCounts.Kind.SOUL;
+            case PURPLE -> HeartCounts.Kind.BLACK;
+            case RED, PINK -> HeartCounts.Kind.RED;
+            default -> HeartCounts.Kind.UNKNOWN;
+        };
+    }
+
+    private static float clampProgress(float progress) {
+        if (Float.isNaN(progress)) return 0.0f;
+        return Math.max(0.0f, Math.min(1.0f, progress));
     }
 
     /**
@@ -200,6 +232,34 @@ final class BossBarTracker {
             if (!parsed.isEmpty()) return parsed;
         }
         return List.of();
+    }
+
+    /** 队伍条解析结果的短缓存（{@link #isTeammate} 每帧会被问很多次）。 */
+    private static List<TeamBarTitle.Entry> cachedTeamEntries = null;
+    private static long cachedTeamAtMs = 0L;
+    private static final long TEAM_CACHE_MS = 200L;
+
+    /** 带短缓存的 {@link #teamEntries}。 */
+    static synchronized List<TeamBarTitle.Entry> teamEntriesCached(Minecraft mc) {
+        long now = System.currentTimeMillis();
+        if (cachedTeamEntries != null && now - cachedTeamAtMs < TEAM_CACHE_MS) {
+            return cachedTeamEntries;
+        }
+        cachedTeamEntries = teamEntries(mc);
+        cachedTeamAtMs = now;
+        return cachedTeamEntries;
+    }
+
+    /** 这名玩家是否在队伍条里（= 是不是队友）。 */
+    static boolean isTeammate(Minecraft mc, Player player) {
+        if (player == null) return false;
+        for (TeamBarTitle.Entry entry : teamEntriesCached(mc)) {
+            if (nameMatches(player, entry.name, true)) return true;
+        }
+        for (TeamBarTitle.Entry entry : teamEntriesCached(mc)) {
+            if (nameMatches(player, entry.name, false)) return true;
+        }
+        return false;
     }
 
     /** 把队伍条目认领到附近的同名玩家实体（自己永不参与）。 */

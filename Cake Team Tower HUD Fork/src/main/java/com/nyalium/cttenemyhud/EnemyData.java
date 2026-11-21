@@ -50,7 +50,9 @@ public final class EnemyData {
 
     /** 单只敌人一帧的读数。 */
     public static final class Snapshot {
+        /** {@code AllHearts}（全部心的总量）。 */
         public final int hp;
+        /** {@code MaxHP}（红心上限）。 */
         public final int maxHp;
         /** true = 只有百分比（读到的是 HealthPercent），画 "73%" 而不是 "73/120"。 */
         public final boolean percentOnly;
@@ -58,23 +60,21 @@ public final class EnemyData {
         public final int defence;
         /** 7 档元素护甲，0 = 没有。 */
         public final int[] armor;
+        /** 各类心的数量；{@link HeartCounts#unknown()} = 拆不出来，界面退回「当前/最大」。 */
+        public final HeartCounts hearts;
+        /** 血条填充比例 0..1。 */
+        public final float ratio;
 
-        Snapshot(int hp, int maxHp, boolean percentOnly, int percent, int defence, int[] armor) {
+        Snapshot(int hp, int maxHp, boolean percentOnly, int percent, int defence, int[] armor,
+                 HeartCounts hearts, float ratio) {
             this.hp = hp;
             this.maxHp = maxHp;
             this.percentOnly = percentOnly;
             this.percent = percent;
             this.defence = defence;
             this.armor = armor;
-        }
-
-        /** 血量比例 0..1，血条按它填充。 */
-        public float ratio() {
-            if (percentOnly) {
-                return Math.max(0.0f, Math.min(1.0f, percent / 100.0f));
-            }
-            if (maxHp <= 0) return 0.0f;
-            return Math.max(0.0f, Math.min(1.0f, (float) hp / (float) maxHp));
+            this.hearts = hearts != null ? hearts : HeartCounts.unknown();
+            this.ratio = Math.max(0.0f, Math.min(1.0f, Float.isNaN(ratio) ? 0.0f : ratio));
         }
 
         public boolean hasArmor() {
@@ -89,16 +89,19 @@ public final class EnemyData {
     /**
      * 用外部来源（客户端 Boss 栏）得到的绝对值构造读数。
      *
-     * @param armor 七档元素护甲，长度不足按 0 处理
+     * @param armor  七档元素护甲，长度不足按 0 处理
+     * @param hearts 各类心的数量，null = 不知道
+     * @param ratio  血条填充比例（数据包按「当前这一类心」设的 value/max）
      */
-    public static Snapshot exact(int hp, int maxHp, int defence, int[] armor) {
+    public static Snapshot exact(int hp, int maxHp, float ratio, int defence, int[] armor, HeartCounts hearts) {
         int[] fixed = new int[ARMOR_OBJECTIVES.length];
         if (armor != null) {
             System.arraycopy(armor, 0, fixed, 0, Math.min(armor.length, fixed.length));
         }
         int safeMax = Math.max(1, maxHp);
         int safeHp = Math.max(0, Math.min(hp, safeMax));
-        return new Snapshot(safeHp, safeMax, false, pct(safeHp, safeMax), defence, fixed);
+        HeartCounts h = hearts != null ? hearts : HeartCounts.forMob(safeHp, safeMax);
+        return new Snapshot(safeHp, safeMax, false, pct(safeHp, safeMax), defence, fixed, h, ratio);
     }
 
     /**
@@ -120,16 +123,32 @@ public final class EnemyData {
         if (current > 0 || maxHp > 0) {
             if (maxHp <= 0) maxHp = Math.max(1, current);
             if (current < 0) current = 0;
-            return new Snapshot(current, maxHp, false, pct(current, maxHp), defence, armor);
+            return new Snapshot(current, maxHp, false, pct(current, maxHp), defence, armor,
+                    HeartCounts.forMob(current, maxHp), pct(current, maxHp) / 100.0f);
         }
 
         // 绝对值通道没打通：退回 below_name 的百分比（每只怪都有）。
         int p = score(sb, "HealthPercent", entity);
         if (p > 0) {
             p = Math.min(100, p);
-            return new Snapshot(p, 100, true, p, defence, armor);
+            return new Snapshot(p, 100, true, p, defence, armor,
+                    HeartCounts.unknown(), p / 100.0f);
         }
         return null;
+    }
+
+    /**
+     * 只判断「这只实体受数据包管控」，不构造读数 —— 供每帧每实体的判定用，零分配。
+     *
+     * <p>判据与 {@link #read} 完全一致：{@code AllHearts / RedHearts / MaxHP / HealthPercent}
+     * 里任意一项有分，就说明数据包在管它。</p>
+     */
+    public static boolean hasData(Scoreboard sb, Entity entity) {
+        if (sb == null || entity == null) return false;
+        return score(sb, "AllHearts", entity) > 0
+                || score(sb, "RedHearts", entity) > 0
+                || score(sb, "MaxHP", entity) > 0
+                || score(sb, "HealthPercent", entity) > 0;
     }
 
     private static int pct(int hp, int maxHp) {

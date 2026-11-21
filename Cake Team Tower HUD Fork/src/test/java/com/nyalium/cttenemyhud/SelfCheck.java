@@ -15,6 +15,7 @@ public final class SelfCheck {
         barWidthSweep();
         configNormalization();
         armorEdgeCases();
+        heartCountsAndRows();
         bossBarTitles();
         curseKeys();
         teamBarTitles();
@@ -82,8 +83,9 @@ public final class SelfCheck {
                     check((l.rgb & 0xFF000000) == 0, tag + " 颜色含高位");
                 }
 
-                check(r.barTop <= -10, tag + " 血条压到名字行");
-                check(r.textTop <= -10, tag + " 文字压到名字行");
+                check(r.barTop + EnemyHudLayout.BAR_HEIGHT <= EnemyHudLayout.NAME_TOP,
+                        tag + " 血条压到名称行");
+                check(r.textTop < EnemyHudLayout.NAME_TOP, tag + " 文字压到名称行");
                 check(r.textTop + 9 <= r.barTop, tag + " 文字与血条重叠");
             }
         }
@@ -163,6 +165,9 @@ public final class SelfCheck {
         check(defaults.verticalOffset == 0, "默认垂直偏移应为 0");
         check(defaults.opacity == 0.75, "默认透明度应为 0.75");
         check(defaults.showBar && defaults.showNumbers && defaults.showArmor, "默认三个显示项应全开");
+        check(defaults.showHeartCounts, "默认应显示心数");
+        check(defaults.hideVanillaName, "默认名称应由本 Mod 绘制");
+        check(defaults.hideBelowNameScore, "默认应隐藏 below_name 分数");
         check(defaults.hideEnemyBossBar, "默认应隐藏顶部敌人Boss条");
         check(defaults.showTeammates, "默认应显示队友血量");
         check(defaults.autoPartyBossbar, "默认应自动开启队伍条");
@@ -195,7 +200,78 @@ public final class SelfCheck {
         check(r2.hasText, "只有防御时也应产出文字");
     }
 
-    // ── 5. Boss 栏标题解析 ──
+    // ── 5. 心数行 ──
+
+    private static void heartCountsAndRows() {
+        // 敌人：红心上限 MaxHP，多出来的都是魂心。
+        HeartCounts mob = HeartCounts.forMob(160, 100);
+        check(mob.get(HeartCounts.RED) == 100, "敌人红心应被 MaxHP 夹住: " + mob.get(HeartCounts.RED));
+        check(mob.get(HeartCounts.SOUL) == 60, "敌人魂心应是溢出部分: " + mob.get(HeartCounts.SOUL));
+        check(mob.any(), "有血时应能画");
+        check(!mob.has(HeartCounts.BLACK) && !mob.has(HeartCounts.BLUE), "敌人不该有黑/蓝心");
+        check(!mob.has(HeartCounts.CRACKED), "碎心读不到，不该显示");
+
+        HeartCounts full = HeartCounts.forMob(100, 100);
+        check(full.get(HeartCounts.RED) == 100 && full.get(HeartCounts.SOUL) == 0, "满红心无魂心");
+        check(!full.has(HeartCounts.SOUL), "魂心 0 不算存在");
+
+        HeartCounts hurt = HeartCounts.forMob(40, 100);
+        check(hurt.get(HeartCounts.RED) == 40 && hurt.get(HeartCounts.SOUL) == 0, "红心受击后无魂心");
+
+        HeartCounts dead = HeartCounts.forMob(0, 0);
+        check(!dead.any(), "0/0 不该画心数");
+        HeartCounts negative = HeartCounts.forMob(-7, 100);
+        check(negative.get(HeartCounts.RED) == 0, "负血量夹到 0");
+        check(!HeartCounts.unknown().any(), "未知不该画心数");
+        check(HeartCounts.unknown().get(HeartCounts.RED) == HeartCounts.UNKNOWN, "未知哨兵值");
+        check(HeartCounts.unknown().get(99) == HeartCounts.UNKNOWN, "越界下标应安全");
+        check(HeartCounts.forMob(160, 100).knownSum() == 160, "已知心数之和应等于 AllHearts");
+
+        // 文字行：顺序 红/魂/黑/蓝/碎，中间 " | "。
+        EnemyHudLayout.Options o = new EnemyHudLayout.Options();
+        o.showArmor = false;
+        o.showBar = false;
+        EnemyHudLayout.Result r = run("心数行", new Data("两色", 160, 100, false, 0,
+                new int[]{0, 0, 0, 0, 0, 0, 0}), o);
+        String joined = join(r);
+        check(joined.equals("❤100 | 💛60"), "心数行内容=" + joined);
+
+        EnemyHudLayout.Result single = run("单色", new Data("单红", 80, 100, false, 0,
+                new int[]{0, 0, 0, 0, 0, 0, 0}), o);
+        check(join(single).equals("❤80"), "只有红心时不该出现分隔符: " + join(single));
+
+        // 拆不出心数（percentOnly / 未知）→ 退回「当前/最大」。
+        EnemyHudLayout.Result fallback = run("回退", new Data("只有百分比", 73, 100, true, 0,
+                new int[]{0, 0, 0, 0, 0, 0, 0}), o);
+        check(!fallback.hasText, "只有百分比且无心数时不该有文字: " + join(fallback));
+
+        EnemyHudLayout.Options noHearts = new EnemyHudLayout.Options();
+        noHearts.showHearts = false;
+        noHearts.showArmor = false;
+        noHearts.showBar = false;
+        EnemyHudLayout.Result numbers = run("关掉心数", new Data("普通", 160, 100, false, 0,
+                new int[]{0, 0, 0, 0, 0, 0, 0}), noHearts);
+        check(join(numbers).equals("160/100"), "关掉心数应退回绝对血量: " + join(numbers));
+
+        // 心数与护甲之间也要有分隔符。
+        EnemyHudLayout.Options withArmor = new EnemyHudLayout.Options();
+        withArmor.showBar = false;
+        EnemyHudLayout.Result armored = run("心数+护甲", new Data("带护甲", 160, 100, false, 3,
+                new int[]{0, 5, 0, 0, 0, 0, 0}), withArmor);
+        check(join(armored).startsWith("❤100 | 💛60 | "), "心数后应有分隔符: " + join(armored));
+        // 用转义写死期望值：🛡 在源码里常被写成「🛡+U+FE0F」，直接比字面量会踩变体选择符。
+        check(join(armored).contains("\uD83D\uDEE13"), "防御段缺失: " + join(armored));
+        check(join(armored).contains(EnemyData.ARMOR_ICONS[1] + "5"), "元素护甲段缺失: " + join(armored));
+    }
+
+    private static String join(EnemyHudLayout.Result r) {
+        if (r == null) return "";
+        StringBuilder sb = new StringBuilder();
+        for (EnemyHudLayout.Line l : r.lines) sb.append(l.text);
+        return sb.toString();
+    }
+
+    // ── 6. Boss 栏标题解析 ──
 
     private static void bossBarTitles() {
         expectTitle("Frost Wolf (HP 73/120) 🛡3 🔥5", "Frost Wolf", 73, 120);
@@ -280,7 +356,7 @@ public final class SelfCheck {
     private static EnemyHudLayout.Result run(String tag, Data d, EnemyHudLayout.Options o) {
         try {
             EnemyHudLayout.Result r = EnemyHudLayout.compute(
-                    d.hp, d.maxHp, d.percentOnly, d.defence, d.armor, o, SelfCheck::width);
+                    d.hp, d.maxHp, d.percentOnly, d.defence, d.armor, d.hearts, o, SelfCheck::width);
             if (r == null) {
                 fail(tag + " 返回 null");
                 return null;
@@ -319,6 +395,7 @@ public final class SelfCheck {
         final boolean percentOnly;
         final int defence;
         final int[] armor;
+        final HeartCounts hearts;
 
         Data(String name, int hp, int maxHp, boolean percentOnly, int defence, int[] armor) {
             this.name = name;
@@ -327,6 +404,7 @@ public final class SelfCheck {
             this.percentOnly = percentOnly;
             this.defence = defence;
             this.armor = armor;
+            this.hearts = percentOnly ? HeartCounts.unknown() : HeartCounts.forMob(hp, maxHp);
         }
     }
 }

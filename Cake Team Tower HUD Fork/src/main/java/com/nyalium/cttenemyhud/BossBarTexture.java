@@ -29,8 +29,26 @@ final class BossBarTexture {
     static final int NATIVE_WIDTH = 182;
     static final int NATIVE_HEIGHT = 5;
 
-    /** 心类对应的条颜色。 */
+    /** 心类对应的条颜色（名字就是原版 sprite 的名字）。 */
     enum HeartTint { RED, BLUE, PURPLE, YELLOW }
+
+    /**
+     * 心类 → 条颜色，按需求：红心→红、魂心→黄、黑心→紫、蓝心→蓝。
+     *
+     * <p>数据包自己的 bossbar 颜色与这个映射不完全一样（敌人的红心通道用的是
+     * {@code blue}、魂心是 {@code yellow}），所以先由
+     * {@code BossBarTracker} 把颜色翻译成 {@link HeartCounts.Kind}，这里只做
+     * 「心类 → 纹理」这一步。</p>
+     */
+    static HeartTint tintFor(HeartCounts.Kind kind) {
+        if (kind == null) return HeartTint.RED;
+        return switch (kind) {
+            case SOUL -> HeartTint.YELLOW;
+            case BLACK -> HeartTint.PURPLE;
+            case BLUE -> HeartTint.BLUE;
+            default -> HeartTint.RED;
+        };
+    }
 
     private static final Identifier BACKGROUND_BLUE = Identifier.withDefaultNamespace("boss_bar/blue_background");
     private static final Identifier PROGRESS_BLUE = Identifier.withDefaultNamespace("boss_bar/blue_progress");

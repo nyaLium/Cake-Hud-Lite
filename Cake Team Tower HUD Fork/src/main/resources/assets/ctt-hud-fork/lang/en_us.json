@@ -42,6 +42,8 @@
   "ctt_enemy_hud.config.enabled": "Enabled",
   "ctt_enemy_hud.config.showBar": "Show bar",
   "ctt_enemy_hud.config.showNumbers": "Show health numbers",
+  "ctt_enemy_hud.config.showHeartCounts": "Show heart counts",
+  "ctt_enemy_hud.config.hideVanillaName": "Mod draws name tags",
   "ctt_enemy_hud.config.showArmor": "Show armour",
   "ctt_enemy_hud.config.textShadow": "Text shadow",
   "ctt_enemy_hud.config.hideBehindWalls": "Hide behind walls",

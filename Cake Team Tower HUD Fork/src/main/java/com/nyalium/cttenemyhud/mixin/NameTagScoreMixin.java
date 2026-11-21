@@ -1,6 +1,8 @@
 package com.nyalium.cttenemyhud.mixin;
 
 import com.nyalium.cttenemyhud.EnemyHudConfig;
+import com.nyalium.cttenemyhud.HudTarget;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.world.entity.Entity;
@@ -10,26 +12,38 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 隐藏实体名称下方那条计分板分数（数据包把 {@code HealthPercent} 挂在 {@code below_name} 上）。
+ * 把「原版名称 + below_name 分数」从本 Mod 接管的实体上摘掉。
  *
- * <p>{@code EntityRenderer.submitNameDisplay} 会先画 {@code scoreText}，再把名字整体上抬
- * {@code 9 × 1.15 × 0.025} 格；只清空 {@code scoreText} 的话名字会留在原来的高处。
- * 所以这里用两步：</p>
- * <ol>
- *   <li>{@code extractRenderState} 收尾时把 {@code scoreText} 置空（每帧重建，安全）；</li>
- *   <li>{@link NameTagOffsetMixin} 在 {@code submitNameDisplay} 里把那次上抬改成 0，
- *       名字于是落回原位。</li>
- * </ol>
+ * <h2>为什么要摘分数</h2>
+ * <p>数据包把 {@code HealthPercent} 挂在 {@code below_name} 上，血量信息已经由血条表达，
+ * 分数是重复的。顺便它也决定了名字的位置：{@code submitNameDisplay} 只有在
+ * {@code scoreText != null} 时才把名字整体上抬 {@code 9 × 1.15 × 0.025} 格，
+ * 分数清掉后原版名字会自己落回 {@code y ∈ [0, 9]}（见 {@code EnemyHudLayout} 的坐标系说明）。</p>
+ *
+ * <h2>为什么要摘名称</h2>
+ * <p>按需求名称改由本 Mod 绘制（{@code EnemyHudElement#drawName}）：字形、颜色、阴影、
+ * 原版底框全部照抄 {@code submitNameTag}，不受透明度 / 缩放 / 垂直偏移影响。
+ * 判定条件与画血条的条件共用 {@link HudTarget#visible}，两边绝不会一边清一边不画。</p>
  */
 @Mixin(EntityRenderer.class)
 public abstract class NameTagScoreMixin {
 
     @Inject(method = "extractRenderState", at = @At("TAIL"))
-    private void cttEnemyHud$hideBelowNameScore(Entity entity, EntityRenderState state, float partialTick,
+    private void cttEnemyHud$hideVanillaNameTag(Entity entity, EntityRenderState state, float partialTick,
                                                 CallbackInfo ci) {
-        if (!EnemyHudConfig.get().hideBelowNameScore) return;
-        if (state != null) {
+        if (state == null || entity == null) return;
+        EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
+        if (!cfg.enabled) return;
+        if (!cfg.hideBelowNameScore && !cfg.hideVanillaName) return;
+
+        Minecraft mc = Minecraft.getInstance();
+        // 分数：只要这只实体归本 Mod 管就摘（数据包的百分比与血条重复，远近都不必留）。
+        if (cfg.hideBelowNameScore && HudTarget.managed(mc, entity)) {
             state.scoreText = null;
+        }
+        // 名称：只有这一帧确实会自绘时才摘，保证任何时刻都有名字可看。
+        if (cfg.hideVanillaName && HudTarget.visible(mc, entity)) {
+            state.nameTag = null;
         }
     }
 }

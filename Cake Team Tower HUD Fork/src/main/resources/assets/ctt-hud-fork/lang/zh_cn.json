@@ -42,6 +42,8 @@
   "ctt_enemy_hud.config.enabled": "总开关",
   "ctt_enemy_hud.config.showBar": "显示血条",
   "ctt_enemy_hud.config.showNumbers": "显示血量数字",
+  "ctt_enemy_hud.config.showHeartCounts": "显示心数（红/魂/黑/蓝/碎）",
+  "ctt_enemy_hud.config.hideVanillaName": "名称由本 Mod 绘制",
   "ctt_enemy_hud.config.showArmor": "显示护甲属性",
   "ctt_enemy_hud.config.textShadow": "文字阴影",
   "ctt_enemy_hud.config.hideBehindWalls": "被墙挡住时隐藏",

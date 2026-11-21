@@ -56,7 +56,8 @@ public final class EnemyHudConfigScreen extends Screen {
         }
 
         int totalWidth = w * 2 + COLUMN_GAP;
-        int buttonY = Math.min(TOP + ROW_GAP * 5 + 4, this.height - ROW_HEIGHT - 8);
+        // 第 2 页（敌人血条）左列最多 6 行，按钮条按它留位。
+        int buttonY = Math.min(TOP + ROW_GAP * 6 + 4, this.height - ROW_HEIGHT - 8);
         int small = (totalWidth - 16) / 3;
 
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.prev_section"),
@@ -108,6 +109,9 @@ public final class EnemyHudConfigScreen extends Screen {
                 .create(leftX, y, w, ROW_HEIGHT, key("showNumbers"),
                         (b, v) -> EnemyHudConfig.get().showNumbers = v));
         y += ROW_GAP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.showHeartCounts)
+                .create(leftX, y, w, ROW_HEIGHT, key("showHeartCounts"),
+                        (b, v) -> EnemyHudConfig.get().showHeartCounts = v));
         y += ROW_GAP;
         addRenderableWidget(CycleButton.onOffBuilder(cfg.showArmor)
                 .create(leftX, y, w, ROW_HEIGHT, key("showArmor"),
@@ -159,6 +163,10 @@ public final class EnemyHudConfigScreen extends Screen {
         addRenderableWidget(CycleButton.onOffBuilder(cfg.hideBehindWalls)
                 .create(leftX, y, w, ROW_HEIGHT, key("hideBehindWalls"),
                         (b, v) -> EnemyHudConfig.get().hideBehindWalls = v));
+        y += ROW_GAP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideVanillaName)
+                .create(leftX, y, w, ROW_HEIGHT, key("hideVanillaName"),
+                        (b, v) -> EnemyHudConfig.get().hideVanillaName = v));
         y += ROW_GAP;
         addRenderableWidget(Button.builder(key("reset"), b -> {
             EnemyHudConfig.reset();
