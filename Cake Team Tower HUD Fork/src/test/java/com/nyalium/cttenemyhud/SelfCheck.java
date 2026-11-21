@@ -229,27 +229,33 @@ public final class SelfCheck {
         check(HeartCounts.unknown().get(99) == HeartCounts.UNKNOWN, "越界下标应安全");
         check(HeartCounts.forMob(160, 100).knownSum() == 160, "已知心数之和应等于 AllHearts");
 
-        // 文字行：顺序 红/魂/黑/蓝/碎，同一组内只隔一个空格（不插分隔符）。
+        // 文字行：红心是「当前/上限」，其余心只隔一个空格，同一行内不插分隔符。
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
         o.showArmor = false;
         o.showBar = false;
         EnemyHudLayout.Result r = run("心数行", new Data("两色", 160, 100, false, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
         String joined = join(r);
-        check(joined.equals("❤100 💛60"), "心数行内容=" + joined);
+        check(joined.equals("❤100/100 💛60"), "心数行内容=" + joined);
         check(!joined.contains(EnemyHudLayout.SEPARATOR), "同类之间不该有分隔符=" + joined);
+        check(r.rowCount() == 1, "不超宽时不该折行: " + r.rowCount());
 
         EnemyHudLayout.Result single = run("单色", new Data("单红", 80, 100, false, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
-        check(join(single).equals("❤80"), "只有红心时不该出现分隔符: " + join(single));
+        check(join(single).equals("❤80/100"), "红心应写成 当前/上限: " + join(single));
+
+        // 上限未知（MaxHP<=0）时只写当前值。
+        EnemyHudLayout.Result noCap = EnemyHudLayout.compute(70, 0, false, 0, new int[7],
+                HeartCounts.of(70, 0, 0, 0, 0), o, SelfCheck::width);
+        check(join(noCap).equals("❤70"), "上限未知时不该写 /0: " + join(noCap));
 
         // 碎心 / 粉心是同一 objective 的两面，画出来互斥、各用各的颜色。
         EnemyHudLayout.Result crackedLine = EnemyHudLayout.compute(50, 50, false, 0,
                 new int[7], HeartCounts.of(50, 0, 0, 0, 5), o, SelfCheck::width);
-        check(join(crackedLine).equals("❤50 💔5"), "碎心行=" + join(crackedLine));
+        check(join(crackedLine).equals("❤50/50 💔5"), "碎心行=" + join(crackedLine));
         EnemyHudLayout.Result pinkLine = EnemyHudLayout.compute(50, 50, false, 0,
                 new int[7], HeartCounts.of(50, 0, 0, 0, -5), o, SelfCheck::width);
-        check(join(pinkLine).equals("❤50 💗5"), "粉心行=" + join(pinkLine));
+        check(join(pinkLine).equals("❤50/50 💗5"), "粉心行=" + join(pinkLine));
         check(HeartCounts.COLORS[HeartCounts.CRACKED] == 0xAA0000, "碎心配色应为 dark_red");
         check(HeartCounts.COLORS[HeartCounts.PINK] == 0xFF55FF, "粉心配色应为 light_purple");
 
@@ -266,17 +272,38 @@ public final class SelfCheck {
                 new int[]{0, 0, 0, 0, 0, 0, 0}), noHearts);
         check(join(numbers).equals("160/100"), "关掉心数应退回绝对血量: " + join(numbers));
 
-        // 心组与护甲之间要有分隔符；心与心之间只能有一个空格。
+        // 一行放得下时，心组与护甲之间只有一个分隔符。
         EnemyHudLayout.Options withArmor = new EnemyHudLayout.Options();
         withArmor.showBar = false;
+        EnemyHudLayout.Result narrowArmor = run("窄护甲", new Data("一个护甲", 100, 100, false, 0,
+                new int[]{3, 0, 0, 0, 0, 0, 0}), withArmor);
+        check(narrowArmor.rowCount() == 1, "窄内容不该折行: " + narrowArmor.rowCount());
+        check(join(narrowArmor).startsWith("❤100/100 | "), "心组与护甲之间才该有分隔符: "
+                + join(narrowArmor));
+        check(!join(narrowArmor).contains("❤100/100 | ❤"), "心里面不该出现分隔符: " + join(narrowArmor));
+
+        // 一行放不下（超过 max(条长, MIN_ROW_WIDTH)）→ 红心顶到上面一行。
         EnemyHudLayout.Result armored = run("心数+护甲", new Data("带护甲", 160, 100, false, 3,
                 new int[]{0, 5, 0, 0, 0, 0, 0}), withArmor);
-        check(join(armored).contains("❤100 💛60"), "各类心之间应只有一个空格: " + join(armored));
-        check(join(armored).startsWith("❤100 💛60 | "), "心组与护甲之间才该有分隔符: " + join(armored));
-        check(!join(armored).contains("❤100 | "), "心里面不该出现分隔符: " + join(armored));
+        check(armored.rowCount() == 2, "超宽时应折成两行: " + armored.rowCount());
+        check(rowText(armored, 0).equals("❤100/100"), "第一行应只有红心: " + rowText(armored, 0));
+        check(rowText(armored, 1).equals("💛60 | " + "\uD83D\uDEE13" + " "
+                + EnemyData.ARMOR_ICONS[1] + "5"), "第二行应是其它心+护甲: " + rowText(armored, 1));
+        check(armored.rows.get(0).top == EnemyHudLayout.TEXT_TOP - EnemyHudLayout.ROW_STEP,
+                "上面一行要再抬 " + EnemyHudLayout.ROW_STEP + " 像素");
+        check(armored.rows.get(1).top == EnemyHudLayout.TEXT_TOP, "下面一行贴着 TEXT_TOP");
+        check(armored.textTop == EnemyHudLayout.TEXT_TOP, "textTop 仍指最底一行");
         // 用转义写死期望值：🛡 在源码里常被写成「🛡+U+FE0F」，直接比字面量会踩变体选择符。
         check(join(armored).contains("\uD83D\uDEE13"), "防御段缺失: " + join(armored));
         check(join(armored).contains(EnemyData.ARMOR_ICONS[1] + "5"), "元素护甲段缺失: " + join(armored));
+    }
+
+    /** 第 index 行拼起来的文字（0 = 最上面那行）。 */
+    private static String rowText(EnemyHudLayout.Result r, int index) {
+        if (r == null || index < 0 || index >= r.rows.size()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (EnemyHudLayout.Line l : r.rows.get(index).lines) sb.append(l.text);
+        return sb.toString();
     }
 
     private static String join(EnemyHudLayout.Result r) {

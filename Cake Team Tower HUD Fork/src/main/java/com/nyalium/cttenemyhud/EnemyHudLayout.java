@@ -19,6 +19,11 @@ import java.util.List;
  * 「名字下移」位置，本 Mod 自己画名字时就用它（{@link #NAME_TOP}）。</p>
  *
  * <p>于是整组 HUD 自下而上：名称 {@code [0, 9]} → 血条 → 文字，互不重叠。</p>
+ *
+ * <h2>两行文字</h2>
+ * <p>红心现在写成 {@code ❤当前/上限}，配上魂心/护甲后整行容易比血条还宽。所以文字是
+ * <b>可折行</b>的：超过 {@code max(血条长度, MIN_ROW_WIDTH)} 时，红心单独占上面一行，
+ * 其余心与护甲留在下面一行；上面的行每次再抬 {@link #ROW_STEP} 像素，血条位置不变。</p>
  */
 public final class EnemyHudLayout {
 
@@ -32,6 +37,17 @@ public final class EnemyHudLayout {
     public static final int NAME_TOP = 0;
     /** 名称行高度（原版字体行高）。 */
     public static final int NAME_HEIGHT = 9;
+
+    /** 行高：文字折成多行时，每往上一行抬这么多像素（与原版字体行高一致）。 */
+    public static final int ROW_STEP = 9;
+
+    /**
+     * 一行文字的最小可用宽度。
+     *
+     * <p>整行宽度超过 {@code max(血条长度, 这个值)} 时，把红心单独顶到上面一行，
+     * 其余心与护甲留在下面一行，避免文字比血条还宽、糊成一坨。</p>
+     */
+    public static final int MIN_ROW_WIDTH = 90;
 
     /** 血条长度的允许范围与默认值（原版名牌像素）。 */
     public static final int BAR_WIDTH_MIN = 50;
@@ -77,16 +93,37 @@ public final class EnemyHudLayout {
         }
     }
 
+    /** 一整行（若干段首尾相接），多行时各自居中。 */
+    public static final class Row {
+        public final List<Line> lines;
+        /** 本行总宽（布局像素）。 */
+        public final int width;
+        /** 本行文字顶部（布局像素，向上为负）。 */
+        public final int top;
+
+        Row(List<Line> lines, int width, int top) {
+            this.lines = lines;
+            this.width = width;
+            this.top = top;
+        }
+    }
+
     /** 布局结果。 */
     public static final class Result {
+        /** 从下到上按视觉顺序排列：最后一个是最靠近血条那行。 */
+        public final List<Row> rows;
+        /** 所有行扁平化后的段（调试 / 测试用）。 */
         public final List<Line> lines;
         public final int textWidth;
         public final int barWidth;
+        /** 最底一行的文字顶部（多行时上面的行依次再往上 9 像素）。 */
         public final int textTop;
         public final int barTop;
         public final boolean hasText;
 
-        Result(List<Line> lines, int textWidth, int barWidth, int textTop, int barTop) {
+        Result(List<Row> rows, List<Line> lines, int textWidth, int barWidth,
+               int textTop, int barTop) {
+            this.rows = rows;
             this.lines = lines;
             this.textWidth = textWidth;
             this.barWidth = barWidth;
@@ -98,6 +135,11 @@ public final class EnemyHudLayout {
         /** 完全没有内容可画（三个开关全关 / 没有任何数据）。 */
         public boolean isEmpty() {
             return !hasText && barWidth <= 0;
+        }
+
+        /** 文字一共占几行。 */
+        public int rowCount() {
+            return rows.size();
         }
     }
 
@@ -119,40 +161,42 @@ public final class EnemyHudLayout {
         Options opt = options != null ? options : new Options();
         WidthMeasurer w = measurer != null ? measurer : String::length;
 
-        List<Line> lines = new ArrayList<>(12);
+        // 红心（或队友的「当前/最大」）单独一组，太长时它自己占上面一行。
+        List<Line> head = new ArrayList<>(4);
+        // 其它心 + 护甲，留在下面一行。
+        List<Line> rest = new ArrayList<>(12);
 
         if (opt.showNumbers) {
             if (opt.showHearts && hearts != null && hearts.any()) {
-                appendHeartSegments(lines, hearts);
+                if (hearts.has(HeartCounts.RED)) {
+                    head.add(redLine(hearts.get(HeartCounts.RED), maxHp));
+                }
+                appendHeartSegments(rest, hearts);
             } else if (!percentOnly) {
                 // 拆不出各类心（例如队友只有 AllHearts/MaxHP）：退回原来的「当前/最大」。
-                lines.add(new Line(Math.max(0, hp) + "/" + Math.max(0, maxHp), 0xFFFFFF));
+                head.add(new Line(Math.max(0, hp) + "/" + Math.max(0, maxHp), 0xFFFFFF));
             }
         }
 
         if (opt.showArmor && hasArmor(defence, armor)) {
-            if (!lines.isEmpty()) {
-                lines.add(new Line(SEPARATOR, SEPARATOR_COLOR));
+            // 分隔符是「心组 ↔ 护甲」之间的，红心在 head 里也算有内容。
+            if (!head.isEmpty() || !rest.isEmpty()) {
+                rest.add(new Line(SEPARATOR, SEPARATOR_COLOR));
             }
             if (defence != 0) {
-                lines.add(new Line("\uD83D\uDEE1" + defence, EnemyData.DEFENCE_COLOR));
+                rest.add(new Line("\uD83D\uDEE1" + defence, EnemyData.DEFENCE_COLOR));
             }
             if (armor != null) {
                 int n = Math.min(armor.length, EnemyData.ARMOR_ICONS.length);
                 for (int i = 0; i < n; i++) {
                     int v = armor[i];
                     if (v == 0) continue;
-                    if (!lines.isEmpty()) {
-                        lines.add(new Line(" ", 0xFFFFFF));
+                    if (!rest.isEmpty()) {
+                        rest.add(new Line(" ", 0xFFFFFF));
                     }
-                    lines.add(new Line(EnemyData.ARMOR_ICONS[i] + v, EnemyData.ARMOR_COLORS[i]));
+                    rest.add(new Line(EnemyData.ARMOR_ICONS[i] + v, EnemyData.ARMOR_COLORS[i]));
                 }
             }
-        }
-
-        int textWidth = 0;
-        for (Line line : lines) {
-            textWidth += Math.max(0, w.width(line.text));
         }
 
         int barWidth = 0;
@@ -160,22 +204,84 @@ public final class EnemyHudLayout {
             barWidth = resolveBarWidth(opt.barWidth);
         }
 
-        return new Result(lines, textWidth, barWidth,
-                TEXT_TOP + opt.verticalOffset,
-                BAR_TOP + opt.verticalOffset);
+        // 分隔符只存在于「心 ↔ 护甲」之间；护甲成为单独一行时，换行就代替了它。
+        boolean hasSeparator = !rest.isEmpty() && SEPARATOR.equals(rest.get(0).text);
+
+        List<Line> merged = new ArrayList<>(head.size() + rest.size() + 1);
+        merged.addAll(head);
+        if (!head.isEmpty() && !rest.isEmpty() && !hasSeparator) {
+            merged.add(new Line(HEART_GAP, 0xFFFFFF));
+        }
+        merged.addAll(rest);
+
+        List<Line> bottom = hasSeparator
+                ? new ArrayList<>(rest.subList(1, rest.size()))
+                : rest;
+
+        int headWidth = width(head, w);
+        int bottomWidth = width(bottom, w);
+        int mergedWidth = width(merged, w);
+
+        // 一行放得下就一行；放不下（且红心之后确实还有东西）就把红心顶到上面一行。
+        List<List<Line>> groups = new ArrayList<>(2);
+        if (headWidth > 0 && bottomWidth > 0
+                && mergedWidth > Math.max(barWidth, MIN_ROW_WIDTH)) {
+            groups.add(head);
+            groups.add(bottom);
+        } else if (!merged.isEmpty()) {
+            groups.add(merged);
+        }
+
+        int bottomTop = TEXT_TOP + opt.verticalOffset;
+        int count = groups.size();
+        List<Row> rows = new ArrayList<>(count);
+        List<Line> flat = new ArrayList<>(12);
+        int flatWidth = 0;
+        for (int i = 0; i < count; i++) {
+            List<Line> group = groups.get(i);
+            int width = width(group, w);
+            // 最后一行贴着 TEXT_TOP，往上的行依次再抬 9 像素。
+            rows.add(new Row(group, width, bottomTop - ROW_STEP * (count - 1 - i)));
+            flat.addAll(group);
+            flatWidth += width;
+        }
+
+        return new Result(rows, flat, flatWidth, barWidth,
+                bottomTop, BAR_TOP + opt.verticalOffset);
     }
 
     /**
-     * 「红心 X 魂心 X 黑心 X 蓝心 X 碎心 X 粉心 X」，<b>只写存在的类型</b>。
+     * 红心段：{@code ❤当前/红心上限}。
      *
-     * <p>顺序固定为红 / 魂 / 黑 / 蓝 / 碎 / 粉，不随数值大小变化，眼睛每次落在同一位置。
+     * <p>红心上限就是 {@code MaxHP}（数据包 {@code RedHearts = min(RedHearts, MaxHP)}）；
+     * 上限未知（≤ 0）时只写当前值。</p>
+     */
+    private static Line redLine(int red, int maxHp) {
+        String icon = HeartCounts.ICONS[HeartCounts.RED];
+        String text = maxHp > 0 ? icon + Math.max(0, red) + "/" + maxHp : icon + Math.max(0, red);
+        return new Line(text, HeartCounts.COLORS[HeartCounts.RED]);
+    }
+
+    private static int width(List<Line> lines, WidthMeasurer w) {
+        int total = 0;
+        for (Line line : lines) {
+            total += Math.max(0, w.width(line.text));
+        }
+        return total;
+    }
+
+    /**
+     * 除红心以外的各类心：「魂心 X 黑心 X 蓝心 X 碎心 X 粉心 X」，<b>只写存在的类型</b>。
+     *
+     * <p>顺序固定为魂 / 黑 / 蓝 / 碎 / 粉，不随数值大小变化，眼睛每次落在同一位置。
      * 碎心与粉心互斥（数据包 {@code CrackedHearts} 的符号决定是哪一个），所以最多只出现一个。</p>
      *
      * <p>各类心之间只用 <b>一个空格</b> 相连，整组算「一段」；只有心组与护甲之间
-     * 才用 {@link #SEPARATOR} 隔开（{@code ❤100 💛60 | 🛡3 ☃5}）。</p>
+     * 才用 {@link #SEPARATOR} 隔开（{@code ❤100/100 💛60 | 🛡3 ☃5}）。红心由
+     * {@link #redLine} 单独产出，这里从 {@link HeartCounts#SOUL} 开始。</p>
      */
     private static void appendHeartSegments(List<Line> lines, HeartCounts hearts) {
-        for (int kind = 0; kind < HeartCounts.COUNT; kind++) {
+        for (int kind = HeartCounts.SOUL; kind < HeartCounts.COUNT; kind++) {
             if (!hearts.has(kind)) continue;
             if (!lines.isEmpty()) {
                 lines.add(new Line(HEART_GAP, 0xFFFFFF));

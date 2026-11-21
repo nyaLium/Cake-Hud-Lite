@@ -2,7 +2,7 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.14.2**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.14.3**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 设置界面一纵排布（通用 / 敌人 / 玩家 / 恢复默认 + 底部完成）。
 
 | 项目 | 内容 |
@@ -12,19 +12,24 @@
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.14.2.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.14.3.jar` |
 
 ## 显示效果
 
 ```
-        ❤120 💛40 | 🛡3 🔥5       ← 心数（同类只用空格隔开）+ 护甲；心组与护甲之间才是 |
+        ❤120/120 💛40 | 🛡3 🔥5    ← 放得下：一行（红心写「当前/上限」，同类只用空格隔开）
         ▬▬▬▬▬▬ 原版 bossbar 纹理 ▬▬▬▬▬▬
         冰霜狼                      ← 原版名称（本 Mod 只摘掉下面那行分数）
+
+        ❤200/200                    ← 放不下：红心单独占上面一行
+        💗5 | 🛡5 🔥3 ☃1            ← 其余心 + 护甲留在下面一行（换行代替了那个 |）
+        ▬▬▬▬▬▬ 原版 bossbar 纹理 ▬▬▬▬▬▬
+        冰霜狼
 ```
 
 | 行 | 距离锚点 | 说明 |
 | --- | --- | --- |
-| 心数 / 护甲 | -18 ~ -9 像素 | `verticalOffset` 可再往上挪 |
+| 心数 / 护甲 | -18 ~ -9 像素（折行时上面的行到 -27 起） | `verticalOffset` 可再往上挪 |
 | 血条 | -7 ~ -2 像素 | 原版 bossbar 纹理，5 像素高 |
 | 名称（原版） | 0 ~ 9 像素 | 分数一摘，原版自己就落回这一行 |
 
@@ -41,7 +46,7 @@
 
 | 心类 | 血条 | 图标 | 数据包通道 |
 | --- | --- | --- | --- |
-| 红心 | 红 | ❤ | `HeartValue=1`（敌方条颜色 `blue`） |
+| 红心 | 红 | ❤ 当前/上限 | `HeartValue=1`（敌方条颜色 `blue`） |
 | 魂心 | **黄** | 💛 | `HeartValue=2`（敌方条颜色 `yellow`） |
 | 黑心 | **紫** | 🖤 | `HeartValue=3`（玩家条颜色 `purple`） |
 | 蓝心 | **蓝** | 💙 | `HeartValue=4`（玩家条颜色 `blue`） |
@@ -301,7 +306,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.14.2.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.14.3.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 

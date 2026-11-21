@@ -250,11 +250,14 @@ public final class EnemyHudElement implements HudElement {
                 pose.scale((float) unit, (float) unit);
 
                 if (layout.hasText) {
-                    int cursor = -layout.textWidth / 2;
-                    for (EnemyHudLayout.Line line : layout.lines) {
-                        g.text(font, line.text, cursor, layout.textTop,
-                                withAlpha(line.rgb, alpha), options.textShadow);
-                        cursor += font.width(line.text);
+                    // 每行各自居中；行数由布局决定（放不下时红心会单独占上面一行）。
+                    for (EnemyHudLayout.Row row : layout.rows) {
+                        int cursor = -row.width / 2;
+                        for (EnemyHudLayout.Line line : row.lines) {
+                            g.text(font, line.text, cursor, row.top,
+                                    withAlpha(line.rgb, alpha), options.textShadow);
+                            cursor += font.width(line.text);
+                        }
                     }
                 }
 
