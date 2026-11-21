@@ -1,0 +1,5 @@
+# 构建产物与本机缓存（不入库）
+Cake Team Tower HUD Fork/build/
+Cake Team Tower HUD Fork/run/
+Cake Team Tower HUD Fork/.gradle/
+*.log

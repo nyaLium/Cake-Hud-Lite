@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.nyalium.cttenemyhud.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "BossHealthOverlayAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

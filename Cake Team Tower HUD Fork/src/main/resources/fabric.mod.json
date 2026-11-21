@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "ctt-hud-fork",
+  "version": "${version}",
+  "name": "Cake Team Tower HUD - Fork",
+  "description": "Fork of Cake-Hud (MIT): enemy / teammate health above name plates, teammate and self stat panels, curse-aware.",
+  "authors": [
+    "nyaLium",
+    "Fork of Cake-Hud by TheHolyLord (MIT)"
+  ],
+  "license": "MIT",
+  "icon": "assets/ctt-hud-fork/icon.png",
+  "environment": "client",
+  "mixins": [
+    "ctt_hud_fork.mixins.json"
+  ],
+  "entrypoints": {
+    "client": [
+      "com.nyalium.cttenemyhud.CttEnemyHudClient"
+    ],
+    "modmenu": [
+      "com.nyalium.cttenemyhud.ModMenuIntegration"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": ">=${minecraft_version}",
+    "java": ">=25",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "modmenu": ">=21.0.0"
+  }
+}

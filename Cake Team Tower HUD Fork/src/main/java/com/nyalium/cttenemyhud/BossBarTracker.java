@@ -1,0 +1,271 @@
+package com.nyalium.cttenemyhud;
+
+import com.nyalium.cttenemyhud.mixin.BossHealthOverlayAccessor;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.BossHealthOverlay;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * 从<b>客户端 Boss 栏</b>读「精确血量 + 护甲」，并把这条 bar 认领到具体实体上。
+ *
+ * <h2>纯客户端唯一能拿到绝对值的通道</h2>
+ * <p>计分板里 {@code AllHearts} / {@code MaxHP} / {@code Defence} 这些 objective 没上展示槽，
+ * 原版不会同步给客户端；但 {@code ClientboundBossEventPacket} 是<b>逐玩家</b>下发的，
+ * 服务端建了什么 bar 客户端就有什么。数据包 {@code bossbars/targetting_enemy.mcfunction}
+ * 恰好把 {@code 名字 (HP 当前/上限) 🛡防御 [元素护甲]} 拼进了 {@code minecraft:targetting}
+ * 的标题，所以这段标题就是权威数值。</p>
+ *
+ * <h2>局限</h2>
+ * <p>数据包同一时刻只维护一条这样的 bar，所以<b>只有被地图锁定的那只敌人</b>能拿到精确值；
+ * 其余敌人退回 {@code below_name} 的 {@code HealthPercent} 百分比。</p>
+ *
+ * <h2>护甲是轮换的</h2>
+ * <p>同一帧的后缀里只带一种元素护甲（{@code ArmorDisplay} 每 40 tick 进一档），
+ * 所以按实体累积到 {@link ArmourCache}，超过一个轮换周期没再出现才作废。</p>
+ */
+final class BossBarTracker {
+
+    /** 一条可解析的怪物 bar。 */
+    static final class Bar {
+        final String name;
+        final int hp;
+        final int maxHp;
+        /** 本帧解析到的护甲段，下标同 {@link ArmourCache}：0=防御，1..7=元素。 */
+        final int[] armour;
+
+        Bar(String name, int hp, int maxHp, int[] armour) {
+            this.name = name;
+            this.hp = hp;
+            this.maxHp = maxHp;
+            this.armour = armour;
+        }
+    }
+
+    private static final int SLOT_SHIELD = 0x1F6E1; // 🛡
+    private static final int SLOT_FIRE = 0x1F525;   // 🔥
+    private static final int SLOT_ICE = 0x2603;     // ☃
+    private static final int SLOT_DARK = 0x2620;    // ☠
+    private static final int SLOT_LIGHT = 0x2600;   // ☀
+    private static final int SLOT_WATER = 0x2693;   // ⚓
+    private static final int SLOT_ELECTRIC = 0x26A1;// ⚡
+
+    private BossBarTracker() {}
+
+    /** 每帧取一次当前客户端所有「怪物血量条」。 */
+    static List<Bar> snapshot(Minecraft mc) {
+        if (mc.gui == null || mc.gui.hud == null) return List.of();
+        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
+        if (overlay == null) return List.of();
+
+        Map<UUID, BossEvent> bars;
+        try {
+            bars = ((BossHealthOverlayAccessor) (Object) overlay).cttEnemyHud$getBossBars();
+        } catch (Throwable t) {
+            return List.of();
+        }
+        if (bars == null || bars.isEmpty()) return List.of();
+
+        String playerName = mc.player != null ? mc.player.getName().getString() : "";
+        List<Bar> out = new ArrayList<>(2);
+        for (BossEvent bar : bars.values()) {
+            Component component = bar.getName();
+            if (component == null) continue;
+            String text = component.getString();
+
+            // 玩家自己 / 队伍状态条不是怪物条
+            if (BossBarTitle.looksLikeTeamBar(text)) continue;
+            if (!playerName.isEmpty() && text.contains(playerName)) continue;
+
+            BossBarTitle title = BossBarTitle.parse(text);
+            if (title == null) continue;
+            out.add(new Bar(title.name, title.hp, title.maxHp, parseArmour(component)));
+        }
+        return out;
+    }
+
+    /**
+     * 把每条 bar 认领到最近的同名实体。
+     *
+     * <p>名字匹配两种优先级：先「完全相同」，再「互相包含」；同一优先级里取离玩家最近的。
+     * 命中后顺手把本帧的护甲段喂给 {@link ArmourCache}。</p>
+     */
+    static Map<UUID, Bar> resolve(Minecraft mc, List<Bar> bars) {
+        Map<UUID, Bar> out = new HashMap<>();
+        if (bars.isEmpty() || mc.level == null || mc.player == null) return out;
+
+        Vec3 playerPos = mc.player.position();
+        List<Entity> candidates = new ArrayList<>();
+        for (Entity entity : mc.level.entitiesForRendering()) {
+            if (entity instanceof Player || entity instanceof ArmorStand) continue;
+            if (!entity.isAlive() || entity.isInvisible()) continue;
+            candidates.add(entity);
+        }
+        if (candidates.isEmpty()) return out;
+
+        for (Bar bar : bars) {
+            Entity best = null;
+            double bestDist = Double.MAX_VALUE;
+            for (int pass = 0; pass < 2 && best == null; pass++) {
+                boolean exact = pass == 0;
+                for (Entity entity : candidates) {
+                    if (!nameMatches(entity, bar.name, exact)) continue;
+                    double dist = entity.position().distanceToSqr(playerPos);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        best = entity;
+                    }
+                }
+            }
+            if (best != null) {
+                out.put(best.getUUID(), bar);
+                ArmourCache.observe(best.getUUID(), bar.armour);
+            }
+        }
+        return out;
+    }
+    // ── 名字匹配 ──
+
+    private static boolean nameMatches(Entity entity, String barName, boolean exact) {
+        if (barName.isEmpty()) return false;
+        for (String candidate : nameCandidates(entity)) {
+            if (candidate == null || candidate.isEmpty()) continue;
+            if (exact) {
+                if (candidate.equalsIgnoreCase(barName)) return true;
+            } else if (candidate.contains(barName) || barName.contains(candidate)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 一只实体可能被叫成哪些名字：客户端本地化后的显示名，以及可翻译名字的**原始 key**
+     * （数据包用 {@code {translate:"Skeleton Warrior"}} 起名，key 本身就是服务端下发的英文名）。
+     */
+    private static List<String> nameCandidates(Entity entity) {
+        List<String> out = new ArrayList<>(4);
+        addCandidate(out, entity.getName());
+        Component display = entity.getDisplayName();
+        if (display != null) addCandidate(out, display);
+        return out;
+    }
+
+    private static void addCandidate(List<String> out, Component component) {
+        if (component == null) return;
+        String localized = component.getString();
+        if (localized != null && !localized.isEmpty()) out.add(localized.trim());
+        // 数据包用 {translate:"Skeleton Warrior"} 起名，key 本身就是服务端下发的英文名；
+        // 26.3 的 TranslatableContents#getKey() 是公开方法，直接取即可。
+        if (component.getContents() instanceof TranslatableContents ttc) {
+            String key = ttc.getKey();
+            if (key != null && !key.isEmpty()) out.add(key.trim());
+        }
+    }
+
+    // ── 护甲段解析 ──
+
+    /**
+     * 从整条标题里扫出「图标 + 数字」段。
+     *
+     * <p>不用正则：Java 的字符类处理代理对（🛡🔥 等 4 字节 emoji）会踩坑，
+     * 参考 Mod 就因此让两种 🛡 全都不显示。这里按码点线性扫描。</p>
+     */
+    static int[] parseArmour(Component title) {
+        int[] slots = new int[ArmourCache.SLOTS];
+        if (title == null) return slots;
+
+        StringBuilder flat = new StringBuilder();
+        List<Integer> colors = new ArrayList<>();
+        try {
+            title.visit((style, text) -> {
+                int color = resolveColor(style);
+                for (int i = 0; i < text.length(); i++) {
+                    char c = text.charAt(i);
+                    if (isInvisibleMark(c)) continue;
+                    flat.append(c);
+                    colors.add(color);
+                }
+                return Optional.empty();
+            }, Style.EMPTY);
+        } catch (Throwable t) {
+            return slots;
+        }
+
+        String s = flat.toString();
+        int i = 0;
+        while (i < s.length()) {
+            int cp = s.codePointAt(i);
+            int slot = slotOf(cp, i < colors.size() ? colors.get(i) : 0xFFFFFF);
+            if (slot < 0) {
+                i += Character.charCount(cp);
+                continue;
+            }
+            int j = i + Character.charCount(cp);
+            while (j < s.length() && s.charAt(j) == ' ') j++;
+            int start = j;
+            if (j < s.length() && (s.charAt(j) == '-' || s.charAt(j) == '+')) j++;
+            while (j < s.length() && Character.isDigit(s.charAt(j))) j++;
+            if (j > start) {
+                try {
+                    slots[slot] = Integer.parseInt(s.substring(start, j));
+                } catch (NumberFormatException ignored) {
+                    // 数字过长等异常：跳过这一段
+                }
+            }
+            i = Math.max(j, i + Character.charCount(cp));
+        }
+        return slots;
+    }
+
+    /** ⚓ 是 BMP 内符号，☃☠☀⚡ 也是；🛡🔥 是代理对，这里统一按码点比较。 */
+    private static int slotOf(int codePoint, int rgb) {
+        if (codePoint == SLOT_SHIELD) {
+            // 蓝🛡 = Defence，白🛡 = TrueArmor（数据包靠颜色区分同图标）
+            int r = (rgb >> 16) & 0xFF;
+            int b = rgb & 0xFF;
+            return b > r ? 0 : 5;
+        }
+        switch (codePoint) {
+            case SLOT_FIRE:
+                return 1;
+            case SLOT_ICE:
+                return 2;
+            case SLOT_DARK:
+                return 3;
+            case SLOT_LIGHT:
+                return 4;
+            case SLOT_WATER:
+                return 6;
+            case SLOT_ELECTRIC:
+                return 7;
+            default:
+                return -1;
+        }
+    }
+
+    private static int resolveColor(Style style) {
+        TextColor color = style == null ? null : style.getColor();
+        return color == null ? 0xFFFFFF : (color.getValue() & 0xFFFFFF);
+    }
+
+    private static boolean isInvisibleMark(char c) {
+        return c == '\uFE0E' || c == '\uFE0F'
+                || c == '\u200B' || c == '\u200C' || c == '\u200D'
+                || c == '\u2060' || c == '\uFEFF';
+    }
+}
