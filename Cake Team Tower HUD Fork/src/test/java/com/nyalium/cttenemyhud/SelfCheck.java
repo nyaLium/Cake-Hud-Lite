@@ -211,6 +211,7 @@ public final class SelfCheck {
         check(mob.any(), "有血时应能画");
         check(!mob.has(HeartCounts.BLACK) && !mob.has(HeartCounts.BLUE), "敌人不该有黑/蓝心");
         check(!mob.has(HeartCounts.CRACKED), "碎心读不到，不该显示");
+        check(!mob.has(HeartCounts.PINK), "粉心读不到，不该显示");
 
         HeartCounts full = HeartCounts.forMob(100, 100);
         check(full.get(HeartCounts.RED) == 100 && full.get(HeartCounts.SOUL) == 0, "满红心无魂心");
@@ -241,6 +242,16 @@ public final class SelfCheck {
         EnemyHudLayout.Result single = run("单色", new Data("单红", 80, 100, false, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
         check(join(single).equals("❤80"), "只有红心时不该出现分隔符: " + join(single));
+
+        // 碎心 / 粉心是同一 objective 的两面，画出来互斥、各用各的颜色。
+        EnemyHudLayout.Result crackedLine = EnemyHudLayout.compute(50, 50, false, 0,
+                new int[7], HeartCounts.of(50, 0, 0, 0, 5), o, SelfCheck::width);
+        check(join(crackedLine).equals("❤50 💔5"), "碎心行=" + join(crackedLine));
+        EnemyHudLayout.Result pinkLine = EnemyHudLayout.compute(50, 50, false, 0,
+                new int[7], HeartCounts.of(50, 0, 0, 0, -5), o, SelfCheck::width);
+        check(join(pinkLine).equals("❤50 💗5"), "粉心行=" + join(pinkLine));
+        check(HeartCounts.COLORS[HeartCounts.CRACKED] == 0xAA0000, "碎心配色应为 dark_red");
+        check(HeartCounts.COLORS[HeartCounts.PINK] == 0xFF55FF, "粉心配色应为 light_purple");
 
         // 拆不出心数（percentOnly / 未知）→ 退回「当前/最大」。
         EnemyHudLayout.Result fallback = run("回退", new Data("只有百分比", 73, 100, true, 0,
@@ -336,10 +347,30 @@ public final class SelfCheck {
         check(noMax.ratio == 0.0f, "MaxHP=0 时 ratio=" + noMax.ratio);
         check(noMax.hearts.get(HeartCounts.RED) == 30, "MaxHP=0 时红心=" + noMax.hearts.get(HeartCounts.RED));
 
-        // 负的碎心（粉心）按 0 处理（图标与配色暂与碎心共用）
+        // 碎心的符号：> 0 是碎心，< 0 是粉心（数据包 view_stats 的口径）
+        EnemyData.Snapshot crackedOnly = EnemyData.fromPayload(50, 50, 0, 0, 0, 3, 0, 0, 0, 0, new int[7]);
+        check(crackedOnly.hearts.get(HeartCounts.CRACKED) == 3, "正碎心="
+                + crackedOnly.hearts.get(HeartCounts.CRACKED));
+        check(crackedOnly.hearts.get(HeartCounts.PINK) == 0, "正碎心不该有粉心="
+                + crackedOnly.hearts.get(HeartCounts.PINK));
+
         EnemyData.Snapshot pink = EnemyData.fromPayload(50, 50, 0, 0, 0, -5, 0, 0, 0, 0, new int[7]);
-        check(pink.hearts.get(HeartCounts.CRACKED) == 0, "负碎心应夹到 0: "
+        check(pink.hearts.get(HeartCounts.CRACKED) == 0, "负碎心不该进碎心栏: "
                 + pink.hearts.get(HeartCounts.CRACKED));
+        check(pink.hearts.get(HeartCounts.PINK) == 5, "负碎心应变成 5 粉心: "
+                + pink.hearts.get(HeartCounts.PINK));
+        check(pink.hearts.has(HeartCounts.PINK) && !pink.hearts.has(HeartCounts.CRACKED),
+                "粉心存在而碎心不存在");
+
+        // 直接测 HeartCounts.of 的四条边界
+        check(HeartCounts.of(1, 0, 0, 0, 7).get(HeartCounts.CRACKED) == 7, "of(+7) 碎心");
+        check(HeartCounts.of(1, 0, 0, 0, 7).get(HeartCounts.PINK) == 0, "of(+7) 粉心");
+        check(HeartCounts.of(1, 0, 0, 0, -7).get(HeartCounts.PINK) == 7, "of(-7) 粉心");
+        check(HeartCounts.of(1, 0, 0, 0, -7).get(HeartCounts.CRACKED) == 0, "of(-7) 碎心");
+        check(HeartCounts.of(0, 0, 0, 0, 0).get(HeartCounts.PINK) == 0, "of(0) 粉心");
+        check(HeartCounts.of(0, 0, 0, 0, Integer.MIN_VALUE).get(HeartCounts.PINK) == Integer.MAX_VALUE,
+                "MIN_VALUE 粉心不该溢出为负");
+        check(HeartCounts.unknown().get(HeartCounts.PINK) == HeartCounts.UNKNOWN, "未知粉心哨兵值");
     }
 
     // ── 6. Boss 栏标题解析 ──
