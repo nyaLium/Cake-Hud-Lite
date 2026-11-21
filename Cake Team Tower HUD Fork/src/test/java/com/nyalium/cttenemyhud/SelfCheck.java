@@ -17,6 +17,7 @@ public final class SelfCheck {
         armorEdgeCases();
         heartCountsAndRows();
         barOwnershipScoring();
+        payloadConversion();
         bossBarTitles();
         curseKeys();
         teamBarTitles();
@@ -291,6 +292,51 @@ public final class SelfCheck {
                 new int[8], 1.0f, HeartCounts.Kind.RED);
         check(bar.expectedPercent() == expected,
                 "expectedPercent(" + hp + "/" + maxHp + ")=" + bar.expectedPercent());
+    }
+
+    // ── 5c. 服务端选装组件的数据换算 ──
+
+    private static void payloadConversion() {
+        // 魂心阶段：AllHearts 160 / MaxHP 100 / 魂 60 → 红 100，比例 60/100（数据包 Boss 栏同款口径）
+        EnemyData.Snapshot soul = EnemyData.fromPayload(160, 100, 60, 0, 0, 0, 100, 0, 0, 3,
+                new int[]{1, 0, 0, 0, 0, 0, 0});
+        check(soul.hearts.get(HeartCounts.RED) == 100, "payload 红心=" + soul.hearts.get(HeartCounts.RED));
+        check(soul.hearts.get(HeartCounts.SOUL) == 60, "payload 魂心=" + soul.hearts.get(HeartCounts.SOUL));
+        check(soul.kind == HeartCounts.Kind.SOUL, "魂心阶段 kind=" + soul.kind);
+        check(Math.abs(soul.ratio - 0.6f) < 1e-6, "魂心阶段 ratio=" + soul.ratio);
+        check(soul.hp == 160 && soul.maxHp == 100, "payload hp/maxHp=" + soul.hp + "/" + soul.maxHp);
+        check(soul.defence == 3 && soul.armor[0] == 1, "payload 护甲没接上");
+
+        // 红心阶段：只有红心 → 比例按 min(红,MaxHP)/MaxHP
+        EnemyData.Snapshot red = EnemyData.fromPayload(80, 100, 0, 0, 0, 0, 0, 0, 0, 0, new int[7]);
+        check(red.kind == HeartCounts.Kind.RED, "红心阶段 kind=" + red.kind);
+        check(Math.abs(red.ratio - 0.8f) < 1e-6, "红心阶段 ratio=" + red.ratio);
+        check(red.hearts.get(HeartCounts.RED) == 80, "红心阶段红心=" + red.hearts.get(HeartCounts.RED));
+
+        // 蓝心优先级最高（数据包 HeartValue 顺序 蓝 > 黑 > 魂 > 红）
+        EnemyData.Snapshot blue = EnemyData.fromPayload(100, 100, 0, 0, 30, 0, 0, 0, 60, 0, new int[7]);
+        check(blue.kind == HeartCounts.Kind.BLUE, "蓝心阶段 kind=" + blue.kind);
+        check(Math.abs(blue.ratio - 0.5f) < 1e-6, "蓝心阶段 ratio=" + blue.ratio);
+        check(blue.hearts.get(HeartCounts.RED) == 70, "蓝心阶段反算红心=" + blue.hearts.get(HeartCounts.RED));
+
+        // 黑心次之
+        EnemyData.Snapshot black = EnemyData.fromPayload(100, 100, 0, 20, 0, 0, 0, 40, 0, 0, new int[7]);
+        check(black.kind == HeartCounts.Kind.BLACK, "黑心阶段 kind=" + black.kind);
+        check(Math.abs(black.ratio - 0.5f) < 1e-6, "黑心阶段 ratio=" + black.ratio);
+
+        // 边界：数据自相矛盾（各色之和 > AllHearts）→ 红心夹到 0，不能为负
+        EnemyData.Snapshot weird = EnemyData.fromPayload(10, 100, 20, 0, 0, 0, 20, 0, 0, 0, new int[7]);
+        check(weird.hearts.get(HeartCounts.RED) == 0, "红心不该为负: " + weird.hearts.get(HeartCounts.RED));
+
+        // 边界：MaxHP 为 0 / 缺字段 → 比例 0，但心数照旧
+        EnemyData.Snapshot noMax = EnemyData.fromPayload(30, 0, 0, 0, 0, 0, 0, 0, 0, 0, new int[7]);
+        check(noMax.ratio == 0.0f, "MaxHP=0 时 ratio=" + noMax.ratio);
+        check(noMax.hearts.get(HeartCounts.RED) == 30, "MaxHP=0 时红心=" + noMax.hearts.get(HeartCounts.RED));
+
+        // 负的碎心（粉心）按 0 处理（图标与配色暂与碎心共用）
+        EnemyData.Snapshot pink = EnemyData.fromPayload(50, 50, 0, 0, 0, -5, 0, 0, 0, 0, new int[7]);
+        check(pink.hearts.get(HeartCounts.CRACKED) == 0, "负碎心应夹到 0: "
+                + pink.hearts.get(HeartCounts.CRACKED));
     }
 
     // ── 6. Boss 栏标题解析 ──

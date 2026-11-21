@@ -27,6 +27,11 @@ public final class EnemyHudConfig {
         public boolean textShadow = true;
         /** 是否画血条（原版 bossbar 纹理）。心数 / 护甲永远显示，不再提供开关。 */
         public boolean showBar = true;
+        /**
+         * 优先使用服务端选装组件推来的权威数据（{@link MobHealthPayload}）。
+         * 服务端没装本 Mod 时这一项无影响，自动回落到客户端 Boss 栏 + HealthPercent。
+         */
+        public boolean useServerData = true;
         /** 隐藏实体名称下方那条计分板分数（数据包的 HealthPercent 显示）。 */
         public boolean hideBelowNameScore = true;
         /** 隐藏上方 Boss 栏里「最近敌人的信息」那一条（头顶已经画过了）。 */

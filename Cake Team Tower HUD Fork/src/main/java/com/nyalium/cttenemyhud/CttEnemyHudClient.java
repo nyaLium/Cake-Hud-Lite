@@ -2,14 +2,17 @@ package com.nyalium.cttenemyhud;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.resources.Identifier;
 
 /**
- * CTT Enemy HUD · 纯客户端入口。
+ * CTT Enemy HUD · 客户端入口。
  *
- * <p><b>客户端必装、服务端选装</b>：所有数据都从客户端可见的渠道取
- * （计分板展示槽、原版 Boss 栏标题 / 颜色 / 进度、实体、玩家列表），服务端<b>不需要</b>安装任何东西。</p>
+ * <p><b>客户端必装、服务端选装</b>：所有基础数据都从客户端可见的渠道取
+ * （计分板展示槽、原版 Boss 栏标题 / 颜色 / 进度、实体、玩家列表），服务端<b>不需要</b>安装任何东西。
+ * 服务端若额外装了本 Mod，会通过 {@link MobHealthPayload} 推来按 UUID 的权威数据，
+ * 本端自动优先使用（{@code useServerData}）。</p>
  */
 public final class CttEnemyHudClient implements ClientModInitializer {
 
@@ -26,5 +29,9 @@ public final class CttEnemyHudClient implements ClientModInitializer {
         // 注意 ALLOW_GAME 的返回值语义：true = 允许显示，false = 拦掉。
         ClientReceiveMessageEvents.ALLOW_GAME.register(
                 (message, overlay) -> !ChatTriggerFilter.shouldHide(message, overlay));
+        // 服务端选装组件：接收按 UUID 的怪物权威数据。
+        ClientMobHealthCache.register();
+        // 断线 / 换服清缓存，避免看到上一局的残留数据。
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientMobHealthCache.reset());
     }
 }

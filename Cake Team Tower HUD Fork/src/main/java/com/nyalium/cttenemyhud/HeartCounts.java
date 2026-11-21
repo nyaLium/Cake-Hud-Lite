@@ -85,6 +85,21 @@ public final class HeartCounts {
         return h;
     }
 
+    /**
+     * 全部五类都已知（服务端组件推送时用）。
+     *
+     * <p>负数一律夹到 0：碎心为负表示「粉心」，图标与配色暂时共用碎心那一栏。</p>
+     */
+    public static HeartCounts of(int red, int soul, int black, int blue, int cracked) {
+        HeartCounts h = new HeartCounts(0);
+        h.values[RED] = Math.max(0, red);
+        h.values[SOUL] = Math.max(0, soul);
+        h.values[BLACK] = Math.max(0, black);
+        h.values[BLUE] = Math.max(0, blue);
+        h.values[CRACKED] = Math.max(0, cracked);
+        return h;
+    }
+
     public int get(int kind) {
         return kind >= 0 && kind < COUNT ? values[kind] : UNKNOWN;
     }

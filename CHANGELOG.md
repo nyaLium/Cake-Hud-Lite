@@ -7,8 +7,8 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
-| **1.13.5** | 修聊天栏被全拦（ALLOW_GAME 返回值反了）；通用设置「返回」按钮按实际行数定位（不再压行）；同名敌人按 `HealthPercent` + 绑定粘性做唯一认领 | `versions/v1.13.5/` |
-| 1.13.4 | 定位「客户端必装、服务端选装」；队友条与敌人条共用同一条原版 bossbar 纹理绘制；恢复自动开队伍条（3 s 冷却 / 5 次失败 10 分钟熔断 / 防误关）；聊天回显与报错过滤 | `versions/v1.13.4/` |
+| **1.14.0** | 新增服务端选装组件（`ctt-hud-fork:mob_health`，按 UUID 推 `AllHearts/MaxHP/护甲/红魂黑蓝碎`，5 Hz 差量 + 3 s keepalive）；客户端优先使用并在 5 s 失鲜后自动回落；新增 `useServerData` | `versions/v1.14.0/` |
+| 1.13.5 | 修聊天栏被全拦（ALLOW_GAME 返回值反了）；设置页「返回」按实际行数定位；同名敌人按 `HealthPercent` + 绑定粘性唯一认领 | `versions/v1.13.5/` |
 | 1.13.0 | 心数行（红/魂精确反推）；魂心→黄条、蓝心→蓝条；名称改由本 Mod 自绘（1.13.1 已移除） | `versions/v1.13.0/` |
 | 1.12.0 | 隐藏名称下方计分板分数；删除百分比文字；玩家血条独立设置（含隐藏队伍条）；血条按心类变色 | `versions/v1.12.0/` |
 | 1.11.0 | **回补顶部Boss条隐藏、队友血条；百分比可开关且保留护甲；| 分隔；默认透明度 75%；设置分四类** | `versions/v1.11.0/` |
@@ -27,16 +27,31 @@
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
 
-## 1.13.5（当前）
+## 1.14.0（当前）
+
+- **服务端选装组件**：新增 `MobHealthPayload`（S2C `ctt-hud-fork:mob_health`），
+  服务端 `CttEnemyHudServer` 每 4 tick（5 Hz）按玩家周围最近的 32 只怪推
+  `uuid / AllHearts / MaxHP / 魂 / 黑 / 蓝 / 碎 / MaxSoul / MaxBlack / MaxBlue / 防御 / 元素护甲×7 / targetted`。
+  差量（内容一致不重发）+ 每 3 s keepalive；`canSend` 为假（客户端没装）完全不发。
+- **客户端优先使用**：`ClientMobHealthCache`（UUID → Entry，5 s 失鲜，断线清空），
+  `EnemyData.fromPayload` 复现数据包 `HeartValue` 分段（蓝 → 黑 → 魂 → 红）算血条比例，
+  红心由 `AllHearts - 魂 - 黑 - 蓝` 反算。失鲜或关闭 `useServerData` → 回落 1.13.5 的纯客户端路径。
+- 新增配置 `useServerData`（默认开，界面在敌人设置）。
+- `fabric.mod.json` 的 `environment` 改为 `*` 并加 `main` 入口（只装客户端时该入口在集成服务器上跑，
+  单机自动获得完整数据；只装服务端时客户端不受影响）。
+- **修一个启动崩溃**：`CustomPacketPayload.createType(String)` 收的是 path 不是 `ns:path`，
+  传 `"ctt-hud-fork:mob_health"` 会在 main 入口抛 `IdentifierException`，改用
+  `new Type<>(Identifier.fromNamespaceAndPath(...))`。Fabric API 6.x 的注册入口是
+  `PayloadTypeRegistry.clientboundPlay()`（`playS2C()` 已不存在）。
+- 自检：`checks=1476 failures=0`（新增 18 条 payload 换算断言）。
+
+## 1.13.5
 
 - **修复聊天栏被全部拦截**：`ClientReceiveMessageEvents.ALLOW_GAME` 是「true = 允许显示」，
   1.13.4 把 `shouldHide` 直接注册进去 → 非目标消息全被拦掉。改为 `!shouldHide(...)`。
-- **修复设置界面按钮错位**：子页面改为返回实际占用行数，「返回」落在最长一列下方；
-  通用设置重新分栏（左 4 / 右 3，共 4 行），不再压住最后一个开关。
-- **同名敌人血条唯一化**：新增 `Bar.expectedPercent()`
-  （`min(AllHearts, MaxHP) * 100 / MaxHP`，与数据包同口径），
-  按「百分比精确吻合 > 差 ≤2 > 名字完全一致 > 上一帧绑定（粘性）> 距离」打分认领；
-  对不上时宁可不显示绝对值。绑定按 bar UUID 保存，bar 消失即清理。
+- **修复设置界面按钮错位**：子页面改为返回实际占用行数，「返回」落在最长一列下方。
+- **同名敌人血条唯一化**：`Bar.expectedPercent()`（`min(AllHearts, MaxHP) * 100 / MaxHP`）+
+  绑定粘性 + 名字完全一致 + 距离 四级打分。
 - 自检：`checks=1458 failures=0`。
 
 ## 1.13.4

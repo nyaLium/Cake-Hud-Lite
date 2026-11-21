@@ -64,6 +64,11 @@ public final class EnemyData {
         public final HeartCounts hearts;
         /** 血条填充比例 0..1。 */
         public final float ratio;
+        /**
+         * 当前血条表现的心类（决定纹理配色）；null = 红条。
+         * 由 Boss 栏认领或服务端组件填，见 {@link EnemyHudElement}。
+         */
+        public HeartCounts.Kind kind;
 
         Snapshot(int hp, int maxHp, boolean percentOnly, int percent, int defence, int[] armor,
                  HeartCounts hearts, float ratio) {
@@ -102,6 +107,56 @@ public final class EnemyData {
         int safeHp = Math.max(0, Math.min(hp, safeMax));
         HeartCounts h = hearts != null ? hearts : HeartCounts.forMob(safeHp, safeMax);
         return new Snapshot(safeHp, safeMax, false, pct(safeHp, safeMax), defence, fixed, h, ratio);
+    }
+
+    /**
+     * 用服务端组件（{@link MobHealthPayload}）推送的权威数据构造读数。
+     *
+     * <p><b>纯函数</b>，只吃整数，便于自检穷举。红心由
+     * {@code AllHearts - 魂 - 黑 - 蓝} 反算（数据包 {@code health.mcfunction:25-28}）。</p>
+     *
+     * <p>血条填充比例复现数据包 Boss 栏的「按当前心类分层」（{@code HeartValue} 的优先级
+     * 蓝 &gt; 黑 &gt; 魂 &gt; 红）：当前这一类的剩余量 ÷ 它的上限。
+     * 四类都没有时按红心算 {@code min(红, MaxHP) / MaxHP}。</p>
+     */
+    public static Snapshot fromPayload(int hp, int maxHp, int soul, int black, int blue, int cracked,
+                                       int maxSoul, int maxBlack, int maxBlue,
+                                       int defence, int[] armour) {
+        int all = Math.max(0, hp);
+        int cap = Math.max(0, maxHp);
+        int soulC = Math.max(0, soul);
+        int blackC = Math.max(0, black);
+        int blueC = Math.max(0, blue);
+        int red = Math.max(0, all - soulC - blackC - blueC);
+        int redClamped = cap > 0 ? Math.min(red, cap) : red;
+
+        HeartCounts hearts = HeartCounts.of(red, soulC, blackC, blueC, cracked);
+
+        float ratio;
+        HeartCounts.Kind kind;
+        if (blueC > 0 && maxBlue > 0) {
+            ratio = blueC / (float) maxBlue;
+            kind = HeartCounts.Kind.BLUE;
+        } else if (blackC > 0 && maxBlack > 0) {
+            ratio = blackC / (float) maxBlack;
+            kind = HeartCounts.Kind.BLACK;
+        } else if (soulC > 0 && maxSoul > 0) {
+            ratio = soulC / (float) maxSoul;
+            kind = HeartCounts.Kind.SOUL;
+        } else {
+            ratio = cap > 0 ? redClamped / (float) cap : 0.0f;
+            kind = HeartCounts.Kind.RED;
+        }
+
+        int[] fixed = new int[ARMOR_OBJECTIVES.length];
+        if (armour != null) {
+            System.arraycopy(armour, 0, fixed, 0, Math.min(armour.length, fixed.length));
+        }
+        int safeMax = Math.max(1, cap);
+        Snapshot snapshot = new Snapshot(all, safeMax, false, pct(all, safeMax), defence, fixed,
+                hearts, ratio);
+        snapshot.kind = kind;
+        return snapshot;
     }
 
     /**

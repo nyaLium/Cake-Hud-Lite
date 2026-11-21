@@ -1,4 +1,4 @@
-{
+﻿{
   "modmenu.nameTranslation.ctt-hud-fork": "CTT敌人血条",
   "modmenu.descriptionTranslation.ctt-hud-fork": "在原版名牌上方显示蛋糕塔敌人的心数、护甲与原版Boss条纹理的血条，纯客户端。",
 
@@ -18,6 +18,7 @@
   "ctt_enemy_hud.config.hideTeamBossBar": "隐藏上方Boss栏 - 队伍血量",
 
   "ctt_enemy_hud.config.showBar": "显示血条",
+  "ctt_enemy_hud.config.useServerData": "优先使用服务端数据",
   "ctt_enemy_hud.config.showTeammates": "显示队友血量",
   "ctt_enemy_hud.config.autoPartyBossbar": "自动开启队伍血量条",
   "ctt_enemy_hud.config.barWidth": "血条长度：%s",

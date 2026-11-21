@@ -10,11 +10,14 @@
   ],
   "license": "MIT",
   "icon": "assets/ctt-hud-fork/icon.png",
-  "environment": "client",
+  "environment": "*",
   "mixins": [
     "ctt_hud_fork.mixins.json"
   ],
   "entrypoints": {
+    "main": [
+      "com.nyalium.cttenemyhud.CttEnemyHudServer"
+    ],
     "client": [
       "com.nyalium.cttenemyhud.CttEnemyHudClient"
     ],

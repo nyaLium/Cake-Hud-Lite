@@ -54,8 +54,6 @@ public final class EnemyHudElement implements HudElement {
         double ppu;
         /** true = 队友（绿色条、无护甲）。 */
         boolean player;
-        /** 当前血条表现的心类；null = 红条。 */
-        HeartCounts.Kind kind;
     }
 
     @Override
@@ -107,15 +105,29 @@ public final class EnemyHudElement implements HudElement {
             EnemyData.Snapshot data = EnemyData.read(sb, entity);
             if (data == null) continue;   // HudTarget 已保证有数据，这里只是保险
 
-            HeartCounts.Kind kind = null;
-            BossBarTracker.Bar bar = exact.get(entity.getUUID());
-            if (bar != null) {
-                int[] slots = ArmourCache.snapshot(entity.getUUID());
-                int[] elements = new int[EnemyData.ARMOR_OBJECTIVES.length];
-                System.arraycopy(slots, 1, elements, 0, elements.length);
-                data = EnemyData.exact(bar.hp, bar.maxHp, bar.progress, slots[0], elements,
-                        HeartCounts.forMob(bar.hp, bar.maxHp));
-                kind = bar.kind;
+            // ① 服务端选装组件：按 UUID 的权威数据（每只怪都有绝对值 + 四色心）。
+            MobHealthPayload.Entry pushed =
+                    cfg.useServerData ? ClientMobHealthCache.lookup(entity.getUUID()) : null;
+            if (pushed != null) {
+                data = EnemyData.fromPayload(pushed.hp(), pushed.maxHp(),
+                        pushed.soul(), pushed.black(), pushed.blue(), pushed.cracked(),
+                        pushed.maxSoul(), pushed.maxBlack(), pushed.maxBlue(),
+                        pushed.defence(), pushed.armour());
+                if (pushed.targetted()) {
+                    // 被锁定的那只跟着数据包的护甲轮换走（ArmourCache 才有最新一档）
+                    ArmourCache.observe(entity.getUUID(), fullArmourSlots(pushed));
+                }
+            } else {
+                // ② 纯客户端：客户端 Boss 栏那条「最近敌人」条 + ArmourCache 轮换累积。
+                BossBarTracker.Bar bar = exact.get(entity.getUUID());
+                if (bar != null) {
+                    int[] slots = ArmourCache.snapshot(entity.getUUID());
+                    int[] elements = new int[EnemyData.ARMOR_OBJECTIVES.length];
+                    System.arraycopy(slots, 1, elements, 0, elements.length);
+                    data = EnemyData.exact(bar.hp, bar.maxHp, bar.progress, slots[0], elements,
+                            HeartCounts.forMob(bar.hp, bar.maxHp));
+                    data.kind = bar.kind;
+                }
             }
             withData++;
 
@@ -132,7 +144,6 @@ public final class EnemyHudElement implements HudElement {
             p.gx = pt[0];
             p.gy = pt[1];
             p.ppu = ppu;
-            p.kind = kind;
             placements.add(p);
         }
 
@@ -272,7 +283,18 @@ public final class EnemyHudElement implements HudElement {
     /** 队友固定绿条；敌人按当前心类取色。 */
     private static BossBarTexture.Tint tintOf(Placement p) {
         if (p.player) return BossBarTexture.Tint.GREEN;
-        return BossBarTexture.tintFor(p.kind);
+        return BossBarTexture.tintFor(p.data.kind);
+    }
+
+    /** 把服务端推来的 7 档元素护甲还原成 {@link ArmourCache} 的 8 槽格式（0=防御）。 */
+    private static int[] fullArmourSlots(MobHealthPayload.Entry entry) {
+        int[] slots = new int[ArmourCache.SLOTS];
+        slots[0] = entry.defence();
+        int[] armour = entry.armour();
+        if (armour != null) {
+            System.arraycopy(armour, 0, slots, 1, Math.min(armour.length, slots.length - 1));
+        }
+        return slots;
     }
 
     // ── 工具 ──

@@ -2,17 +2,17 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.13.5**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.14.0**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 设置界面一纵排布（通用 / 敌人 / 玩家 / 恢复默认 + 底部完成）。
 
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.13.5` |
+| 版本 | `1.14.0` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.13.5.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.14.0.jar` |
 
 ## 显示效果
 
@@ -68,16 +68,40 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 两个数都在客户端 Boss 栏标题里（`名字 (HP 120/100) 🛡3`），
 所以**敌人心数 100% 精确，不需要任何服务端组件**。
 
-## 数据来源（纯客户端）
+## 数据来源（客户端必装 / 服务端选装）
 
-| 数据源 | 能拿到什么 | 覆盖 |
-| --- | --- | --- |
-| 客户端 Boss 栏 `targetting*` 标题 | 精确 `AllHearts / MaxHP` + `🛡防御` + 元素护甲 | 被地图锁定的那一只 |
-| 同一条 bar 的 progress / color | 当前心类的剩余比例 + 是哪一类心 | 同上 |
-| `below_name` 展示槽的 `HealthPercent` | 0~100 百分比（红心口径） | 视野内全部敌人 |
-| 队伍条 `spectator_bossbar` | 每名队友的 `AllHearts / MaxHP` | 队伍条存在时 |
+| 数据源 | 能拿到什么 | 覆盖 | 需要服务端吗 |
+| --- | --- | --- | --- |
+| **服务端组件 `ctt-hud-fork:mob_health`** | 按 **UUID** 的 `AllHearts / MaxHP / 护甲 / 红魂黑蓝碎` | 视野内最近 32 只怪 | 选装 |
+| 客户端 Boss 栏 `targetting*` 标题 | 精确 `AllHearts / MaxHP` + `🛡防御` + 元素护甲 | 被地图锁定的那一只 | 否 |
+| 同一条 bar 的 progress / color | 当前心类的剩余比例 + 是哪一类心 | 同上 | 否 |
+| `below_name` 展示槽的 `HealthPercent` | 0~100 百分比（红心口径） | 视野内全部敌人 | 否 |
+| 队伍条 `spectator_bossbar` | 每名队友的 `AllHearts / MaxHP` | 队伍条存在时 | 否 |
 
 敌人判据是「有没有 CTT 的血量分数」，**不用 scoreboard tag**（原版不同步实体标签，客户端永远是空集）。
+
+### 三种安装组合
+
+| 客户端 | 服务端 | 效果 |
+| --- | --- | --- |
+| ✅ | ❌ | 被锁定的那只 `x/y` + 心数；其余怪只有百分比 |
+| ✅ | ✅ | **每只怪**都有 `x/y` + 护甲 + 各类心，同名怪也不串（按 UUID） |
+| ❌ | ✅ | 服务端什么都不发（`canSend` 为假），零副作用 |
+
+单机（集成服务器）自动等于「两端都装」。
+
+### 服务端组件协议
+
+`MobHealthPayload`（S2C，每 4 tick = 5 Hz，差量 + 3 s keepalive）：
+
+| 字段 | 说明 |
+| --- | --- |
+| `version` | 协议版本，客户端遇到更高版本整包忽略 |
+| `entries[]` | 最近 32 只怪，按距离 |
+
+单条：`uuid / hp(AllHearts) / maxHp / soul / black / blue / cracked / maxSoul / maxBlack / maxBlue / defence / armour[7] / targetted`。
+可负字段用 zigzag varint，一只怪约 40 字节。红心由 `AllHearts - 魂 - 黑 - 蓝` 反算。
+客户端在 5 s 内收到包才用，超时自动回落到纯客户端路径（`ClientMobHealthCache`）。
 
 ### 上方 Boss 栏的两条如何识别
 
@@ -102,8 +126,9 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 
 ## 同名敌人的唯一认领
 
-数据包那条「最近敌人」Boss 栏标题里**只有名字、没有 UUID**，所以「Stone Zombie ×5」靠名字分不开。
-本 Mod 用两个信号把它锁到唯一一只：
+装了服务端组件时**根本不需要认领**：数据按实体 UUID 走，名字再像也不会串。
+
+纯客户端时没有 UUID，只能靠两个信号把那条 Boss 栏锁到唯一一只：
 
 1. **`below_name` 的 `HealthPercent`**：只有真正被锁定的那只，它的百分比才等于
    bar 里的 `min(AllHearts, MaxHP) * 100 / MaxHP`（整数截断，与 `misc/health.mcfunction:102-104` 同口径）；
@@ -129,7 +154,7 @@ CTT敌人血条设置
 | 入口 | 内容 |
 | --- | --- |
 | 通用设置 | 左列：总开关 / 文字阴影 / 隐藏名称下方分数 / 透明度；右列：被墙挡住时隐藏 / **隐藏上方Boss栏 - 最近敌人的信息** / **隐藏上方Boss栏 - 队伍血量** |
-| 敌人设置 | 左列：显示血条 / 显示距离；右列：血条长度 / 整体缩放 / 垂直偏移 |
+| 敌人设置 | 左列：显示血条 / 显示距离；右列：血条长度 / 整体缩放 / 垂直偏移 / **优先使用服务端数据** |
 | 玩家设置 | 左列：显示队友血量 / **自动开启队伍血量条** / 显示距离；右列：血条长度 / 整体缩放 / 垂直偏移 |
 | 恢复默认 | 只改内存不落盘，点「完成」才写盘 |
 | 完成 | 归一化后写盘并关闭（总界面 ESC 等同「完成」） |
@@ -209,6 +234,7 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
   "opacity": 0.75,
   "textShadow": true,
   "showBar": true,
+  "useServerData": true,
   "hideBelowNameScore": true,
   "hideEnemyBossBar": true,
   "showTeammates": true,
@@ -233,6 +259,7 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 | `opacity` | 文字 + 血条不透明度（名称不吃） | 0.50 ~ 1.00（默认 0.75） |
 | `textShadow` | 文字阴影 | — |
 | `showBar` | 是否画血条（心数 / 护甲永久显示） | — |
+| `useServerData` | 优先使用服务端组件推来的权威数据（服务端没装则无影响） | — |
 | `hideBelowNameScore` | 隐藏数据包挂在名称下方的 `HealthPercent` 分数（名字因此自动落到原位） | — |
 | `hideEnemyBossBar` | 隐藏上方 Boss 栏里「最近敌人的信息」 | — |
 | `hideTeamBossBar` | 隐藏上方 Boss 栏里「队伍血量」（数据照常读取） | — |
@@ -263,7 +290,7 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**1458 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**1476 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与分隔符、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定。
 
@@ -273,7 +300,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.13.5.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.14.0.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 
@@ -292,11 +319,13 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 1.13.2 | 设置界面恢复「完成 / 取消」；总界面四项两列排布 |
 | 1.13.3 | 一纵排布 + 底部完成（取消移除）；心数/护甲永久开启；两条 Boss 栏开关并入通用并改名 |
 | 1.13.4 | 定位「客户端必装、服务端选装」；队友条与敌人条共用同一条原版 bossbar 纹理绘制；恢复自动开队伍条；聊天回显与报错过滤 |
-| **1.13.5** | 修聊天栏被全拦（`ALLOW_GAME` 返回值反了）；设置页「返回」按实际行数定位；同名敌人按 `HealthPercent` + 绑定粘性唯一认领 |
+| 1.13.5 | 修聊天栏被全拦（`ALLOW_GAME` 返回值反了）；设置页「返回」按实际行数定位；同名敌人按 `HealthPercent` + 绑定粘性唯一认领 |
+| **1.14.0** | 新增服务端选装组件（按 UUID 推权威血量/护甲/各类心，5 Hz 差量）；客户端优先使用并自动回落；新增 `useServerData` |
 
 ## 已知限制
 
 - 只在 **26.3** 上验证；1.21.4 需另开分支。
-- 精确血量只覆盖 Boss 栏指向的那一只，其余是百分比（纯客户端上限）。
-- 敌人心数（红 / 魂）精确；**队友的黑/蓝/碎心客户端拿不到**，那一行保持 `当前/最大`。
-- 队友头顶条依赖「队伍血量」这条 Boss 栏自身存在；本 Mod 不再主动 `/trigger` 打开它。
+- **纯客户端**下精确血量只覆盖 Boss 栏指向的那一只，其余是百分比；装了服务端组件后每只怪都有绝对值。
+- 队友的黑/蓝/碎心客户端拿不到（`spectator_bossbar` 只有 `AllHearts/MaxHP`），那一行保持 `当前/最大`；
+  同一套服务端通道扩一列即可补上，尚未做。
+- 队友头顶条依赖「队伍血量」这条 Boss 栏自身存在（自动开启会替你开，3 s 冷却 + 10 分钟熔断）。

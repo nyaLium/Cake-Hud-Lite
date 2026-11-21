@@ -133,7 +133,11 @@ public final class EnemyHudSettingsScreen extends Screen {
                 -30.0, 0.0, 1.0, cfg.verticalOffset,
                 v -> key("verticalOffset", signed((int) Math.round(v))),
                 v -> EnemyHudConfig.get().verticalOffset = (int) Math.round(v)));
-        return 3;
+        y += ROW_GAP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.useServerData)
+                .create(rightX, y, w, ROW_HEIGHT, key("useServerData"),
+                        (b, v) -> EnemyHudConfig.get().useServerData = v));
+        return 4;
     }
 
     // ── 玩家设置 ──
