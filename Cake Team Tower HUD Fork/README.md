@@ -2,7 +2,7 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.14.0**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.14.1**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 设置界面一纵排布（通用 / 敌人 / 玩家 / 恢复默认 + 底部完成）。
 
 | 项目 | 内容 |
@@ -12,12 +12,12 @@
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.14.0.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.14.1.jar` |
 
 ## 显示效果
 
 ```
-        ❤120 | 💛40 | 🛡3 🔥5      ← 心数（只写存在的类型）+ 护甲（永久显示）
+        ❤120 💛40 | 🛡3 🔥5       ← 心数（同类只用空格隔开）+ 护甲；心组与护甲之间才是 |
         ▬▬▬▬▬▬ 原版 bossbar 纹理 ▬▬▬▬▬▬
         冰霜狼                      ← 原版名称（本 Mod 只摘掉下面那行分数）
 ```
@@ -291,7 +291,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 ```
 
 **1476 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
-心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与分隔符、队伍条严格解析与宽松扫描、
+心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定。
 
 ## 构建
@@ -300,7 +300,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.14.0.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.14.1.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 

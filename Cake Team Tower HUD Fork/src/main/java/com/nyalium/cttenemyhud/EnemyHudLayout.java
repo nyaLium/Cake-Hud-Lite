@@ -42,6 +42,9 @@ public final class EnemyHudLayout {
     public static final String SEPARATOR = " | ";
     public static final int SEPARATOR_COLOR = 0x9E9E9E;
 
+    /** 同一组内各段之间的间隔（各类心之间用它，不是分隔符）。 */
+    public static final String HEART_GAP = " ";
+
     /** 文字宽度测量器（游戏里是真 Font，测试里可以是假实现）。 */
     public interface WidthMeasurer {
         int width(String text);
@@ -163,15 +166,18 @@ public final class EnemyHudLayout {
     }
 
     /**
-     * 「红心 X | 魂心 X | 黑心 X | 蓝心 X | 碎心 X」，<b>只写存在的类型</b>。
+     * 「红心 X 魂心 X 黑心 X 蓝心 X 碎心 X」，<b>只写存在的类型</b>。
      *
      * <p>顺序固定为红 / 魂 / 黑 / 蓝 / 碎，不随数值大小变化，眼睛每次落在同一位置。</p>
+     *
+     * <p>各类心之间只用 <b>一个空格</b> 相连，整组算「一段」；只有心组与护甲之间
+     * 才用 {@link #SEPARATOR} 隔开（{@code ❤100 💛60 | 🛡3 ☃5}）。</p>
      */
     private static void appendHeartSegments(List<Line> lines, HeartCounts hearts) {
         for (int kind = 0; kind < HeartCounts.COUNT; kind++) {
             if (!hearts.has(kind)) continue;
             if (!lines.isEmpty()) {
-                lines.add(new Line(SEPARATOR, SEPARATOR_COLOR));
+                lines.add(new Line(HEART_GAP, 0xFFFFFF));
             }
             lines.add(new Line(HeartCounts.ICONS[kind] + hearts.get(kind), HeartCounts.COLORS[kind]));
         }

@@ -228,14 +228,15 @@ public final class SelfCheck {
         check(HeartCounts.unknown().get(99) == HeartCounts.UNKNOWN, "越界下标应安全");
         check(HeartCounts.forMob(160, 100).knownSum() == 160, "已知心数之和应等于 AllHearts");
 
-        // 文字行：顺序 红/魂/黑/蓝/碎，中间 " | "。
+        // 文字行：顺序 红/魂/黑/蓝/碎，同一组内只隔一个空格（不插分隔符）。
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
         o.showArmor = false;
         o.showBar = false;
         EnemyHudLayout.Result r = run("心数行", new Data("两色", 160, 100, false, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
         String joined = join(r);
-        check(joined.equals("❤100 | 💛60"), "心数行内容=" + joined);
+        check(joined.equals("❤100 💛60"), "心数行内容=" + joined);
+        check(!joined.contains(EnemyHudLayout.SEPARATOR), "同类之间不该有分隔符=" + joined);
 
         EnemyHudLayout.Result single = run("单色", new Data("单红", 80, 100, false, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
@@ -254,12 +255,14 @@ public final class SelfCheck {
                 new int[]{0, 0, 0, 0, 0, 0, 0}), noHearts);
         check(join(numbers).equals("160/100"), "关掉心数应退回绝对血量: " + join(numbers));
 
-        // 心数与护甲之间也要有分隔符。
+        // 心组与护甲之间要有分隔符；心与心之间只能有一个空格。
         EnemyHudLayout.Options withArmor = new EnemyHudLayout.Options();
         withArmor.showBar = false;
         EnemyHudLayout.Result armored = run("心数+护甲", new Data("带护甲", 160, 100, false, 3,
                 new int[]{0, 5, 0, 0, 0, 0, 0}), withArmor);
-        check(join(armored).startsWith("❤100 | 💛60 | "), "心数后应有分隔符: " + join(armored));
+        check(join(armored).contains("❤100 💛60"), "各类心之间应只有一个空格: " + join(armored));
+        check(join(armored).startsWith("❤100 💛60 | "), "心组与护甲之间才该有分隔符: " + join(armored));
+        check(!join(armored).contains("❤100 | "), "心里面不该出现分隔符: " + join(armored));
         // 用转义写死期望值：🛡 在源码里常被写成「🛡+U+FE0F」，直接比字面量会踩变体选择符。
         check(join(armored).contains("\uD83D\uDEE13"), "防御段缺失: " + join(armored));
         check(join(armored).contains(EnemyData.ARMOR_ICONS[1] + "5"), "元素护甲段缺失: " + join(armored));
