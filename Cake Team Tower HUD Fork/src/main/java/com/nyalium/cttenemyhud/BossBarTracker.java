@@ -12,12 +12,15 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.scores.Scoreboard;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -42,6 +45,8 @@ public final class BossBarTracker {
 
     /** 一条可解析的怪物 bar。 */
     static final class Bar {
+        /** bossbar 自身的 UUID，用于「绑定到实体」的稳定性（同名怪物之间不来回跳）。 */
+        final UUID id;
         final String name;
         /** 标题里的 {@code AllHearts}（全部心的总量）。 */
         final int hp;
@@ -60,13 +65,29 @@ public final class BossBarTracker {
          */
         final HeartCounts.Kind kind;
 
-        Bar(String name, int hp, int maxHp, int[] armour, float progress, HeartCounts.Kind kind) {
+        Bar(UUID id, String name, int hp, int maxHp, int[] armour, float progress, HeartCounts.Kind kind) {
+            this.id = id;
             this.name = name;
             this.hp = hp;
             this.maxHp = maxHp;
             this.armour = armour;
             this.progress = progress;
             this.kind = kind;
+        }
+
+        /**
+         * 这条 bar 对应的「红心百分比」。
+         *
+         * <p>数据包 {@code misc/health.mcfunction:102-104}：
+         * {@code HealthPercent = min(RedHearts, MaxHP) * 100 / MaxHP}（整数除法，截断）。
+         * 标题里左数就是 {@code AllHearts}，所以 {@code 红心 = min(AllHearts, MaxHP)}。</p>
+         *
+         * @return 0~100；算不出来时 -1
+         */
+        int expectedPercent() {
+            if (maxHp <= 0) return -1;
+            int red = Math.max(0, Math.min(hp, maxHp));
+            return Math.min(100, (int) ((long) red * 100L / maxHp));
         }
     }
 
@@ -107,7 +128,7 @@ public final class BossBarTracker {
 
             BossBarTitle title = BossBarTitle.parse(text);
             if (title == null) continue;
-            out.add(new Bar(title.name, title.hp, title.maxHp, parseArmour(component),
+            out.add(new Bar(bar.getId(), title.name, title.hp, title.maxHp, parseArmour(component),
                     clampProgress(bar.getProgress()), kindOf(bar.getColor())));
         }
         return out;
@@ -136,15 +157,33 @@ public final class BossBarTracker {
         return Math.max(0.0f, Math.min(1.0f, progress));
     }
 
+    /** bar UUID → 实体 UUID。绑上之后不再每帧重新挑，避免同名怪物之间来回跳。 */
+    private static final Map<UUID, UUID> BINDINGS = new HashMap<>();
+
     /**
-     * 把每条 bar 认领到最近的同名实体。
-     * <p>名字匹配两种优先级：先「完全相同」，再「互相包含」；同一优先级里取离玩家最近的。
-     * 命中后顺手把本帧的护甲段喂给 {@link ArmourCache}。</p>
+     * 把每条 bar 认领到唯一一只实体。
+     *
+     * <h2>同名怪物怎么办</h2>
+     * <p>数据包那条 {@code targetting} 标题里只有实体<b>名字</b>，没有 UUID，所以名字本身区分不了
+     * 「Stone Zombie ×5」。能区分的是<b>{@code below_name} 的 {@code HealthPercent}</b>：
+     * 只有真正被锁定的那只，它的百分比才会等于 bar 里的
+     * {@code min(AllHearts, MaxHP) * 100 / MaxHP}（见 {@link Bar#expectedPercent()}）。</p>
+     *
+     * <p>打分（从强到弱）：</p>
+     * <ol>
+     *   <li>百分比精确吻合 → 基本可以确定就是它；</li>
+     *   <li>百分比差 ≤ 2（同步差一两个 tick）→ 次之；</li>
+     *   <li>名字完全相同优于「互相包含」；</li>
+     *   <li>上一帧的绑定优先（粘性，避免抖动时血条数字在两只怪之间来回跳）；</li>
+     *   <li>最后才看距离。</li>
+     * </ol>
+     * <p>命中后顺手把本帧的护甲段喂给 {@link ArmourCache}。</p>
      */
     static Map<UUID, Bar> resolve(Minecraft mc, List<Bar> bars) {
         Map<UUID, Bar> out = new HashMap<>();
         if (bars.isEmpty() || mc.level == null || mc.player == null) return out;
 
+        Scoreboard sb = mc.level.getScoreboard();
         Vec3 playerPos = mc.player.position();
         List<Entity> candidates = new ArrayList<>();
         for (Entity entity : mc.level.entitiesForRendering()) {
@@ -152,25 +191,46 @@ public final class BossBarTracker {
             if (!entity.isAlive() || entity.isInvisible()) continue;
             candidates.add(entity);
         }
-        if (candidates.isEmpty()) return out;
+        if (candidates.isEmpty()) {
+            BINDINGS.clear();
+            return out;
+        }
+
+        // 清掉已经消失的 bar 的绑定，避免无限增长。
+        Set<UUID> liveBarIds = new HashSet<>();
+        for (Bar bar : bars) liveBarIds.add(bar.id);
+        BINDINGS.keySet().retainAll(liveBarIds);
 
         for (Bar bar : bars) {
+            int expected = bar.expectedPercent();
+            UUID bound = BINDINGS.get(bar.id);
+
             Entity best = null;
-            double bestDist = Double.MAX_VALUE;
-            for (int pass = 0; pass < 2 && best == null; pass++) {
-                boolean exact = pass == 0;
-                for (Entity entity : candidates) {
-                    if (!nameMatches(entity, bar.name, exact)) continue;
-                    double dist = entity.position().distanceToSqr(playerPos);
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        best = entity;
-                    }
+            double bestScore = -Double.MAX_VALUE;
+            for (Entity entity : candidates) {
+                boolean exact = nameMatches(entity, bar.name, true);
+                if (!exact && !nameMatches(entity, bar.name, false)) continue;
+
+                int percent = EnemyData.healthPercentOf(sb, entity);
+                int diff = (expected < 0 || percent < 0) ? Integer.MAX_VALUE : Math.abs(expected - percent);
+
+                double score = 0.0;
+                if (diff == 0) score += 1.0e9;
+                else if (diff <= 2) score += 5.0e8;
+                if (exact) score += 1.0e7;
+                if (bound != null && bound.equals(entity.getUUID())) score += 1.0e6;
+                score -= entity.position().distanceToSqr(playerPos);
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = entity;
                 }
             }
             if (best != null) {
+                BINDINGS.put(bar.id, best.getUUID());
                 out.put(best.getUUID(), bar);
                 ArmourCache.observe(best.getUUID(), bar.armour);
+            } else {
+                BINDINGS.remove(bar.id);
             }
         }
         return out;

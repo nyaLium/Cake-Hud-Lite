@@ -16,6 +16,7 @@ public final class SelfCheck {
         configNormalization();
         armorEdgeCases();
         heartCountsAndRows();
+        barOwnershipScoring();
         bossBarTitles();
         curseKeys();
         teamBarTitles();
@@ -268,6 +269,28 @@ public final class SelfCheck {
         StringBuilder sb = new StringBuilder();
         for (EnemyHudLayout.Line l : r.lines) sb.append(l.text);
         return sb.toString();
+    }
+
+    // ── 5b. 同名怪物的唯一认领 ──
+
+    private static void barOwnershipScoring() {
+        // expectedPercent 必须与数据包 misc/health.mcfunction:102-104 的整数截断口径一致
+        expectBarPercent(160, 100, 100);   // 红心被 MaxHP 夹住 → 100%
+        expectBarPercent(100, 100, 100);
+        expectBarPercent(73, 120, 60);     // 73*100/120 = 60.83 → 截断 60
+        expectBarPercent(50, 120, 41);     // 41.67 → 41
+        expectBarPercent(1, 3, 33);        // 33.3 → 33
+        expectBarPercent(0, 100, 0);
+        expectBarPercent(5, 0, -1);        // 上限非法 → 算不出来
+        expectBarPercent(-9, 100, 0);      // 负数夹到 0
+    }
+
+    private static void expectBarPercent(int hp, int maxHp, int expected) {
+        BossBarTracker.Bar bar = new BossBarTracker.Bar(
+                java.util.UUID.randomUUID(), "Stone Zombie", hp, maxHp,
+                new int[8], 1.0f, HeartCounts.Kind.RED);
+        check(bar.expectedPercent() == expected,
+                "expectedPercent(" + hp + "/" + maxHp + ")=" + bar.expectedPercent());
     }
 
     // ── 6. Boss 栏标题解析 ──

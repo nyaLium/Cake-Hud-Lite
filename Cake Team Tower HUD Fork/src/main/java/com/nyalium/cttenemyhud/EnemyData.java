@@ -151,6 +151,21 @@ public final class EnemyData {
                 || score(sb, "HealthPercent", entity) > 0;
     }
 
+    /**
+     * 读一只实体的 {@code below_name} {@code HealthPercent}（0~100）；没有分数返回 -1。
+     *
+     * <p>用途：把「最近敌人」那条 bossbar 认领到正确的实体上 —— 同名怪物有好几只时，
+     * 只有真正被锁定的那只，它的 {@code HealthPercent} 才会和 bar 里的
+     * {@code min(AllHearts, MaxHP) / MaxHP} 对得上。</p>
+     */
+    public static int healthPercentOf(Scoreboard sb, Entity entity) {
+        if (sb == null || entity == null) return -1;
+        Objective obj = sb.getObjective("HealthPercent");
+        if (obj == null) return -1;
+        ReadOnlyScoreInfo info = sb.getPlayerScoreInfo(entity, obj);
+        return info == null ? -1 : info.value();
+    }
+
     private static int pct(int hp, int maxHp) {
         if (maxHp <= 0) return 100;
         return Math.max(0, Math.min(100, Math.round(hp * 100.0f / maxHp)));

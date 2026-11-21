@@ -23,6 +23,8 @@ public final class CttEnemyHudClient implements ClientModInitializer {
                 Identifier.fromNamespaceAndPath(MOD_ID, "enemy_hud"),
                 new EnemyHudElement());
         // 吞掉本 Mod 自发 /trigger 的聊天回显（成功回显 + 「无法触发该计分项」）。
-        ClientReceiveMessageEvents.ALLOW_GAME.register(ChatTriggerFilter::shouldHide);
+        // 注意 ALLOW_GAME 的返回值语义：true = 允许显示，false = 拦掉。
+        ClientReceiveMessageEvents.ALLOW_GAME.register(
+                (message, overlay) -> !ChatTriggerFilter.shouldHide(message, overlay));
     }
 }

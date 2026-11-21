@@ -50,14 +50,16 @@ public final class EnemyHudSettingsScreen extends Screen {
         int leftX = this.width / 2 - w - COLUMN_GAP / 2;
         int rightX = this.width / 2 + COLUMN_GAP / 2;
 
-        switch (section) {
+        int rows = switch (section) {
             case GENERAL -> initGeneral(cfg, w, leftX, rightX);
             case ENEMY -> initEnemy(cfg, w, leftX, rightX);
             case PLAYER -> initPlayer(cfg, w, leftX, rightX);
-        }
+        };
 
         int totalWidth = w * 2 + COLUMN_GAP;
-        int buttonY = Math.min(TOP + ROW_GAP * 4 + 12, this.height - ROW_HEIGHT - 8);
+        // 「返回」必须落在最长那一列的下方，否则会压住最后一个开关。
+        int contentBottom = TOP + ROW_GAP * (Math.max(1, rows) - 1) + ROW_HEIGHT;
+        int buttonY = Math.min(contentBottom + 12, this.height - ROW_HEIGHT - 8);
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
                 .bounds(leftX + totalWidth / 2 - 60, buttonY, 120, ROW_HEIGHT).build());
     }
@@ -69,7 +71,8 @@ public final class EnemyHudSettingsScreen extends Screen {
 
     // ── 通用设置 ──
 
-    private void initGeneral(EnemyHudConfig.Cfg cfg, int w, int leftX, int rightX) {
+    /** @return 占用的行数（左列最多 3，右列最多 4） */
+    private int initGeneral(EnemyHudConfig.Cfg cfg, int w, int leftX, int rightX) {
         int y = TOP;
         addRenderableWidget(CycleButton.onOffBuilder(cfg.enabled)
                 .create(leftX, y, w, ROW_HEIGHT, key("enabled"), (b, v) -> EnemyHudConfig.get().enabled = v));
@@ -82,28 +85,30 @@ public final class EnemyHudSettingsScreen extends Screen {
                 .create(leftX, y, w, ROW_HEIGHT, key("hideBelowNameScore"),
                         (b, v) -> EnemyHudConfig.get().hideBelowNameScore = v));
         y += ROW_GAP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideEnemyBossBar)
-                .create(leftX, y, w, ROW_HEIGHT, key("hideEnemyBossBar"),
-                        (b, v) -> EnemyHudConfig.get().hideEnemyBossBar = v));
-        y += ROW_GAP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideTeamBossBar)
-                .create(leftX, y, w, ROW_HEIGHT, key("hideTeamBossBar"),
-                        (b, v) -> EnemyHudConfig.get().hideTeamBossBar = v));
-
-        y = TOP;
-        addRenderableWidget(new ValueSlider(rightX, y, w, ROW_HEIGHT,
+        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
                 50.0, 100.0, 1.0, cfg.opacity * 100.0,
                 v -> key("opacity", Math.round(v) + "%"),
                 v -> EnemyHudConfig.get().opacity = v / 100.0));
-        y += ROW_GAP;
+
+        y = TOP;
         addRenderableWidget(CycleButton.onOffBuilder(cfg.hideBehindWalls)
                 .create(rightX, y, w, ROW_HEIGHT, key("hideBehindWalls"),
                         (b, v) -> EnemyHudConfig.get().hideBehindWalls = v));
+        y += ROW_GAP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideEnemyBossBar)
+                .create(rightX, y, w, ROW_HEIGHT, key("hideEnemyBossBar"),
+                        (b, v) -> EnemyHudConfig.get().hideEnemyBossBar = v));
+        y += ROW_GAP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideTeamBossBar)
+                .create(rightX, y, w, ROW_HEIGHT, key("hideTeamBossBar"),
+                        (b, v) -> EnemyHudConfig.get().hideTeamBossBar = v));
+        return 4;
     }
 
     // ── 敌人设置 ──
 
-    private void initEnemy(EnemyHudConfig.Cfg cfg, int w, int leftX, int rightX) {
+    /** @return 占用的行数 */
+    private int initEnemy(EnemyHudConfig.Cfg cfg, int w, int leftX, int rightX) {
         int y = TOP;
         addRenderableWidget(CycleButton.onOffBuilder(cfg.showBar)
                 .create(leftX, y, w, ROW_HEIGHT, key("showBar"), (b, v) -> EnemyHudConfig.get().showBar = v));
@@ -128,11 +133,13 @@ public final class EnemyHudSettingsScreen extends Screen {
                 -30.0, 0.0, 1.0, cfg.verticalOffset,
                 v -> key("verticalOffset", signed((int) Math.round(v))),
                 v -> EnemyHudConfig.get().verticalOffset = (int) Math.round(v)));
+        return 3;
     }
 
     // ── 玩家设置 ──
 
-    private void initPlayer(EnemyHudConfig.Cfg cfg, int w, int leftX, int rightX) {
+    /** @return 占用的行数 */
+    private int initPlayer(EnemyHudConfig.Cfg cfg, int w, int leftX, int rightX) {
         int y = TOP;
         addRenderableWidget(CycleButton.onOffBuilder(cfg.showTeammates)
                 .create(leftX, y, w, ROW_HEIGHT, key("showTeammates"),
@@ -162,6 +169,7 @@ public final class EnemyHudSettingsScreen extends Screen {
                 -30.0, 0.0, 1.0, cfg.teamVerticalOffset,
                 v -> key("verticalOffset", signed((int) Math.round(v))),
                 v -> EnemyHudConfig.get().teamVerticalOffset = (int) Math.round(v)));
+        return 3;
     }
 
     @Override
