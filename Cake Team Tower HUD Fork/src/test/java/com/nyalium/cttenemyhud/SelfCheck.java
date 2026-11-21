@@ -175,6 +175,22 @@ public final class SelfCheck {
 
         check(EnemyHudConfig.normalize(null) != null, "normalize(null) 不能返回 null");
 
+        // 换行阈值：40~200，200 = 自动。
+        EnemyHudConfig.Cfg wrap = new EnemyHudConfig.Cfg();
+        wrap.wrapWidth = 0;
+        EnemyHudConfig.normalize(wrap);
+        check(wrap.wrapWidth == EnemyHudLayout.WRAP_MIN, "wrapWidth 0 应夹到 " + EnemyHudLayout.WRAP_MIN);
+        wrap.wrapWidth = 9999;
+        EnemyHudConfig.normalize(wrap);
+        check(wrap.wrapWidth == EnemyHudLayout.WRAP_AUTO, "wrapWidth 9999 应夹到自动");
+        wrap.wrapWidth = Double.NaN;
+        EnemyHudConfig.normalize(wrap);
+        check(wrap.wrapWidth == EnemyHudLayout.WRAP_AUTO, "wrapWidth NaN 应回落自动");
+        wrap.wrapWidth = 80;
+        EnemyHudConfig.normalize(wrap);
+        check(wrap.wrapWidth == 80, "wrapWidth 80 应保持");
+        check(defaults.wrapWidth == EnemyHudLayout.WRAP_AUTO, "默认换行阈值应为自动");
+
         for (double op = 0.4; op <= 1.2; op += 0.05) {
             EnemyHudConfig.Cfg t = new EnemyHudConfig.Cfg();
             t.opacity = op;
@@ -293,6 +309,26 @@ public final class SelfCheck {
                 "上面一行要再抬 " + EnemyHudLayout.ROW_STEP + " 像素");
         check(armored.rows.get(1).top == EnemyHudLayout.TEXT_TOP, "下面一行贴着 TEXT_TOP");
         check(armored.textTop == EnemyHudLayout.TEXT_TOP, "textTop 仍指最底一行");
+
+        // 换行阈值的解析：最右 = 自动（不超过血条长度），血条关掉时用默认长度兜底。
+        check(EnemyHudLayout.resolveWrapWidth(EnemyHudLayout.WRAP_AUTO, 120) == 120,
+                "自动阈值应等于条长");
+        check(EnemyHudLayout.resolveWrapWidth(EnemyHudLayout.WRAP_AUTO, 0)
+                == EnemyHudLayout.BAR_WIDTH_DEFAULT, "血条关掉时自动阈值应兜底");
+        check(EnemyHudLayout.resolveWrapWidth(Double.NaN, 120) == 120, "NaN 应视为自动");
+        check(EnemyHudLayout.resolveWrapWidth(0, 120) == 120, "0 应视为自动");
+        check(EnemyHudLayout.resolveWrapWidth(60, 120) == 60, "手填阈值应生效");
+
+        // 手填 60 像素：78 像素的两色行必须折成两行。
+        EnemyHudLayout.Options smallWrap = new EnemyHudLayout.Options();
+        smallWrap.showBar = false;
+        smallWrap.showArmor = false;
+        smallWrap.wrapWidth = 60;
+        EnemyHudLayout.Result wrapped = run("小阈值", new Data("两色", 160, 100, false, 0,
+                new int[]{0, 0, 0, 0, 0, 0, 0}), smallWrap);
+        check(wrapped.rowCount() == 2, "阈值 60 时 78 像素应折行: " + wrapped.rowCount());
+        check(rowText(wrapped, 0).equals("❤100/100"), "折行后第一行=" + rowText(wrapped, 0));
+        check(rowText(wrapped, 1).equals("💛60"), "折行后第二行=" + rowText(wrapped, 1));
         // 用转义写死期望值：🛡 在源码里常被写成「🛡+U+FE0F」，直接比字面量会踩变体选择符。
         check(join(armored).contains("\uD83D\uDEE13"), "防御段缺失: " + join(armored));
         check(join(armored).contains(EnemyData.ARMOR_ICONS[1] + "5"), "元素护甲段缺失: " + join(armored));

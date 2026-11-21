@@ -22,8 +22,9 @@ import java.util.List;
  *
  * <h2>两行文字</h2>
  * <p>红心现在写成 {@code ❤当前/上限}，配上魂心/护甲后整行容易比血条还宽。所以文字是
- * <b>可折行</b>的：超过 {@code max(血条长度, MIN_ROW_WIDTH)} 时，红心单独占上面一行，
- * 其余心与护甲留在下面一行；上面的行每次再抬 {@link #ROW_STEP} 像素，血条位置不变。</p>
+ * <b>可折行</b>的：超过「换行阈值」({@link Options#wrapWidth}，默认
+ * {@link #WRAP_AUTO} = 不超过血条长度) 时，红心单独占上面一行，其余心与护甲留在下面一行；
+ * 上面的行每次再抬 {@link #ROW_STEP} 像素，血条位置不变。</p>
  */
 public final class EnemyHudLayout {
 
@@ -41,13 +42,12 @@ public final class EnemyHudLayout {
     /** 行高：文字折成多行时，每往上一行抬这么多像素（与原版字体行高一致）。 */
     public static final int ROW_STEP = 9;
 
-    /**
-     * 一行文字的最小可用宽度。
-     *
-     * <p>整行宽度超过 {@code max(血条长度, 这个值)} 时，把红心单独顶到上面一行，
-     * 其余心与护甲留在下面一行，避免文字比血条还宽、糊成一坨。</p>
-     */
-    public static final int MIN_ROW_WIDTH = 90;
+    /** 换行阈值可调下限（像素）。 */
+    public static final int WRAP_MIN = 40;
+    /** 换行阈值可调上限；滑块拉到这里 = **自动**。 */
+    public static final int WRAP_MAX = 200;
+    /** 阈值等于这个值即「自动」：不超过血条长度。 */
+    public static final double WRAP_AUTO = WRAP_MAX;
 
     /** 血条长度的允许范围与默认值（原版名牌像素）。 */
     public static final int BAR_WIDTH_MIN = 50;
@@ -75,6 +75,11 @@ public final class EnemyHudLayout {
         public boolean showBar = true;
         /** 固定长度（原版名牌像素），夹在 BAR_WIDTH_MIN ~ BAR_WIDTH_MAX。 */
         public double barWidth = BAR_WIDTH_DEFAULT;
+        /**
+         * 换行阈值（像素）。{@link #WRAP_AUTO} = 自动（不超过血条长度）。
+         * 整行文字超过它就折成两行：红心在上，其余心 + 护甲在下。
+         */
+        public double wrapWidth = WRAP_AUTO;
         public int verticalOffset = 0;
         /** 文字是否带阴影（纯渲染开关，放这里只为让测试能覆盖到）。 */
         public boolean textShadow = true;
@@ -223,9 +228,9 @@ public final class EnemyHudLayout {
         int mergedWidth = width(merged, w);
 
         // 一行放得下就一行；放不下（且红心之后确实还有东西）就把红心顶到上面一行。
+        int wrapLimit = resolveWrapWidth(opt.wrapWidth, barWidth);
         List<List<Line>> groups = new ArrayList<>(2);
-        if (headWidth > 0 && bottomWidth > 0
-                && mergedWidth > Math.max(barWidth, MIN_ROW_WIDTH)) {
+        if (headWidth > 0 && bottomWidth > 0 && mergedWidth > wrapLimit) {
             groups.add(head);
             groups.add(bottom);
         } else if (!merged.isEmpty()) {
@@ -295,6 +300,19 @@ public final class EnemyHudLayout {
         if (Double.isNaN(configured)) return BAR_WIDTH_DEFAULT;
         int width = (int) Math.round(configured);
         return Math.max(BAR_WIDTH_MIN, Math.min(BAR_WIDTH_MAX, width));
+    }
+
+    /**
+     * 换行阈值的最终像素值。
+     *
+     * <p>拉到最右（{@code >= WRAP_AUTO}）或值非法 → **自动**，直接用血条长度；
+     * 血条关掉（长度 0）时用 {@link #BAR_WIDTH_DEFAULT} 兜底，避免所有怪都被折成两行。</p>
+     */
+    public static int resolveWrapWidth(double configured, int barWidth) {
+        if (Double.isNaN(configured) || configured <= 0 || configured >= WRAP_AUTO) {
+            return barWidth > 0 ? barWidth : BAR_WIDTH_DEFAULT;
+        }
+        return (int) Math.round(configured);
     }
 
     public static boolean hasArmor(int defence, int[] armor) {

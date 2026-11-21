@@ -211,6 +211,7 @@ public final class EnemyHudElement implements HudElement {
         o.showArmor = false;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.teamBarWidth;
+        o.wrapWidth = cfg.wrapWidth;
         o.verticalOffset = cfg.teamVerticalOffset;
         o.textShadow = cfg.textShadow;
         o.scale = cfg.teamScale;
@@ -225,6 +226,7 @@ public final class EnemyHudElement implements HudElement {
         o.showArmor = true;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.barWidth;
+        o.wrapWidth = cfg.wrapWidth;
         o.verticalOffset = cfg.verticalOffset;
         o.textShadow = cfg.textShadow;
         o.scale = cfg.scale;

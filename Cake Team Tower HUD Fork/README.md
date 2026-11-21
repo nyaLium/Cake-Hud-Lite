@@ -2,7 +2,7 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.14.3**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.14.4**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 设置界面一纵排布（通用 / 敌人 / 玩家 / 恢复默认 + 底部完成）。
 
 | 项目 | 内容 |
@@ -12,7 +12,7 @@
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.14.3.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.14.4.jar` |
 
 ## 显示效果
 
@@ -252,6 +252,7 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
   "teamMaxDistance": 48.0,
   "maxDistance": 48.0,
   "barWidth": 100.0,
+  "wrapWidth": 200.0,
   "scale": 1.0,
   "verticalOffset": 0,
   "hideBehindWalls": true,
@@ -273,6 +274,7 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 | `autoPartyBossbar` | 自动 `/trigger TogglePartyBossbar` 打开「队伍血量」条（队友血量的纯客户端数据源） | — |
 | `teamBarWidth` / `teamScale` / `teamVerticalOffset` | 玩家血条的长度 / 缩放 / 垂直微调 | 50~150 / 0.75~1.50 / -30~0 |
 | `teamMaxDistance` | 玩家血条显示距离（格） | 4 ~ 256 |
+| `wrapWidth` | 换行阈值（原版名牌像素）。`200` = **自动**，即不超过血条长度；整行超过它就折两行 | 40 ~ 200 |
 | `maxDistance` | 敌人血条显示距离（格） | 4 ~ 256 |
 | `barWidth` | 敌人血条长度（原版名牌像素） | 50 ~ 150（默认 100） |
 | `scale` | 敌人整体缩放 | 0.75 ~ 1.50 |
@@ -306,7 +308,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.14.3.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.14.4.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 

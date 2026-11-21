@@ -54,6 +54,11 @@ public final class EnemyHudConfig {
         public double maxDistance = 48.0;
         /** 血条长度（原版名牌像素），50 ~ 150，默认 100。 */
         public double barWidth = 100.0;
+        /**
+         * 换行阈值（原版名牌像素），40 ~ 200；拉到最右（200）= **自动**，即不超过血条长度。
+         * 整行文字超过它就折成两行：红心在上，其余心 + 护甲在下。
+         */
+        public double wrapWidth = EnemyHudLayout.WRAP_AUTO;
         /** 整组 UI 的额外缩放，0.75 ~ 1.50，1.0 = 与原版名牌同字号。 */
         public double scale = 1.0;
         /** 整组 UI 的垂直微调（原版名牌像素），-30 ~ 0，负数=更高。 */
@@ -166,6 +171,8 @@ public final class EnemyHudConfig {
         if (Double.isNaN(read.barWidth)) read.barWidth = EnemyHudLayout.BAR_WIDTH_DEFAULT;
         read.barWidth = clamp(read.barWidth, EnemyHudLayout.BAR_WIDTH_MIN, EnemyHudLayout.BAR_WIDTH_MAX);
         read.verticalOffset = (int) clamp(read.verticalOffset, -30.0, 0.0);
+        // 换行阈值：NaN 视作「自动」（clamp 对 NaN 返回上限）；越界夹到 40~200。
+        read.wrapWidth = clamp(read.wrapWidth, EnemyHudLayout.WRAP_MIN, EnemyHudLayout.WRAP_AUTO);
         if (Double.isNaN(read.teamBarWidth)) read.teamBarWidth = EnemyHudLayout.BAR_WIDTH_DEFAULT;
         read.teamBarWidth = clamp(read.teamBarWidth, EnemyHudLayout.BAR_WIDTH_MIN, EnemyHudLayout.BAR_WIDTH_MAX);
         read.teamScale = clamp(read.teamScale, 0.75, 1.5);

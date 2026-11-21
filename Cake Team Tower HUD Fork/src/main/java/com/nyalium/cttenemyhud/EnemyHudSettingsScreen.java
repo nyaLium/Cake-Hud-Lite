@@ -117,6 +117,14 @@ public final class EnemyHudSettingsScreen extends Screen {
                 4.0, 128.0, 4.0, cfg.maxDistance,
                 v -> key("maxDistance", (int) Math.round(v)),
                 v -> EnemyHudConfig.get().maxDistance = v));
+        y += ROW_GAP;
+        // 拉到最右 = 自动（不超过血条长度）。
+        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
+                EnemyHudLayout.WRAP_MIN, EnemyHudLayout.WRAP_AUTO, 5.0, cfg.wrapWidth,
+                v -> v >= EnemyHudLayout.WRAP_AUTO
+                        ? key("wrapWidth.auto")
+                        : key("wrapWidth", (int) Math.round(v)),
+                v -> EnemyHudConfig.get().wrapWidth = v));
 
         y = TOP;
         addRenderableWidget(new ValueSlider(rightX, y, w, ROW_HEIGHT,

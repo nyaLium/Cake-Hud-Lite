@@ -1,4 +1,4 @@
-﻿{
+{
   "modmenu.nameTranslation.ctt-hud-fork": "CTT Enemy HUD",
   "modmenu.descriptionTranslation.ctt-hud-fork": "Client-side heart counts / armour readout and vanilla boss-bar health bar above Cake Team Towers enemies.",
 
@@ -22,6 +22,8 @@
   "ctt_enemy_hud.config.showTeammates": "Show teammate health",
   "ctt_enemy_hud.config.autoPartyBossbar": "Auto-enable party health bar",
   "ctt_enemy_hud.config.barWidth": "Bar length: %s",
+	"ctt_enemy_hud.config.wrapWidth": "Wrap width: %s",
+	"ctt_enemy_hud.config.wrapWidth.auto": "Wrap width: Auto",
   "ctt_enemy_hud.config.scale": "Scale: %s",
   "ctt_enemy_hud.config.verticalOffset": "Vertical offset: %s",
   "ctt_enemy_hud.config.maxDistance": "Distance: %s blocks"
