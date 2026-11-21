@@ -2,17 +2,17 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.13.3**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.13.4**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 设置界面一纵排布（通用 / 敌人 / 玩家 / 恢复默认 + 底部完成）。
 
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.13.3` |
+| 版本 | `1.13.4` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.13.3.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.13.4.jar` |
 
 ## 显示效果
 
@@ -116,33 +116,73 @@ CTT敌人血条设置
 | --- | --- |
 | 通用设置 | 总开关 / 文字阴影 / 隐藏名称下方分数 / **隐藏上方Boss栏 - 最近敌人的信息** / **隐藏上方Boss栏 - 队伍血量** / 透明度 / 被墙挡住时隐藏 |
 | 敌人设置 | 显示血条 / 显示距离 / 血条长度 / 整体缩放 / 垂直偏移 |
-| 玩家设置 | 显示队友血量 / 显示距离 / 血条长度 / 整体缩放 / 垂直偏移 |
+| 玩家设置 | 显示队友血量 / **自动开启队伍血量条** / 显示距离 / 血条长度 / 整体缩放 / 垂直偏移 |
 | 恢复默认 | 只改内存不落盘，点「完成」才写盘 |
 | 完成 | 归一化后写盘并关闭（总界面 ESC 等同「完成」） |
 
 - 只有「完成」，**没有「取消」**；子界面底部只有「返回」（改动保留，写盘由总界面负责）。
 - 心数 / 护甲 / 血量数字**永久开启**，没有开关。
 
-## 本 Mod 不发送任何命令
+## 队友血条的数据从哪来（客户端必装 / 服务端选装）
 
-早期版本会自动发 `/trigger TogglePartyBossbar` 想打开队伍条，结果反而制造问题：
-数据包 `misc.mcfunction:997-1016` 只给 `tag=CTT` 的玩家 `enable` 这个触发项，
-而且队伍条的观看者是**每 tick 被清空重设**的 —— 普通玩家按下触发项只能看到**一 tick 的闪现**。
-于是旧版表现为「顶部队伍血量条时不时闪一下」，触发项没 enable 时还会在聊天栏刷
-**「无法触发该计分项」**（暂停时最明显）。
+所有数据都来自**客户端可见**的渠道，服务端不装任何东西也完整可用：
 
-1.13.3 起 `PartyBossbarAutoToggle` 整个移除，**本 Mod 不再发送任何命令**。
-队伍条只在你真正持有它时存在（观战 / 复活中 / 队里有治疗者职业），队友头顶条才有数据。
+| 数据 | 客户端渠道 |
+| --- | --- |
+| 队友血量 | 「队伍血量」Boss 栏标题（`spectator_bossbar`），靠 `/trigger TogglePartyBossbar` 打开 |
+| 队友命数 | 本地计分板 `Lives`（原版会同步） |
+| 敌人精确血量 / 护甲 / 心数 | 原版 Boss 栏标题 + 数据包心模型反推 |
 
-## 血条纹理
+那条队伍条**默认是关的**，数据包里 `TogglePartyBossbarA` 第一次按后一直保持 1（每 tick 重新打 tag），
+所以它是**真开关**——再按一次才关。本 Mod 会自动开（见下一节）。
+
+> 服务端**如果**将来愿意装一个 mod 组件（像 Cake-Hud 的 `TeamHeartsPayload`）就能补上队友四色心；
+> 那是纯可选增强，不做也不影响任何现有功能。
+
+## 自动开队伍条（3 s 冷却 / 5 次失败 → 10 分钟熔断）
+
+`PartyBossbarAutoToggle`，参数与 Cake-Hud 的 `maybeAutoTogglePartyBossbar` 一致：
+
+| 项 | 值 / 行为 |
+| --- | --- |
+| 触发前置 | 必须已看到「自己的」Boss 条（进局了）且当前**没看到**队伍条 |
+| 冷却 | 3 s |
+| 连续失败 | 5 次 → **10 分钟熔断**，期间完全不发 |
+| 防误关 | 见过队伍条后，要**连续消失 10 s** 才允许再开（一次检测抖动不会把条点掉） |
+| 界面保护 | 暂停 / 背包 / 聊天界面里一律不发 |
+| 上限 | 单局最多 20 次；切世界状态清零 |
+
+> 历史坑：1.12.x 的旧版检测队伍条只看「整串 `名字 (x/y)`」，标题里夹着 ` (/) ` 空槽残渣时解析失败，
+> 于是一直认为「没开」→ 每 3 秒按一次 → **开了又关**，表现为「顶部队伍血量条时不时闪一下」，
+> 触发项没 enable 时还会刷「无法触发该计分项」。1.13.3 起检测改成宽松扫描 + Tab 名单匹配，
+> 1.13.4 起把自动开启按上面的策略恢复，并把聊天回显 / 报错一起过滤掉。
+
+## 聊天栏不再被自己的命令刷屏
+
+`ChatTriggerFilter`（注册在 `ClientReceiveMessageEvents.ALLOW_GAME`），只在自己刚发过命令的 3 秒内过滤，
+手动敲 `/trigger` 不受影响：
+
+| 吞掉的消息 | 判定 |
+| --- | --- |
+| 成功回显 | 文本含 `Triggered` / `已触发` 且含 `TogglePartyBossbar` |
+| 失败报错 | 翻译键以 `commands.trigger.failed` 开头（「无法触发该计分项」） |
+
+## 血条纹理（敌人 / 队友同一条路径）
 
 **不打包任何材质**，直接调用原版 GUI 图集里的
 `minecraft:boss_bar/{red,yellow,purple,blue,green}_{background,progress}`：
+
+```java
+BossBarTexture.Tint tint = p.player ? Tint.GREEN : tintFor(p.heartKind);
+BossBarTexture.drawBackground(g, bx, 0, W, H, white, tint);
+BossBarTexture.drawProgress(g, bx, 0, fill, H, white, tint);
+```
 
 走的是 `GuiGraphicsExtractor.blitSprite(pipeline, id, x, y, w, h, color)` ——
 sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数带 alpha。
 早期版本手工拼 UV（`getX()/getY()` + 自算图集尺寸）推导有偏差时会采样到图集别处，
 表现就是「血条不再是原版纹理」；现在这条路径与 `BossHealthOverlay` 画 Boss 条一致。
+1.13.4 起队友条也走这同一条调用（只是 tint 固定绿），不再有单独的绿色分支。
 
 ## 配置
 
@@ -157,6 +197,7 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
   "hideBelowNameScore": true,
   "hideEnemyBossBar": true,
   "showTeammates": true,
+  "autoPartyBossbar": true,
   "hideTeamBossBar": true,
   "teamBarWidth": 100.0,
   "teamScale": 1.0,
@@ -181,6 +222,7 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 | `hideEnemyBossBar` | 隐藏上方 Boss 栏里「最近敌人的信息」 | — |
 | `hideTeamBossBar` | 隐藏上方 Boss 栏里「队伍血量」（数据照常读取） | — |
 | `showTeammates` | 显示队友血量（绿色条，自己永不显示） | — |
+| `autoPartyBossbar` | 自动 `/trigger TogglePartyBossbar` 打开「队伍血量」条（队友血量的纯客户端数据源） | — |
 | `teamBarWidth` / `teamScale` / `teamVerticalOffset` | 玩家血条的长度 / 缩放 / 垂直微调 | 50~150 / 0.75~1.50 / -30~0 |
 | `teamMaxDistance` | 玩家血条显示距离（格） | 4 ~ 256 |
 | `maxDistance` | 敌人血条显示距离（格） | 4 ~ 256 |
@@ -190,8 +232,9 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 | `hideBehindWalls` | 被方块挡住视线时不画 | — |
 | `debug` | 左上角打印 `entities= / withData= / mates= / drawn=`（**仅配置文件，界面无此项**） | — |
 
-> 1.13.3 起 `showNumbers` / `showHeartCounts` / `showArmor` / `autoPartyBossbar` 已删除，
+> 1.13.3 起 `showNumbers` / `showHeartCounts` / `showArmor` 已删除（永久开启），
 > 老配置文件里的这几个键会被忽略，下次「完成」时自动消失。
+> `autoPartyBossbar` 在 1.13.3 一度移除，1.13.4 恢复（默认开）。
 
 ## 未知诅咒
 
@@ -205,7 +248,7 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**1449 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**1450 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与分隔符、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定。
 
@@ -215,7 +258,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.13.3.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.13.4.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 
@@ -232,7 +275,8 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 1.13.0 | 心数行（红/魂精确）、魂心→黄条·蓝心→蓝条；名称一度改为自绘 |
 | 1.13.1 | 修复「高塔层数」Boss 条被当成队伍条隐藏；设置界面改为四项菜单；移除自绘名称 |
 | 1.13.2 | 设置界面恢复「完成 / 取消」；总界面四项两列排布 |
-| **1.13.3** | 一纵排布 + 底部完成（取消移除）；心数/护甲永久开启；两条 Boss 栏开关并入通用并改名；移除自动 `/trigger`，修队伍条闪现与聊天报错 |
+| 1.13.3 | 一纵排布 + 底部完成（取消移除）；心数/护甲永久开启；两条 Boss 栏开关并入通用并改名 |
+| **1.13.4** | 定位「客户端必装、服务端选装」；队友条与敌人条共用同一条原版 bossbar 纹理绘制；恢复自动开队伍条（3 s 冷却 / 5 次失败 10 分钟熔断 / 防误关）；聊天回显与报错过滤 |
 
 ## 已知限制
 

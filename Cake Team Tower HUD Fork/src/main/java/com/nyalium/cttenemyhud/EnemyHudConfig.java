@@ -33,6 +33,8 @@ public final class EnemyHudConfig {
         public boolean hideEnemyBossBar = true;
         /** 是否显示队友血量（绿色条）。自己永远不显示。 */
         public boolean showTeammates = true;
+        /** 自动 /trigger TogglePartyBossbar 打开「队伍血量」条（队友血量的数据源，纯客户端）。 */
+        public boolean autoPartyBossbar = true;
         /** 隐藏上方 Boss 栏里「队伍血量」那一条（数据照常读取）。 */
         public boolean hideTeamBossBar = true;
         /** 玩家血条长度（原版名牌像素）。 */

@@ -19,6 +19,7 @@
 
   "ctt_enemy_hud.config.showBar": "显示血条",
   "ctt_enemy_hud.config.showTeammates": "显示队友血量",
+  "ctt_enemy_hud.config.autoPartyBossbar": "自动开启队伍血量条",
   "ctt_enemy_hud.config.barWidth": "血条长度：%s",
   "ctt_enemy_hud.config.scale": "整体缩放：%s",
   "ctt_enemy_hud.config.verticalOffset": "垂直偏移：%s",

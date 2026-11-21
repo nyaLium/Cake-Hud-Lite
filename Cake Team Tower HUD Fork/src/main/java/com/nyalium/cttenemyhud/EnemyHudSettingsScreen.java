@@ -138,6 +138,10 @@ public final class EnemyHudSettingsScreen extends Screen {
                 .create(leftX, y, w, ROW_HEIGHT, key("showTeammates"),
                         (b, v) -> EnemyHudConfig.get().showTeammates = v));
         y += ROW_GAP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.autoPartyBossbar)
+                .create(leftX, y, w, ROW_HEIGHT, key("autoPartyBossbar"),
+                        (b, v) -> EnemyHudConfig.get().autoPartyBossbar = v));
+        y += ROW_GAP;
         addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
                 4.0, 128.0, 4.0, cfg.teamMaxDistance,
                 v -> key("maxDistance", (int) Math.round(v)),

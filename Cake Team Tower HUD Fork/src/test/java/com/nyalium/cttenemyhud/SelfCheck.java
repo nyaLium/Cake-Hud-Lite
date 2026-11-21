@@ -169,6 +169,7 @@ public final class SelfCheck {
         check(defaults.hideEnemyBossBar, "默认应隐藏上方 Boss 栏里的最近敌人信息");
         check(defaults.hideTeamBossBar, "默认应隐藏上方 Boss 栏里的队伍血量");
         check(defaults.showTeammates, "默认应显示队友血量");
+        check(defaults.autoPartyBossbar, "默认应自动开启队伍血量条（纯客户端数据源）");
 
         check(EnemyHudConfig.normalize(null) != null, "normalize(null) 不能返回 null");
 

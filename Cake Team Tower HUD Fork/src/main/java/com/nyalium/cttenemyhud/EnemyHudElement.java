@@ -82,10 +82,13 @@ public final class EnemyHudElement implements HudElement {
         Scoreboard sb = mc.level.getScoreboard();
         Map<UUID, BossBarTracker.Bar> exact = BossBarTracker.resolve(mc, BossBarTracker.snapshot(mc));
 
-        // 队友：数据来自「队伍血量」这条 Boss 栏，条在才有数据。
-        // 注意：本 Mod 不再自己发 /trigger TogglePartyBossbar —— 那条命令只会给普通玩家
-        // 一 tick 的闪现（队友名单来自 @a[tag=PlayerHealthBossbar]，每 tick 清空重设），
-        // 反而让顶部 Boss 栏时不时闪一下，并在触发项未 enable 时刷聊天错误。
+        // 队友：数据来自「队伍血量」这条 Boss 栏。
+        // 那条 bar 默认是关的，需要 /trigger TogglePartyBossbar 打开（数据包里的真开关），
+        // 所以这里带上冷却 / 熔断 / 防误关的自动开启（见 PartyBossbarAutoToggle）。
+        if (cfg.showTeammates && cfg.autoPartyBossbar) {
+            PartyBossbarAutoToggle.tick(mc, BossBarTracker.hasTeamBar(mc),
+                    BossBarTracker.hasPersonalBar(mc));
+        }
         Map<UUID, TeamBarTitle.Entry> teammates = cfg.showTeammates
                 ? BossBarTracker.resolveTeam(mc, BossBarTracker.teamEntriesCached(mc))
                 : Map.of();
@@ -250,30 +253,26 @@ public final class EnemyHudElement implements HudElement {
                     pose.scale(layout.barWidth / (float) BossBarTexture.NATIVE_WIDTH, 1.0f);
                     int bx = -BossBarTexture.NATIVE_WIDTH / 2;
                     int white = withAlpha(0xFFFFFF, alpha);
-                    if (p.player) {
-                        BossBarTexture.drawBackgroundGreen(g, bx, 0, BossBarTexture.NATIVE_WIDTH,
-                                EnemyHudLayout.BAR_HEIGHT, white);
-                    } else {
-                        BossBarTexture.drawBackground(g, bx, 0, BossBarTexture.NATIVE_WIDTH,
-                                EnemyHudLayout.BAR_HEIGHT, white, BossBarTexture.tintFor(p.kind));
-                    }
+                    // 敌人与队友走同一条绘制路径，差别只有 tint（都来自原版 boss_bar 纹理）。
+                    BossBarTexture.Tint tint = tintOf(p);
+                    BossBarTexture.drawBackground(g, bx, 0, BossBarTexture.NATIVE_WIDTH,
+                            EnemyHudLayout.BAR_HEIGHT, white, tint);
                     int fill = Math.round(BossBarTexture.NATIVE_WIDTH * p.data.ratio);
                     fill = Math.max(0, Math.min(BossBarTexture.NATIVE_WIDTH, fill));
-                    if (fill > 0) {
-                        if (p.player) {
-                            BossBarTexture.drawProgressGreen(g, bx, 0, fill,
-                                    EnemyHudLayout.BAR_HEIGHT, white);
-                        } else {
-                            BossBarTexture.drawProgress(g, bx, 0, fill,
-                                    EnemyHudLayout.BAR_HEIGHT, white, BossBarTexture.tintFor(p.kind));
-                        }
-                    }
+                    BossBarTexture.drawProgress(g, bx, 0, fill,
+                            EnemyHudLayout.BAR_HEIGHT, white, tint);
                     pose.popMatrix();
                 }
 
                 pose.popMatrix();
             }
         }
+    }
+
+    /** 队友固定绿条；敌人按当前心类取色。 */
+    private static BossBarTexture.Tint tintOf(Placement p) {
+        if (p.player) return BossBarTexture.Tint.GREEN;
+        return BossBarTexture.tintFor(p.kind);
     }
 
     // ── 工具 ──

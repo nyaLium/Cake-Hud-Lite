@@ -180,9 +180,37 @@ public final class BossBarTracker {
 
     // ── 队伍条（队友血量） ──
 
-    /** 队伍血量条是否已经在客户端上（只读判定；本 Mod 不再主动 /trigger 开关它）。 */
+    /** 队伍血量条是否已经在客户端上（只读判定）。 */
     static boolean hasTeamBar(Minecraft mc) {
-        return !teamEntries(mc).isEmpty();
+        return !teamEntriesCached(mc).isEmpty();
+    }
+
+    /**
+     * 是否存在「自己」的血量条 —— 用来判断玩家是否已进入对局。
+     *
+     * <p>数据包给每名参赛玩家一条 {@code player_100N}（标题里含自己名字 + {@code (x/y)}），
+     * 大厅里没有。自动开队伍条必须以此为前提，否则会在菜单里白发命令。</p>
+     */
+    static boolean hasPersonalBar(Minecraft mc) {
+        if (mc.gui == null || mc.gui.hud == null || mc.player == null) return false;
+        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
+        if (overlay == null) return false;
+        Map<UUID, BossEvent> bars;
+        try {
+            bars = ((BossHealthOverlayAccessor) (Object) overlay).cttEnemyHud$getBossBars();
+        } catch (Throwable t) {
+            return false;
+        }
+        if (bars == null || bars.isEmpty()) return false;
+        String playerName = mc.player.getName().getString();
+        if (playerName.isEmpty()) return false;
+        for (BossEvent bar : bars.values()) {
+            Component component = bar.getName();
+            if (component == null) continue;
+            String text = component.getString();
+            if (text.contains(playerName) && BossBarTitle.parse(text) != null) return true;
+        }
+        return false;
     }
 
     /** 从客户端 Boss 栏里找那条队伍血量条并解析出每个玩家的 当前/上限。 */
