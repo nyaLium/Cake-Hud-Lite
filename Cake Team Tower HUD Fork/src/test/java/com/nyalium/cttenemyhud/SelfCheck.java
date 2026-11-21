@@ -18,7 +18,6 @@ public final class SelfCheck {
         bossBarTitles();
         curseKeys();
         teamBarTitles();
-        percentTextOption();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -53,7 +52,7 @@ public final class SelfCheck {
                 EnemyHudLayout.Result r = run(tag, d, o);
 
                 boolean hasArmorData = EnemyHudLayout.hasArmor(d.defence, d.armor);
-                boolean expectText = o.showNumbers || (o.showArmor && hasArmorData);
+                boolean expectText = (o.showNumbers && !d.percentOnly) || (o.showArmor && hasArmorData);
                 boolean expectEmpty = !expectText && !o.showBar;
 
                 if (expectEmpty) {
@@ -164,7 +163,6 @@ public final class SelfCheck {
         check(defaults.verticalOffset == 0, "默认垂直偏移应为 0");
         check(defaults.opacity == 0.75, "默认透明度应为 0.75");
         check(defaults.showBar && defaults.showNumbers && defaults.showArmor, "默认三个显示项应全开");
-        check(defaults.showPercentText, "默认应显示百分比文字");
         check(defaults.hideEnemyBossBar, "默认应隐藏顶部敌人Boss条");
         check(defaults.showTeammates, "默认应显示队友血量");
         check(defaults.autoPartyBossbar, "默认应自动开启队伍条");
@@ -277,37 +275,6 @@ public final class SelfCheck {
         check(TeamBarTitle.parse("A (10/0)").isEmpty(), "上限为 0 的条目应丢弃");
     }
 
-    // ── 8. 百分比文字开关（关闭后仍保留护甲） ──
-
-    private static void percentTextOption() {
-        Data percent = new Data("仅百分比", 73, 100, true, 4, new int[]{2, 0, 0, 0, 0, 0, 0});
-        EnemyHudLayout.Options on = new EnemyHudLayout.Options();
-        EnemyHudLayout.Result rOn = run("百分比 开", percent, on);
-        check(rOn != null && rOn.hasText, "百分比模式下应显示文字");
-
-        EnemyHudLayout.Options off = new EnemyHudLayout.Options();
-        off.showPercentText = false;
-        EnemyHudLayout.Result rOff = run("百分比 关", percent, off);
-        check(rOff != null, "关闭百分比文字后不应崩");
-        if (rOff != null) {
-            boolean hasPercent = false;
-            for (EnemyHudLayout.Line l : rOff.lines) {
-                if (l.text.contains("%")) hasPercent = true;
-            }
-            check(!hasPercent, "关掉后不应再出现百分比数字");
-            check(rOff.hasText, "关掉数字后护甲仍应显示");
-            check(rOff.barWidth > 0, "关掉数字后血条仍应存在");
-        }
-
-        // 全角/半角无关，分隔符固定为 " | "
-        EnemyHudLayout.Options sep = new EnemyHudLayout.Options();
-        EnemyHudLayout.Result rSep = run("分隔符", new Data("x", 50, 100, false, 3, new int[]{1, 0, 0, 0, 0, 0, 0}), sep);
-        boolean hasPipe = false;
-        for (EnemyHudLayout.Line l : rSep.lines) {
-            if (l.text.contains("|")) hasPipe = true;
-        }
-        check(hasPipe, "血量与护甲之间应使用 \" | \" 分隔");
-    }
     // ── 基础设施 ──
 
     private static EnemyHudLayout.Result run(String tag, Data d, EnemyHudLayout.Options o) {

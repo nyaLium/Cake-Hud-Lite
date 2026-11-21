@@ -31,18 +31,24 @@ public final class EnemyHudConfig {
         public boolean showNumbers = true;
         /** 是否画护甲段（🛡Defence + 元素护甲）。 */
         public boolean showArmor = true;
-        /**
-         * 只有百分比数据时是否显示 "73%" 文字。
-         *
-         * <p>关掉它，远端敌人就只画血条与护甲，不显示百分比数字。</p>
-         */
-        public boolean showPercentText = true;
+        /** 隐藏实体名称下方那条计分板分数（数据包的 HealthPercent 显示）。 */
+        public boolean hideBelowNameScore = true;
         /** 隐藏数据包挂在屏幕顶部的「最近敌人 Boss 条」（头顶已经画过了）。 */
         public boolean hideEnemyBossBar = true;
         /** 是否显示队友血量（绿色条）。自己永远不显示。 */
         public boolean showTeammates = true;
         /** 自动执行 /trigger TogglePartyBossbar 打开队伍条（队友血量的数据源）。 */
         public boolean autoPartyBossbar = true;
+        /** 隐藏屏幕顶部那条队伍血量条（数据照常读取）。 */
+        public boolean hideTeamBossBar = true;
+        /** 玩家血条长度（原版名牌像素）。 */
+        public double teamBarWidth = 100.0;
+        /** 玩家血条整体缩放。 */
+        public double teamScale = 1.0;
+        /** 玩家血条垂直微调。 */
+        public int teamVerticalOffset = 0;
+        /** 玩家血条显示距离（格）。 */
+        public double teamMaxDistance = 48.0;
         /** 超过这个距离（格）不再绘制。 */
         public double maxDistance = 48.0;
         /** 血条长度（原版名牌像素），50 ~ 150，默认 100。 */
@@ -148,6 +154,11 @@ public final class EnemyHudConfig {
         if (Double.isNaN(read.barWidth)) read.barWidth = EnemyHudLayout.BAR_WIDTH_DEFAULT;
         read.barWidth = clamp(read.barWidth, EnemyHudLayout.BAR_WIDTH_MIN, EnemyHudLayout.BAR_WIDTH_MAX);
         read.verticalOffset = (int) clamp(read.verticalOffset, -30.0, 0.0);
+        if (Double.isNaN(read.teamBarWidth)) read.teamBarWidth = EnemyHudLayout.BAR_WIDTH_DEFAULT;
+        read.teamBarWidth = clamp(read.teamBarWidth, EnemyHudLayout.BAR_WIDTH_MIN, EnemyHudLayout.BAR_WIDTH_MAX);
+        read.teamScale = clamp(read.teamScale, 0.75, 1.5);
+        read.teamVerticalOffset = (int) clamp(read.teamVerticalOffset, -30.0, 0.0);
+        read.teamMaxDistance = clamp(read.teamMaxDistance, 4.0, 256.0);
         return read;
     }
 

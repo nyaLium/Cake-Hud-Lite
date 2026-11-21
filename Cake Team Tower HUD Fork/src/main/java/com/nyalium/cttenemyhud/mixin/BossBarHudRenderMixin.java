@@ -2,6 +2,7 @@ package com.nyalium.cttenemyhud.mixin;
 
 import com.nyalium.cttenemyhud.BossBarTitle;
 import com.nyalium.cttenemyhud.EnemyHudConfig;
+import com.nyalium.cttenemyhud.TeamBarTitle;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.BossHealthOverlay;
 import net.minecraft.world.BossEvent;
@@ -36,7 +37,7 @@ public abstract class BossBarHudRenderMixin {
     )
     private Collection<BossEvent> cttEnemyHud$filterEnemyBars(Map<UUID, BossEvent> map) {
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
-        if (!cfg.enabled || !cfg.hideEnemyBossBar) {
+        if (!cfg.enabled || (!cfg.hideEnemyBossBar && !cfg.hideTeamBossBar)) {
             return map.values();
         }
 
@@ -50,7 +51,13 @@ public abstract class BossBarHudRenderMixin {
         boolean anyHidden = false;
         for (BossEvent bar : map.values()) {
             if (bar == null) continue;
-            if (BossBarTitle.isEnemyBarText(bar.getName().getString(), playerName)) {
+            String text = bar.getName().getString();
+            if (cfg.hideEnemyBossBar && BossBarTitle.isEnemyBarText(text, playerName)) {
+                anyHidden = true;
+                continue;
+            }
+            // 队伍血量条：只当数据源用，画面不必再显示一份。
+            if (cfg.hideTeamBossBar && !TeamBarTitle.parse(text).isEmpty()) {
                 anyHidden = true;
                 continue;
             }

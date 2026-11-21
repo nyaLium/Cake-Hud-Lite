@@ -56,6 +56,8 @@ public final class EnemyHudElement implements HudElement {
         double ppu;
         /** true = 队友（绿色条、无护甲）。 */
         boolean player;
+        /** 心跳类对应的条颜色；null = 红色。 */
+        BossBarTexture.HeartTint tint;
     }
 
     @Override
@@ -115,11 +117,13 @@ public final class EnemyHudElement implements HudElement {
 
             EnemyData.Snapshot data = EnemyData.read(sb, entity);
             BossBarTracker.Bar bar = exact.get(entity.getUUID());
+            BossBarTexture.HeartTint tint = null;
             if (bar != null) {
                 int[] slots = ArmourCache.snapshot(entity.getUUID());
                 int[] elements = new int[EnemyData.ARMOR_OBJECTIVES.length];
                 System.arraycopy(slots, 1, elements, 0, elements.length);
                 data = EnemyData.exact(bar.hp, bar.maxHp, slots[0], elements);
+                tint = tintOf(bar.color);
             }
             if (data == null) continue;
             withData++;
@@ -137,6 +141,7 @@ public final class EnemyHudElement implements HudElement {
             p.gx = pt[0];
             p.gy = pt[1];
             p.ppu = ppu;
+            p.tint = tint;
             placements.add(p);
         }
 
@@ -151,7 +156,7 @@ public final class EnemyHudElement implements HudElement {
                 if (entry == null) continue;
 
                 Vec3 pos = entity.getPosition(partialTick);
-                if (camPos.distanceTo(pos) > cfg.maxDistance) continue;
+                if (camPos.distanceTo(pos) > cfg.teamMaxDistance) continue;
                 if (!entity.shouldRender(camPos.x, camPos.y, camPos.z)) continue;
 
                 Vec3 anchor = nameTagAnchor(entity, pos, partialTick);
@@ -192,11 +197,23 @@ public final class EnemyHudElement implements HudElement {
         }
     }
 
+    /** 玩家血条用独立的一套长度/缩放/偏移。 */
+    private static EnemyHudLayout.Options teamOptions(EnemyHudConfig.Cfg cfg) {
+        EnemyHudLayout.Options o = new EnemyHudLayout.Options();
+        o.showNumbers = cfg.showNumbers;
+        o.showArmor = false;
+        o.showBar = cfg.showBar;
+        o.barWidth = cfg.teamBarWidth;
+        o.verticalOffset = cfg.teamVerticalOffset;
+        o.textShadow = cfg.textShadow;
+        o.scale = cfg.teamScale;
+        return o;
+    }
+
     private static EnemyHudLayout.Options options(EnemyHudConfig.Cfg cfg) {
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
         o.showNumbers = cfg.showNumbers;
         o.showArmor = cfg.showArmor;
-        o.showPercentText = cfg.showPercentText;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.barWidth;
         o.verticalOffset = cfg.verticalOffset;
@@ -260,6 +277,27 @@ public final class EnemyHudElement implements HudElement {
     }
 
     // ── 工具 ──
+
+    /**
+     * 数据包用 bossbar 颜色表达「当前显示哪一类心」：
+     * 黄 = 魂心、紫 = 黑心、蓝 = 蓝心（见 p1_bossbar.mcfunction 的 HeartValue 分支）。
+     * 用户要求：魂心用蓝条、黑心用紫条、蓝心用黄条。
+     */
+    /**
+     * 数据包用 bossbar 颜色表达「当前显示哪一类心」（见 p1_bossbar.mcfunction 的 HeartValue 分支）：
+     * 黄 = 魂心通道、紫 = 黑心通道、蓝 = 蓝心通道。
+     *
+     * <p>按需求换成纹理：魂心 → 蓝条、黑心 → 紫条、蓝心 → 黄条；红条保持红色。</p>
+     */
+    private static BossBarTexture.HeartTint tintOf(net.minecraft.world.BossEvent.BossBarColor color) {
+        if (color == null) return null;
+        return switch (color) {
+            case YELLOW -> BossBarTexture.HeartTint.BLUE;    // 魂心通道 → 蓝条
+            case PURPLE -> BossBarTexture.HeartTint.PURPLE;  // 黑心通道 → 紫条
+            case BLUE -> BossBarTexture.HeartTint.YELLOW;    // 蓝心通道 → 黄条
+            default -> null;                                 // RED / PINK / 其它 → 红条
+        };
+    }
 
     private static int withAlpha(int rgb, int alpha) {
         return ((alpha & 0xFF) << 24) | (rgb & 0xFFFFFF);

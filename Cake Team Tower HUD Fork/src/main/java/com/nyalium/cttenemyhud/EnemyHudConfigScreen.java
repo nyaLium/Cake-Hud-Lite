@@ -108,9 +108,6 @@ public final class EnemyHudConfigScreen extends Screen {
                 .create(leftX, y, w, ROW_HEIGHT, key("showNumbers"),
                         (b, v) -> EnemyHudConfig.get().showNumbers = v));
         y += ROW_GAP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.showPercentText)
-                .create(leftX, y, w, ROW_HEIGHT, key("showPercentText"),
-                        (b, v) -> EnemyHudConfig.get().showPercentText = v));
         y += ROW_GAP;
         addRenderableWidget(CycleButton.onOffBuilder(cfg.showArmor)
                 .create(leftX, y, w, ROW_HEIGHT, key("showArmor"),

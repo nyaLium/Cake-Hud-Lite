@@ -47,12 +47,18 @@ final class BossBarTracker {
         final int maxHp;
         /** 本帧解析到的护甲段，下标同 {@link ArmourCache}：0=防御，1..7=元素。 */
         final int[] armour;
+        /**
+         * 原始 bossbar 颜色。数据包用颜色表达「当前显示哪一类心」：
+         * 红/黄 = 魂心通道、紫 = 黑心通道、蓝 = 蓝心通道（见 p1_bossbar.mcfunction）。
+         */
+        final BossEvent.BossBarColor color;
 
-        Bar(String name, int hp, int maxHp, int[] armour) {
+        Bar(String name, int hp, int maxHp, int[] armour, BossEvent.BossBarColor color) {
             this.name = name;
             this.hp = hp;
             this.maxHp = maxHp;
             this.armour = armour;
+            this.color = color;
         }
     }
 
@@ -93,7 +99,7 @@ final class BossBarTracker {
 
             BossBarTitle title = BossBarTitle.parse(text);
             if (title == null) continue;
-            out.add(new Bar(title.name, title.hp, title.maxHp, parseArmour(component)));
+            out.add(new Bar(title.name, title.hp, title.maxHp, parseArmour(component), bar.getColor()));
         }
         return out;
     }

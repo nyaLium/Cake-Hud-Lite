@@ -29,8 +29,40 @@ final class BossBarTexture {
     static final int NATIVE_WIDTH = 182;
     static final int NATIVE_HEIGHT = 5;
 
+    /** 心类对应的条颜色。 */
+    enum HeartTint { RED, BLUE, PURPLE, YELLOW }
+
+    private static final Identifier BACKGROUND_BLUE = Identifier.withDefaultNamespace("boss_bar/blue_background");
+    private static final Identifier PROGRESS_BLUE = Identifier.withDefaultNamespace("boss_bar/blue_progress");
+    private static final Identifier BACKGROUND_PURPLE = Identifier.withDefaultNamespace("boss_bar/purple_background");
+    private static final Identifier PROGRESS_PURPLE = Identifier.withDefaultNamespace("boss_bar/purple_progress");
+    private static final Identifier BACKGROUND_YELLOW = Identifier.withDefaultNamespace("boss_bar/yellow_background");
+    private static final Identifier PROGRESS_YELLOW = Identifier.withDefaultNamespace("boss_bar/yellow_progress");
     private BossBarTexture() {}
 
+    /** 按心类选条纹理的空槽。 */
+    static void drawBackground(GuiGraphicsExtractor g, int x, int y, int w, int h, int color, HeartTint tint) {
+        if (w <= 0 || h <= 0) return;
+        Identifier id = switch (tint == null ? HeartTint.RED : tint) {
+            case BLUE -> BACKGROUND_BLUE;
+            case PURPLE -> BACKGROUND_PURPLE;
+            case YELLOW -> BACKGROUND_YELLOW;
+            default -> BACKGROUND;
+        };
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, id, x, y, w, h, color);
+    }
+
+    /** 按心类选条纹理的填充段。 */
+    static void drawProgress(GuiGraphicsExtractor g, int x, int y, int w, int h, int color, HeartTint tint) {
+        if (w <= 0 || h <= 0) return;
+        Identifier id = switch (tint == null ? HeartTint.RED : tint) {
+            case BLUE -> PROGRESS_BLUE;
+            case PURPLE -> PROGRESS_PURPLE;
+            case YELLOW -> PROGRESS_YELLOW;
+            default -> PROGRESS;
+        };
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, id, x, y, w, h, color);
+    }
     /** 空槽（深红底板）。 */
     static void drawBackground(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
         if (w <= 0 || h <= 0) return;
