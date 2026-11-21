@@ -2,38 +2,42 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.13.0**：敌人血条改为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理，
-> 名称由本 Mod 自绘（先隐藏原版名称），设置界面按「总开关 / 敌人血条 / 玩家血条 / 通用」四类分页。
+> 当前版本 **1.13.1**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 设置界面改成「通用设置 / 敌人设置 / 玩家设置 / 恢复默认」四项菜单，点进去分项细调。
 
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.13.0` |
+| 版本 | `1.13.1` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.13.0.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.13.1.jar` |
 
 ## 显示效果
 
 ```
         ❤120 | 💛40 | 🛡3 🔥5      ← 心数（只写存在的类型）+ 护甲
         ▬▬▬▬▬▬ 原版 bossbar 纹理 ▬▬▬▬▬▬
-        冰霜狼                      ← 本 Mod 自绘，与原版逐像素同款
+        冰霜狼                      ← 原版名称（本 Mod 只摘掉下面那行分数）
 ```
 
 | 行 | 距离锚点 | 说明 |
 | --- | --- | --- |
 | 心数 / 护甲 | -18 ~ -9 像素 | `verticalOffset` 可再往上挪 |
 | 血条 | -7 ~ -2 像素 | 原版 bossbar 纹理，5 像素高 |
-| 名称 | 0 ~ 9 像素 | 固定不动，不吃 `opacity` / `scale` / `verticalOffset` |
+| 名称（原版） | 0 ~ 9 像素 | 分数一摘，原版自己就落回这一行 |
 
 坐标单位是「原版名牌像素」，1 像素 = 0.025 格，锚点复用原版名牌锚点
 （`EntityAttachment.NAME_TAG` + 0.5 格），所以与原生名牌同字号、同远近缩放。
 
+> 名字为什么自己就下来了：`EntityRenderer.submitNameDisplay` 的那次上抬
+> `9 × 1.15 × 0.025` 写在 `if (scoreText != null)` 里。本 Mod 把 `below_name` 分数摘掉后，
+> 上抬不再执行，名字自然落回 `y ∈ [0, 9]`（原来分数占的那行），所以不需要自己画名字。
+
 ## 心类与配色
 
-血条用<b>原版 bossbar 纹理</b>（`red / yellow / purple / blue` 四套），按当前显示的心类换色：
+血条用**原版 bossbar 纹理**（`red / yellow / purple / blue` 四套），按当前显示的心类换色：
 
 | 心类 | 血条 | 图标 | 数据包通道 |
 | --- | --- | --- | --- |
@@ -54,14 +58,14 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 ```
 
 所以 **红心恒等于 `min(AllHearts, MaxHP)`**，多出来的部分只能是其余心。
-敌人只可能带魂心（带 `NoSoulHearts` 标签的怪连魂心都没有），于是敌人的两类心可以精确反推：
+敌人只可能带魂心（带 `NoSoulHearts` 标签的怪连魂心都没有），于是：
 
 ```
 红心 = min(AllHearts, MaxHP)
 魂心 = AllHearts - 红心
 ```
 
-`AllHearts` 与 `MaxHP` 都在客户端 Boss 栏的标题里（`名字 (HP 120/100) 🛡3`），
+两个数都在客户端 Boss 栏标题里（`名字 (HP 120/100) 🛡3`），
 所以**敌人心数 100% 精确，不需要任何服务端组件**。
 
 ## 数据来源（纯客户端）
@@ -75,6 +79,13 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 
 敌人判据是「有没有 CTT 的血量分数」，**不用 scoreboard tag**（原版不同步实体标签，客户端永远是空集）。
 
+### 队伍条怎么和「高塔层数」条区分
+
+数据包的 `floor` 条同样长成 `名字 (x/y)`（`高塔 (12/50)`、`休息室 (3/50)` …，
+见 `break_room_universal.mcfunction:397-402`），只按形状判定会把高塔层数整条隐藏掉。
+所以队伍条判定额外要求**至少有一段名字能匹配到真实玩家**（`BossBarTracker.looksLikeTeamBar`），
+`floor` 条的名字是场景名，永远匹配不到，于是不再被误杀。
+
 ### 队友为什么没有心数
 
 玩家独有的黑心 / 蓝心只出现在**玩家自己**的 `player_1001..1010` 上，而那条 bar
@@ -83,17 +94,24 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 按原样显示 `当前/最大`（不做近似，宁缺毋假）。补齐需要服务端组件（参考 Cake-Hud 的
 `TeamHeartsPayload`），那是另一个工程。
 
-## 名称接管
+## 设置界面
 
-- 原版名称与 `below_name` 分数在 Mixin 里被清掉（`NameTagScoreMixin`）；
-- 本 Mod 用 `textWithBackdrop` 重画：0.025 比例、居中、白字、带阴影、带原版那层半透明底框；
-- **不吃** `opacity` / `scale` / `verticalOffset` —— 按需求「名称不随 Mod 的设置而变化」，等同原版；
-- 判定条件与画血条共用 `HudTarget.visible()`，不会出现「名字被清掉但没重画」的空档；
-  被墙挡住 / 超距 / 诅咒期间一律不接管，原版名称照常显示。
+```
+CTT敌人血条设置
+┌──────────────┐
+│  通用设置     │  总开关 / 文字阴影 / 隐藏名称下方分数 / 透明度 / 被墙挡住时隐藏
+│  敌人设置     │ 显示血条 / 数字 / 心数 / 护甲 / 隐藏顶部敌人Boss条 + 长度 / 缩放 / 偏移 / 距离
+│  玩家设置     │ 显示队友血量 / 显示顶部队伍血量条 / 长度 / 缩放 / 偏移 / 距离
+│  恢复默认     │ 立刻恢复默认并落盘
+└──────────────┘
+```
+
+子界面底部是「返回」（ESC 同样返回），写盘统一发生在关闭总界面时。
 
 ## 血条纹理
 
-**不打包任何材质**，直接调用原版 GUI 图集里的 `minecraft:boss_bar/{red,yellow,purple,blue,green}_{background,progress}`：
+**不打包任何材质**，直接调用原版 GUI 图集里的
+`minecraft:boss_bar/{red,yellow,purple,blue,green}_{background,progress}`：
 
 走的是 `GuiGraphicsExtractor.blitSprite(pipeline, id, x, y, w, h, color)` ——
 sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数带 alpha。
@@ -114,7 +132,6 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
   "showHeartCounts": true,
   "showArmor": true,
   "hideBelowNameScore": true,
-  "hideVanillaName": true,
   "hideEnemyBossBar": true,
   "showTeammates": true,
   "autoPartyBossbar": true,
@@ -139,25 +156,24 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 | `textShadow` | 文字阴影 | — |
 | `showBar` / `showNumbers` / `showArmor` | 分别开关血条 / 数字 / 护甲 | — |
 | `showHeartCounts` | 数字优先画心数，拆不出来才退回 `当前/最大` | — |
-| `hideBelowNameScore` | 隐藏数据包挂在名称下方的 `HealthPercent` 分数 | — |
-| `hideVanillaName` | 名称改由本 Mod 绘制（样式等同原版） | — |
+| `hideBelowNameScore` | 隐藏数据包挂在名称下方的 `HealthPercent` 分数（名字因此自动落到原位） | — |
 | `hideEnemyBossBar` | 隐藏数据包挂在顶部的最近敌人 Boss 条 | — |
 | `showTeammates` | 显示队友血量（绿色条，自己永不显示） | — |
-| `autoPartyBossbar` | 自动 `/trigger TogglePartyBossbar` 打开队伍条（队友血量数据源） | — |
+| `autoPartyBossbar` | 自动 `/trigger TogglePartyBossbar` 打开队伍条（队友血量的数据源；**仅配置文件，界面无此项**） | — |
 | `hideTeamBossBar` | 隐藏顶部那条队伍血量条（数据照常读取） | — |
-| `teamBarWidth` / `teamScale` / `teamVerticalOffset` | 玩家血条的独立长度 / 缩放 / 垂直微调 | 50~150 / 0.75~1.50 / -30~0 |
+| `teamBarWidth` / `teamScale` / `teamVerticalOffset` | 玩家血条的长度 / 缩放 / 垂直微调 | 50~150 / 0.75~1.50 / -30~0 |
 | `teamMaxDistance` | 玩家血条显示距离（格） | 4 ~ 256 |
 | `maxDistance` | 敌人血条显示距离（格） | 4 ~ 256 |
 | `barWidth` | 敌人血条长度（原版名牌像素） | 50 ~ 150（默认 100） |
 | `scale` | 敌人整体缩放 | 0.75 ~ 1.50 |
 | `verticalOffset` | 敌人垂直微调，负值更高 | -30 ~ 0 |
 | `hideBehindWalls` | 被方块挡住视线时不画 | — |
-| `debug` | 左上角打印 `entities= / withData= / mates= / drawn=` | — |
+| `debug` | 左上角打印 `entities= / withData= / mates= / drawn=`（**仅配置文件，界面无此项**） | — |
 
 ## 未知诅咒
 
 数据包 `floors/curse_rooms/d_curse02_unknown.mcfunction` 会把个人状态条换成乱码并清空展示槽。
-本 Mod 用翻译键前缀 `Floors_Curse_Rooms_D_Curse02_Unknown_` 识别，命中期间**整个 UI 不画、名称也不接管**，
+本 Mod 用翻译键前缀 `Floors_Curse_Rooms_D_Curse02_Unknown_` 识别，命中期间**整个 UI 不画**，
 无开关（符合地图设定）；诅咒结束后 2 秒自动恢复。
 
 ## 自检
@@ -166,7 +182,7 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**1441 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**1440 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与分隔符、配置夹取（越界 / NaN / null）、
 Boss 栏标题解析（中英文/全角/负血/零上限/队伍条）、诅咒键判定。
 
@@ -176,7 +192,7 @@ Boss 栏标题解析（中英文/全角/负血/零上限/队伍条）、诅咒�
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.13.0.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.13.1.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 
@@ -190,7 +206,8 @@ Boss 栏标题解析（中英文/全角/负血/零上限/队伍条）、诅咒�
 | 1.9.0 | Mod ID 改为 `ctt-hud-fork` |
 | 1.11.0 | 回退到 1.4.0 功能集 + 修复血条纹理 |
 | 1.12.0 | 隐藏 below_name 分数、删远端百分比文字、玩家血条独立设置、心类配色 |
-| **1.13.0** | **心数行（红/魂精确）、魂心→黄条·蓝心→蓝条、名称改由 Mod 自绘** |
+| 1.13.0 | 心数行（红/魂精确）、魂心→黄条·蓝心→蓝条；名称一度改为自绘 |
+| **1.13.1** | 修复「高塔层数」Boss 条被当成队伍条隐藏；设置界面改为四项菜单；移除自绘名称 |
 
 ## 已知限制
 

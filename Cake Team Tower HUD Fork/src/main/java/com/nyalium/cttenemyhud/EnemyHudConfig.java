@@ -35,8 +35,6 @@ public final class EnemyHudConfig {
         public boolean showArmor = true;
         /** 隐藏实体名称下方那条计分板分数（数据包的 HealthPercent 显示）。 */
         public boolean hideBelowNameScore = true;
-        /** 名称改由本 Mod 绘制（先隐藏原版名称，再用同款样式画一份）。 */
-        public boolean hideVanillaName = true;
         /** 隐藏数据包挂在屏幕顶部的「最近敌人 Boss 条」（头顶已经画过了）。 */
         public boolean hideEnemyBossBar = true;
         /** 是否显示队友血量（绿色条）。自己永远不显示。 */

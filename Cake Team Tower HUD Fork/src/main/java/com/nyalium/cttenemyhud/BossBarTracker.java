@@ -38,7 +38,7 @@ import java.util.UUID;
  * <p>同一帧的后缀里只带一种元素护甲（{@code ArmorDisplay} 每 40 tick 进一档），
  * 所以按实体累积到 {@link ArmourCache}，超过一个轮换周期没再出现才作废。</p>
  */
-final class BossBarTracker {
+public final class BossBarTracker {
 
     /** 一条可解析的怪物 bar。 */
     static final class Bar {
@@ -229,9 +229,43 @@ final class BossBarTracker {
             String text = component.getString();
             if (BossBarTitle.isEnemyBarText(text, playerName)) continue;
             List<TeamBarTitle.Entry> parsed = TeamBarTitle.parse(text);
-            if (!parsed.isEmpty()) return parsed;
+            if (parsed.isEmpty()) continue;
+            // 「高塔 (12/50)」（数据包 floor 条）也是 名字 (x/y) 形状，
+            // 但它的名字是场景名，匹配不到任何真实玩家 —— 用它把两者分开。
+            if (!matchesAnyPlayer(mc, parsed)) continue;
+            return parsed;
         }
         return List.of();
+    }
+
+    /**
+     * 这条标题是不是「队员血量条」。
+     *
+     * <p>{@link TeamBarTitle} 只做形状匹配，而数据包的 {@code floor} 条
+     * （{@code 高塔 (12/50)}、{@code 休息室 (3/50)} …，见
+     * {@code floors/scenes/break_room_universal.mcfunction:397-402}）形状一模一样，
+     * 只按形状判定会把「高塔层数」整条隐藏掉。所以这里再要求
+     * <b>至少有一段名字能匹配到真实玩家</b>。</p>
+     */
+    public static boolean looksLikeTeamBar(Minecraft mc, String text) {        List<TeamBarTitle.Entry> parsed = TeamBarTitle.parse(text);
+        return !parsed.isEmpty() && matchesAnyPlayer(mc, parsed);
+    }
+
+    private static boolean matchesAnyPlayer(Minecraft mc, List<TeamBarTitle.Entry> entries) {
+        if (mc == null || entries.isEmpty()) return false;
+        if (mc.player != null) {
+            for (TeamBarTitle.Entry entry : entries) {
+                if (nameMatches(mc.player, entry.name, false)) return true;
+            }
+        }
+        if (mc.level != null) {
+            for (Player player : mc.level.players()) {
+                for (TeamBarTitle.Entry entry : entries) {
+                    if (nameMatches(player, entry.name, false)) return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** 队伍条解析结果的短缓存（{@link #isTeammate} 每帧会被问很多次）。 */

@@ -1,8 +1,8 @@
 package com.nyalium.cttenemyhud.mixin;
 
 import com.nyalium.cttenemyhud.BossBarTitle;
+import com.nyalium.cttenemyhud.BossBarTracker;
 import com.nyalium.cttenemyhud.EnemyHudConfig;
-import com.nyalium.cttenemyhud.TeamBarTitle;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.BossHealthOverlay;
 import net.minecraft.world.BossEvent;
@@ -57,7 +57,8 @@ public abstract class BossBarHudRenderMixin {
                 continue;
             }
             // 队伍血量条：只当数据源用，画面不必再显示一份。
-            if (cfg.hideTeamBossBar && !TeamBarTitle.parse(text).isEmpty()) {
+            // 注意不能只按「名字 (x/y)」的形状判定 —— 数据包的 floor 条（高塔层数）也是这个形状。
+            if (cfg.hideTeamBossBar && BossBarTracker.looksLikeTeamBar(mc, text)) {
                 anyHidden = true;
                 continue;
             }

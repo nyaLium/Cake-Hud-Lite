@@ -166,7 +166,6 @@ public final class SelfCheck {
         check(defaults.opacity == 0.75, "默认透明度应为 0.75");
         check(defaults.showBar && defaults.showNumbers && defaults.showArmor, "默认三个显示项应全开");
         check(defaults.showHeartCounts, "默认应显示心数");
-        check(defaults.hideVanillaName, "默认名称应由本 Mod 绘制");
         check(defaults.hideBelowNameScore, "默认应隐藏 below_name 分数");
         check(defaults.hideEnemyBossBar, "默认应隐藏顶部敌人Boss条");
         check(defaults.showTeammates, "默认应显示队友血量");

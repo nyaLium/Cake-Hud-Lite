@@ -6,7 +6,6 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
@@ -47,8 +46,6 @@ public final class EnemyHudElement implements HudElement {
 
     private static final double MIN_UNIT = 0.18;
     private static final double MAX_UNIT = 6.0;
-    /** 名称比 HUD 更远就淡出，避免远处一大堆名字糊在一起。 */
-    private static final double MIN_NAME_UNIT = 0.06;
 
     private static final class Placement {
         EnemyData.Snapshot data;
@@ -59,8 +56,6 @@ public final class EnemyHudElement implements HudElement {
         boolean player;
         /** 当前血条表现的心类；null = 红条。 */
         HeartCounts.Kind kind;
-        /** 要自绘的名称（null = 不画）。 */
-        Component name;
     }
 
     @Override
@@ -141,7 +136,6 @@ public final class EnemyHudElement implements HudElement {
             p.gy = pt[1];
             p.ppu = ppu;
             p.kind = kind;
-            p.name = entity.getDisplayName();
             placements.add(p);
         }
 
@@ -172,7 +166,6 @@ public final class EnemyHudElement implements HudElement {
                 p.gy = pt[1];
                 p.ppu = ppu;
                 p.player = true;
-                p.name = entity.getDisplayName();
                 placements.add(p);
                 mateCount++;
             }
@@ -282,32 +275,6 @@ public final class EnemyHudElement implements HudElement {
                 pose.popMatrix();
             }
         }
-
-        // 名称永远画：它已经替代了原版名称（Mixin 里把 nameTag 清掉了）。
-        drawName(g, font, p);
-    }
-
-    /**
-     * 自绘名称：与原版 {@code submitNameTag} 完全同款 —— 0.025 比例、居中、白字、
-     * 带阴影，并调用 {@code textWithBackdrop} 画出原版那层半透明底框。
-     *
-     * <p>按需求「名称不随 Mod 的设置而变化」：<b>不吃</b> {@code opacity} / {@code scale} /
-     * {@code verticalOffset}，永远是原版字号与不透明度；位置也固定在
-     * {@link EnemyHudLayout#NAME_TOP}（= 原版没有分数时名字所在的行）。</p>
-     */
-    private static void drawName(GuiGraphicsExtractor g, Font font, Placement p) {
-        if (p.name == null) return;
-        int width = font.width(p.name);
-        if (width <= 0) return;
-        double nameUnit = NAMETAG_SCALE * p.ppu;
-        if (!(nameUnit >= MIN_NAME_UNIT)) return;
-
-        Matrix3x2fStack pose = g.pose();
-        pose.pushMatrix();
-        pose.translate((float) p.gx, (float) p.gy);
-        pose.scale((float) nameUnit, (float) nameUnit);
-        g.textWithBackdrop(font, p.name, -width / 2, EnemyHudLayout.NAME_TOP, width, 0xFFFFFFFF);
-        pose.popMatrix();
     }
 
     // ── 工具 ──
