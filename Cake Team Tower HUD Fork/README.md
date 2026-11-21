@@ -2,16 +2,16 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.10.0**：功能集回退到「**只在实体名牌上方显示血量**」，去掉队友/自身面板、队伍条自动开启、顶部 Boss 条隐藏。
+> 当前版本 **1.11.0**：功能集回退到「**只在实体名牌上方显示血量**」，去掉队友/自身面板、队伍条自动开启、顶部 Boss 条隐藏。
 
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.10.0` |
+| 版本 | `1.11.0` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.10.0.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.11.0.jar` |
 
 ## 显示效果
 
@@ -52,11 +52,15 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 ```json
 {
   "enabled": true,
-  "opacity": 1.0,
+  "opacity": 0.75,
   "textShadow": true,
   "showBar": true,
   "showNumbers": true,
   "showArmor": true,
+  "showPercentText": true,
+  "hideEnemyBossBar": true,
+  "showTeammates": true,
+  "autoPartyBossbar": true,
   "maxDistance": 48.0,
   "barWidth": 100.0,
   "scale": 1.0,
@@ -69,9 +73,13 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 | 字段 | 说明 | 范围（越界自动夹回） |
 | --- | --- | --- |
 | `enabled` | 总开关 | — |
-| `opacity` | 整体不透明度（文字 + 血条） | 0.50 ~ 1.00 |
+| `opacity` | 整体不透明度（文字 + 血条） | 0.50 ~ 1.00（默认 0.75） |
 | `textShadow` | 文字阴影 | — |
 | `showBar` / `showNumbers` / `showArmor` | 分别开关血条 / 数字 / 护甲 | — |
+| `showPercentText` | 只有百分比数据时是否显示 `73%`；关掉后仍显示护甲 | — |
+| `hideEnemyBossBar` | 隐藏数据包挂在顶部的最近敌人 Boss 条 | — |
+| `showTeammates` | 显示队友血量（绿色条，自己永不显示） | — |
+| `autoPartyBossbar` | 自动 `/trigger TogglePartyBossbar` 打开队伍条（队友血量数据源） | — |
 | `maxDistance` | 超过该距离（格）不画 | 4 ~ 256 |
 | `barWidth` | 血条长度（原版名牌像素） | 50 ~ 150（默认 100） |
 | `scale` | 整体缩放 | 0.75 ~ 1.50 |
@@ -100,7 +108,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.10.0.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.11.0.jar` → 丢进 `.minecraft/mods`。
 
 ## 与本分支更早版本的区别
 
@@ -112,7 +120,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 1.7.0 | + 自动开启队伍条 |
 | 1.8.0 | + 队友/自身面板、拖拽、命令闸门 |
 | 1.9.0 | Mod ID 改为 `ctt-hud-fork` |
-| **1.10.0** | **回退到 1.4.0 功能集 + 修复血条纹理** |
+| **1.11.0** | **回退到 1.4.0 功能集 + 修复血条纹理** |
 
 ## 已知限制
 

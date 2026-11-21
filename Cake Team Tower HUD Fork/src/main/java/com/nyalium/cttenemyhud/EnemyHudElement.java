@@ -54,6 +54,8 @@ public final class EnemyHudElement implements HudElement {
         double gx;
         double gy;
         double ppu;
+        /** true = 队友（绿色条、无护甲）。 */
+        boolean player;
     }
 
     @Override
@@ -80,6 +82,19 @@ public final class EnemyHudElement implements HudElement {
 
         Scoreboard sb = mc.level.getScoreboard();
         Map<UUID, BossBarTracker.Bar> exact = BossBarTracker.resolve(mc, BossBarTracker.snapshot(mc));
+
+        // 队友：队伍条默认关，必要时自动开一次（带冷却与窗口限制）。
+        boolean teamBarPresent = cfg.showTeammates && BossBarTracker.hasTeamBar(mc);
+        if (cfg.showTeammates && cfg.autoPartyBossbar) {
+            if (teamBarPresent) {
+                PartyBossbarAutoToggle.tick(mc, true, false);
+            } else {
+                PartyBossbarAutoToggle.tick(mc, false, BossBarTracker.hasPersonalBar(mc));
+            }
+        }
+        Map<UUID, TeamBarTitle.Entry> teammates = cfg.showTeammates
+                ? BossBarTracker.resolveTeam(mc, BossBarTracker.teamEntries(mc))
+                : Map.of();
 
         List<Placement> placements = new ArrayList<>();
         double[] pt = new double[2];
@@ -125,9 +140,42 @@ public final class EnemyHudElement implements HudElement {
             placements.add(p);
         }
 
+        // 队友：绿色条，自己永远不画（第一/第三人称都看不到自己的条）。
+        int mateCount = 0;
+        if (!teammates.isEmpty()) {
+            int[] noArmour = new int[EnemyData.ARMOR_OBJECTIVES.length];
+            for (Entity entity : mc.level.entitiesForRendering()) {
+                if (!(entity instanceof Player)) continue;
+                if (entity == mc.player || !entity.isAlive() || entity.isInvisible()) continue;
+                TeamBarTitle.Entry entry = teammates.get(entity.getUUID());
+                if (entry == null) continue;
+
+                Vec3 pos = entity.getPosition(partialTick);
+                if (camPos.distanceTo(pos) > cfg.maxDistance) continue;
+                if (!entity.shouldRender(camPos.x, camPos.y, camPos.z)) continue;
+
+                Vec3 anchor = nameTagAnchor(entity, pos, partialTick);
+                if (cfg.hideBehindWalls && blocked(mc, entity, camPos, anchor)) continue;
+                if (!project(viewProj, camPos, anchor, guiW, guiH, pt)) continue;
+                if (!project(viewProj, camPos, anchor.add(right), guiW, guiH, ptRight)) continue;
+                double ppu = ptRight[0] - pt[0];
+                if (!(ppu > 1.0e-3)) continue;
+                if (pt[0] < -margin || pt[0] > guiW + margin || pt[1] < -margin || pt[1] > guiH + margin) continue;
+
+                Placement p = new Placement();
+                p.data = EnemyData.exact(entry.hp, entry.maxHp, 0, noArmour);
+                p.gx = pt[0];
+                p.gy = pt[1];
+                p.ppu = ppu;
+                p.player = true;
+                placements.add(p);
+                mateCount++;
+            }
+        }
+
         if (cfg.debug) {
             g.text(mc.font, "CTT EnemyHUD  entities=" + scanned + " withData=" + withData
-                            + " drawn=" + placements.size()
+                            + " mates=" + mateCount + " drawn=" + placements.size()
                             + (placements.isEmpty() ? "" : "  " + (placements.get(0).data.percentOnly ? "percent" : "absolute")),
                     4, 4, 0xFFFFFF00, true);
         }
@@ -148,6 +196,7 @@ public final class EnemyHudElement implements HudElement {
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
         o.showNumbers = cfg.showNumbers;
         o.showArmor = cfg.showArmor;
+        o.showPercentText = cfg.showPercentText;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.barWidth;
         o.verticalOffset = cfg.verticalOffset;
@@ -188,12 +237,21 @@ public final class EnemyHudElement implements HudElement {
             pose.scale(layout.barWidth / (float) BossBarTexture.NATIVE_WIDTH, 1.0f);
             int bx = -BossBarTexture.NATIVE_WIDTH / 2;
             int white = withAlpha(0xFFFFFF, alpha);
-            BossBarTexture.drawBackground(g, bx, 0, BossBarTexture.NATIVE_WIDTH,
-                    EnemyHudLayout.BAR_HEIGHT, white);
+            if (p.player) {
+                BossBarTexture.drawBackgroundGreen(g, bx, 0, BossBarTexture.NATIVE_WIDTH,
+                        EnemyHudLayout.BAR_HEIGHT, white);
+            } else {
+                BossBarTexture.drawBackground(g, bx, 0, BossBarTexture.NATIVE_WIDTH,
+                        EnemyHudLayout.BAR_HEIGHT, white);
+            }
             int fill = Math.round(BossBarTexture.NATIVE_WIDTH * p.data.ratio());
             fill = Math.max(0, Math.min(BossBarTexture.NATIVE_WIDTH, fill));
             if (fill > 0) {
-                BossBarTexture.drawProgress(g, bx, 0, fill, EnemyHudLayout.BAR_HEIGHT, white);
+                if (p.player) {
+                    BossBarTexture.drawProgressGreen(g, bx, 0, fill, EnemyHudLayout.BAR_HEIGHT, white);
+                } else {
+                    BossBarTexture.drawProgress(g, bx, 0, fill, EnemyHudLayout.BAR_HEIGHT, white);
+                }
             }
             pose.popMatrix();
         }

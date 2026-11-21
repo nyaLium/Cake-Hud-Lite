@@ -4,6 +4,7 @@
   "package": "com.nyalium.cttenemyhud.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "BossBarHudRenderMixin",
     "BossHealthOverlayAccessor"
   ],
   "injectors": {

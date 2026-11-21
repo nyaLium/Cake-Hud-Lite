@@ -38,6 +38,8 @@ public final class EnemyHudLayout {
         public boolean showNumbers = true;
         public boolean showArmor = true;
         public boolean showBar = true;
+        /** 只有百分比数据时是否显示 "73%" 文字；关掉就只画血条与护甲。 */
+        public boolean showPercentText = true;
         /** 固定长度（原版名牌像素），夹在 BAR_WIDTH_MIN ~ BAR_WIDTH_MAX。 */
         public double barWidth = BAR_WIDTH_DEFAULT;
         public int verticalOffset = 0;
@@ -101,14 +103,16 @@ public final class EnemyHudLayout {
 
         List<Line> lines = new ArrayList<>(9);
 
-        if (opt.showNumbers) {
+        // 百分比模式下可以单独关掉数字，但护甲段照旧显示。
+        boolean showNumbers = opt.showNumbers && (!percentOnly || opt.showPercentText);
+        if (showNumbers) {
             String hpText = percentOnly ? Math.max(0, hp) + "%" : Math.max(0, hp) + "/" + Math.max(0, maxHp);
             lines.add(new Line(hpText, 0xFFFFFF));
         }
 
         if (opt.showArmor && hasArmor(defence, armor)) {
             if (!lines.isEmpty()) {
-                lines.add(new Line("  \u2014  ", 0x9E9E9E));
+                lines.add(new Line(" | ", 0x9E9E9E));
             }
             if (defence != 0) {
                 lines.add(new Line("\uD83D\uDEE1" + defence, EnemyData.DEFENCE_COLOR));

@@ -17,6 +17,8 @@ public final class SelfCheck {
         armorEdgeCases();
         bossBarTitles();
         curseKeys();
+        teamBarTitles();
+        percentTextOption();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -160,8 +162,12 @@ public final class SelfCheck {
         check(defaults.barWidth == 100.0, "默认血条长度应为 100");
         check(defaults.scale == 1.0, "默认缩放应为 1.0");
         check(defaults.verticalOffset == 0, "默认垂直偏移应为 0");
-        check(defaults.opacity == 1.0, "默认透明度应为 1.0");
+        check(defaults.opacity == 0.75, "默认透明度应为 0.75");
         check(defaults.showBar && defaults.showNumbers && defaults.showArmor, "默认三个显示项应全开");
+        check(defaults.showPercentText, "默认应显示百分比文字");
+        check(defaults.hideEnemyBossBar, "默认应隐藏顶部敌人Boss条");
+        check(defaults.showTeammates, "默认应显示队友血量");
+        check(defaults.autoPartyBossbar, "默认应自动开启队伍条");
 
         check(EnemyHudConfig.normalize(null) != null, "normalize(null) 不能返回 null");
 
@@ -244,6 +250,64 @@ public final class SelfCheck {
         check(!CurseDetector.isCurseKey(""), "空键不应命中");
     }
 
+    // ── 7. 队伍条（队友血量） ──
+
+    private static void teamBarTitles() {
+        java.util.List<TeamBarTitle.Entry> one = TeamBarTitle.parse("nyaLium (73/120)");
+        check(one.size() == 1, "单条队伍条目解析失败");
+        if (one.size() == 1) {
+            check("nyaLium".equals(one.get(0).name), "队伍名字=" + one.get(0).name);
+            check(one.get(0).hp == 73 && one.get(0).maxHp == 120, "队伍血量解析错误");
+            check(Math.abs(one.get(0).ratio() - 73f / 120f) < 1e-6, "队伍 ratio 错误");
+        }
+
+        java.util.List<TeamBarTitle.Entry> many = TeamBarTitle.parse("A (10/20) B (30/40) C (5/5)");
+        check(many.size() == 3, "多条队伍条目数量错误: " + many.size());
+
+        check(TeamBarTitle.parse("nyaLium (73/120) ").size() == 1, "尾随空格应仍能解析");
+        check(TeamBarTitle.parse("A(1/2)B(3/4)").size() == 2, "无空格相邻应能解析");
+        check(TeamBarTitle.parse("A （1/2）").size() == 1, "全角括号应能解析");
+
+        check(TeamBarTitle.parse("Frost Wolf (HP 73/120)").isEmpty(), "敌人条不能当队伍条");
+        check(TeamBarTitle.parse("Frost Wolf (HP 73/120) 🛡3").isEmpty(), "带护甲的敌人条不能当队伍条");
+        check(TeamBarTitle.parse("").isEmpty(), "空串应解析为空");
+        check(TeamBarTitle.parse(null).isEmpty(), "null 应解析为空");
+        check(TeamBarTitle.parse("Someone (/)").isEmpty(), "队伍标记条不应解析出玩家");
+        check(TeamBarTitle.parse("普通文本").isEmpty(), "普通文本不应解析出玩家");
+        check(TeamBarTitle.parse("A (10/0)").isEmpty(), "上限为 0 的条目应丢弃");
+    }
+
+    // ── 8. 百分比文字开关（关闭后仍保留护甲） ──
+
+    private static void percentTextOption() {
+        Data percent = new Data("仅百分比", 73, 100, true, 4, new int[]{2, 0, 0, 0, 0, 0, 0});
+        EnemyHudLayout.Options on = new EnemyHudLayout.Options();
+        EnemyHudLayout.Result rOn = run("百分比 开", percent, on);
+        check(rOn != null && rOn.hasText, "百分比模式下应显示文字");
+
+        EnemyHudLayout.Options off = new EnemyHudLayout.Options();
+        off.showPercentText = false;
+        EnemyHudLayout.Result rOff = run("百分比 关", percent, off);
+        check(rOff != null, "关闭百分比文字后不应崩");
+        if (rOff != null) {
+            boolean hasPercent = false;
+            for (EnemyHudLayout.Line l : rOff.lines) {
+                if (l.text.contains("%")) hasPercent = true;
+            }
+            check(!hasPercent, "关掉后不应再出现百分比数字");
+            check(rOff.hasText, "关掉数字后护甲仍应显示");
+            check(rOff.barWidth > 0, "关掉数字后血条仍应存在");
+        }
+
+        // 全角/半角无关，分隔符固定为 " | "
+        EnemyHudLayout.Options sep = new EnemyHudLayout.Options();
+        EnemyHudLayout.Result rSep = run("分隔符", new Data("x", 50, 100, false, 3, new int[]{1, 0, 0, 0, 0, 0, 0}), sep);
+        boolean hasPipe = false;
+        for (EnemyHudLayout.Line l : rSep.lines) {
+            if (l.text.contains("|")) hasPipe = true;
+        }
+        check(hasPipe, "血量与护甲之间应使用 \" | \" 分隔");
+    }
     // ── 基础设施 ──
 
     private static EnemyHudLayout.Result run(String tag, Data d, EnemyHudLayout.Options o) {

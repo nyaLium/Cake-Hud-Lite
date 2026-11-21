@@ -100,7 +100,6 @@ final class BossBarTracker {
 
     /**
      * 把每条 bar 认领到最近的同名实体。
-     *
      * <p>名字匹配两种优先级：先「完全相同」，再「互相包含」；同一优先级里取离玩家最近的。
      * 命中后顺手把本帧的护甲段喂给 {@link ArmourCache}。</p>
      */
@@ -139,6 +138,98 @@ final class BossBarTracker {
         return out;
     }
     // ── 名字匹配 ──
+
+
+    // ── 队伍条（队友血量） ──
+
+    /** 队伍血量条是否已经在客户端上。 */
+    static boolean hasTeamBar(Minecraft mc) {
+        return !teamEntries(mc).isEmpty();
+    }
+
+    /** 是否存在「自己」的血量条；用来判断玩家是否已进入对局。 */
+    static boolean hasPersonalBar(Minecraft mc) {
+        if (mc.gui == null || mc.gui.hud == null || mc.player == null) return false;
+        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
+        if (overlay == null) return false;
+        Map<UUID, BossEvent> bars;
+        try {
+            bars = ((BossHealthOverlayAccessor) (Object) overlay).cttEnemyHud$getBossBars();
+        } catch (Throwable t) {
+            return false;
+        }
+        if (bars == null || bars.isEmpty()) return false;
+        String playerName = mc.player.getName().getString();
+        if (playerName.isEmpty()) return false;
+        for (BossEvent bar : bars.values()) {
+            Component component = bar.getName();
+            if (component == null) continue;
+            String text = component.getString();
+            if (text.contains(playerName) && BossBarTitle.parse(text) != null) return true;
+        }
+        return false;
+    }
+
+    /** 从客户端 Boss 栏里找那条队伍血量条并解析出每个玩家的 当前/上限。 */
+    static List<TeamBarTitle.Entry> teamEntries(Minecraft mc) {
+        if (mc.gui == null || mc.gui.hud == null) return List.of();
+        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
+        if (overlay == null) return List.of();
+
+        Map<UUID, BossEvent> bars;
+        try {
+            bars = ((BossHealthOverlayAccessor) (Object) overlay).cttEnemyHud$getBossBars();
+        } catch (Throwable t) {
+            return List.of();
+        }
+        if (bars == null || bars.isEmpty()) return List.of();
+
+        String playerName = mc.player != null ? mc.player.getName().getString() : "";
+        for (BossEvent bar : bars.values()) {
+            Component component = bar.getName();
+            if (component == null) continue;
+            String text = component.getString();
+            if (BossBarTitle.isEnemyBarText(text, playerName)) continue;
+            List<TeamBarTitle.Entry> parsed = TeamBarTitle.parse(text);
+            if (!parsed.isEmpty()) return parsed;
+        }
+        return List.of();
+    }
+
+    /** 把队伍条目认领到附近的同名玩家实体（自己永不参与）。 */
+    static Map<UUID, TeamBarTitle.Entry> resolveTeam(Minecraft mc, List<TeamBarTitle.Entry> entries) {
+        Map<UUID, TeamBarTitle.Entry> out = new HashMap<>();
+        if (entries.isEmpty() || mc.level == null || mc.player == null) return out;
+
+        List<Player> candidates = new ArrayList<>();
+        for (Entity entity : mc.level.entitiesForRendering()) {
+            if (entity instanceof Player player && player != mc.player && player.isAlive()) {
+                candidates.add(player);
+            }
+        }
+        if (candidates.isEmpty()) return out;
+
+        Vec3 self = mc.player.position();
+        for (TeamBarTitle.Entry entry : entries) {
+            for (int pass = 0; pass < 2; pass++) {
+                Player best = null;
+                double bestDist = Double.MAX_VALUE;
+                for (Player player : candidates) {
+                    if (!nameMatches(player, entry.name, pass == 0)) continue;
+                    double dist = player.position().distanceToSqr(self);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        best = player;
+                    }
+                }
+                if (best != null) {
+                    out.put(best.getUUID(), entry);
+                    break;
+                }
+            }
+        }
+        return out;
+    }
 
     private static boolean nameMatches(Entity entity, String barName, boolean exact) {
         if (barName.isEmpty()) return false;

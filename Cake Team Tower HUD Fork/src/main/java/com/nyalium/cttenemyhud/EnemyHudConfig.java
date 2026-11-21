@@ -22,7 +22,7 @@ public final class EnemyHudConfig {
         /** 总开关：false 时完全不绘制。 */
         public boolean enabled = true;
         /** 整体不透明度，0.50 ~ 1.00（低于 0.50 会被夹到 0.50）。 */
-        public double opacity = 1.0;
+        public double opacity = 0.75;
         /** 文字是否带阴影。 */
         public boolean textShadow = true;
         /** 是否画血条（原版 bossbar 纹理）。 */
@@ -31,6 +31,18 @@ public final class EnemyHudConfig {
         public boolean showNumbers = true;
         /** 是否画护甲段（🛡Defence + 元素护甲）。 */
         public boolean showArmor = true;
+        /**
+         * 只有百分比数据时是否显示 "73%" 文字。
+         *
+         * <p>关掉它，远端敌人就只画血条与护甲，不显示百分比数字。</p>
+         */
+        public boolean showPercentText = true;
+        /** 隐藏数据包挂在屏幕顶部的「最近敌人 Boss 条」（头顶已经画过了）。 */
+        public boolean hideEnemyBossBar = true;
+        /** 是否显示队友血量（绿色条）。自己永远不显示。 */
+        public boolean showTeammates = true;
+        /** 自动执行 /trigger TogglePartyBossbar 打开队伍条（队友血量的数据源）。 */
+        public boolean autoPartyBossbar = true;
         /** 超过这个距离（格）不再绘制。 */
         public double maxDistance = 48.0;
         /** 血条长度（原版名牌像素），50 ~ 150，默认 100。 */

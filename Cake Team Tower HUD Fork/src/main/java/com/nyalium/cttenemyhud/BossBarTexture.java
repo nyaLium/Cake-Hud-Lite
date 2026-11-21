@@ -21,6 +21,9 @@ final class BossBarTexture {
 
     private static final Identifier BACKGROUND = Identifier.withDefaultNamespace("boss_bar/red_background");
     private static final Identifier PROGRESS = Identifier.withDefaultNamespace("boss_bar/red_progress");
+    /** 队友血条用原版绿色 bossbar 纹理。 */
+    private static final Identifier BACKGROUND_GREEN = Identifier.withDefaultNamespace("boss_bar/green_background");
+    private static final Identifier PROGRESS_GREEN = Identifier.withDefaultNamespace("boss_bar/green_progress");
 
     /** 原版血条纹理尺寸。 */
     static final int NATIVE_WIDTH = 182;
@@ -32,6 +35,18 @@ final class BossBarTexture {
     static void drawBackground(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
         if (w <= 0 || h <= 0) return;
         g.blitSprite(RenderPipelines.GUI_TEXTURED, BACKGROUND, x, y, w, h, color);
+    }
+
+    /** 队友条：原版绿色空槽。 */
+    static void drawBackgroundGreen(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
+        if (w <= 0 || h <= 0) return;
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, BACKGROUND_GREEN, x, y, w, h, color);
+    }
+
+    /** 队友条：原版绿色填充段。 */
+    static void drawProgressGreen(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
+        if (w <= 0 || h <= 0) return;
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, PROGRESS_GREEN, x, y, w, h, color);
     }
 
     /** 已填充段；{@code w} 是这段占的像素宽。 */
