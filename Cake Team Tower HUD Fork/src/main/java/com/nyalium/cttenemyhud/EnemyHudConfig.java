@@ -120,6 +120,17 @@ public final class EnemyHudConfig {
         cfg = new Cfg();
     }
 
+    /** 当前配置的深拷贝，用作设置界面「取消」的回滚点（不落盘）。 */
+    public static Cfg copy() {
+        Cfg copy = GSON.fromJson(GSON.toJson(cfg), Cfg.class);
+        return normalize(copy);
+    }
+
+    /** 换回给定配置（「取消」用；不落盘）。 */
+    public static void restore(Cfg snapshot) {
+        cfg = normalize(snapshot);
+    }
+
     private static void reloadIfChanged() {
         if (file == null || writing) return;
         try {

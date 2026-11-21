@@ -13,7 +13,8 @@ import net.minecraft.network.chat.Component;
 /**
  * 某一类设置的子界面（从 {@link EnemyHudConfigScreen} 点进来）。
  *
- * <p>左右两列排布，底部一个「返回」。拖动即时生效，写盘统一由总界面负责。</p>
+ * <p>左右两列排布，底部三个按钮：<b>返回</b>（回到总界面，改动保留）/
+ * <b>完成</b>（写盘并关闭整套设置）/ <b>取消</b>（回滚到打开总界面时的快照并关闭）。</p>
  */
 public final class EnemyHudSettingsScreen extends Screen {
 
@@ -25,13 +26,14 @@ public final class EnemyHudSettingsScreen extends Screen {
     private static final int TOP = 52;
     private static final int COLUMN_GAP = 12;
     private static final int ROW_WIDTH_MAX = 210;
+    private static final int BUTTON_GAP = 8;
 
-    private final Screen parent;
+    private final EnemyHudConfigScreen menu;
     private final Section section;
 
-    public EnemyHudSettingsScreen(Screen parent, Section section) {
+    public EnemyHudSettingsScreen(EnemyHudConfigScreen menu, Section section) {
         super(Component.translatable("ctt_enemy_hud.config.section." + id(section)));
-        this.parent = parent;
+        this.menu = menu;
         this.section = section;
     }
 
@@ -57,13 +59,32 @@ public final class EnemyHudSettingsScreen extends Screen {
         }
 
         int totalWidth = w * 2 + COLUMN_GAP;
+        int small = (totalWidth - BUTTON_GAP * 2) / 3;
         int buttonY = Math.min(TOP + ROW_GAP * 5 + 8, this.height - ROW_HEIGHT - 8);
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
-                .bounds(leftX + totalWidth / 2 - 60, buttonY, 120, ROW_HEIGHT).build());
+                .bounds(leftX, buttonY, small, ROW_HEIGHT).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> done())
+                .bounds(leftX + small + BUTTON_GAP, buttonY, small, ROW_HEIGHT).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.cancel"), b -> cancel())
+                .bounds(leftX + (small + BUTTON_GAP) * 2, buttonY,
+                        totalWidth - (small + BUTTON_GAP) * 2, ROW_HEIGHT).build());
     }
 
+    /** 返回：改动保留，回到总界面。 */
     private void back() {
-        this.minecraft.gui.setScreen(this.parent);
+        this.minecraft.gui.setScreen(this.menu);
+    }
+
+    /** 完成：写盘并关闭整套设置。 */
+    private void done() {
+        EnemyHudConfig.save();
+        this.minecraft.gui.setScreen(this.menu.root());
+    }
+
+    /** 取消：回滚到打开总界面时的配置并关闭（不写盘）。 */
+    private void cancel() {
+        EnemyHudConfig.restore(this.menu.snapshot());
+        this.minecraft.gui.setScreen(this.menu.root());
     }
 
     // ── 通用设置 ──
