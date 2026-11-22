@@ -167,8 +167,14 @@ public final class SelfStats {
                 || flat.contains("尚未启用");
     }
 
-    /** 被拒绝后安静一会儿，避免 30 s 一次继续往聊天栏丢提示。 */
-    private static final long DENIED_BACKOFF_MS = 60_000L;
+    /**
+     * 被拒绝后安静一会儿，避免继续往聊天栏丢提示。
+     *
+     * <p>1.20.11：60 s → 10 s。拒绝提示本身已被 {@link ChatTriggerFilter} 吞掉，
+     * 10 s 一次的重试成本可以忽略；好处是开局后最多等 10 s 面板就能重新出数，
+     * 而不是「上一局的数据挂一分钟」。</p>
+     */
+    private static final long DENIED_BACKOFF_MS = 10_000L;
 
     /** 开始一趟采集：只清 PENDING，屏上的旧内容继续显示（避免闪一下空白）。 */
     private static void begin(long now) {
@@ -180,16 +186,34 @@ public final class SelfStats {
         hardEndMs = now + CAPTURE_HARD_MS;
     }
 
-    /** 这一趟发完了（或超时）：把 PENDING 整体换到 SHOWN。空结果不覆盖旧面板。 */
+    /**
+     * 这一趟发完了（或超时）：把 PENDING 整体换到 SHOWN。
+     *
+     * <p>空结果默认不覆盖旧面板（偶发丢包时不闪）。1.20.11：连续 {@value #MAX_EMPTY_CAPTURES}
+     * 趟都拿不到任何行，就当作「当前取不到数据」，清空面板 —— 否则两局之间/旁观时会一直挂着
+     * 上一局的时间和心数。</p>
+     */
     private static void settle(long now) {
         if (!capturing) return;
         if (now <= windowEndMs && now <= hardEndMs) return;
         capturing = false;
-        if (PENDING.isEmpty()) return;
+        if (PENDING.isEmpty()) {
+            if (++emptyCaptures >= MAX_EMPTY_CAPTURES) {
+                SHOWN.clear();
+                java.util.Arrays.fill(HEARTS, 0);
+            }
+            return;
+        }
+        emptyCaptures = 0;
         SHOWN.clear();
         SHOWN.addAll(PENDING);
         System.arraycopy(PENDING_HEARTS, 0, HEARTS, 0, HEARTS.length);
     }
+
+    /** 连续多少趟空采集就认为「现在没有数据」，清空面板。 */
+    private static final int MAX_EMPTY_CAPTURES = 2;
+
+    private static int emptyCaptures;
 
     /** 断线 / 换服时清空，避免看到上一服的面板。 */
     public static void reset() {
@@ -198,6 +222,7 @@ public final class SelfStats {
         java.util.Arrays.fill(HEARTS, 0);
         java.util.Arrays.fill(PENDING_HEARTS, 0);
         capturing = false;
+        emptyCaptures = 0;
         windowEndMs = 0L;
         hardEndMs = 0L;
         nextTriggerMs = 0L;
@@ -224,9 +249,14 @@ public final class SelfStats {
             return true;
         }
         if (isTriggerDenied(flat)) {
-            // 触发项还没 enable（例如刚开局、或这条命令对当前状态无效）：
-            // 吞掉提示、停止这一趟采集，并且 60 s 内不再发，避免聊天栏每 30 s 冒一句。
+            // 触发项还没 enable（对局没开始 / 两局之间 / 这张图不给触发）：
+            // 吞掉提示、停掉这一趟，并且**清空面板** —— 上一局的时间/心数继续挂着会误导。
+            // 1.20.11：冷却从 60 s 缩短到 10 s，开局后最多 10 s 就能重新取到数。
+            notStarted = true;
             capturing = false;
+            SHOWN.clear();
+            PENDING.clear();
+            java.util.Arrays.fill(HEARTS, 0);
             nextTriggerMs = nowMs + DENIED_BACKOFF_MS;
             return true;
         }

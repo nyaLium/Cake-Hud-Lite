@@ -2,18 +2,18 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.20.10**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.20.11**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/字号/透明度，
 > 60 个属性逐项开关（**双列按钮 + 滚动**），快捷键 `F8` 打开设置。
 
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.20.10` |
+| 版本 | `1.20.11` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.20.10.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.20.11.jar` |
 
 ## 绘制方式（1.15.0 起）
 
@@ -307,7 +307,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | 刷新间隔的单位 | `System.currentTimeMillis()` → **现实时间**；界面文案写明「秒（现实时间）」，不走游戏刻 |
 | 不同职业想看的东西不同 | ~~职业过滤~~：1.20.5 已按你的要求删除 |
 
-> **大厅里不发**（1.20.8）：地图开局才 `enable` ViewStats，提前触发只会收到「无法触发该计分项」；现在用「自己身上有 `below_name` 的 `HealthPercent` 分数，或本人 `player_100N` bossbar 已出现」作为开局判据，大厅里每 5 s 复查一次，并且这句回显会被聊天过滤器吞掉。
+> **大厅里不发**（1.20.8）；**被拒绝就直接清空面板**（1.20.11）：地图开局才 `enable` ViewStats，提前触发只会收到「无法触发该计分项」；现在用「自己身上有 `below_name` 的 `HealthPercent` 分数，或本人 `player_100N` bossbar 已出现」作为开局判据，大厅里每 5 s 复查一次，并且这句回显会被聊天过滤器吞掉。
 >
 > **拿不到别人**：地图那 147 条 `tellraw` 全是 `@s`，没有一条发给 `@a`，所以这个通道**只能问到自己**。
 > 队友的**心数拆分**只能靠本 Mod 的服务端组件 payload（1.16.0 起）；没有 payload 时，
@@ -412,7 +412,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.20.10.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.20.11.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 

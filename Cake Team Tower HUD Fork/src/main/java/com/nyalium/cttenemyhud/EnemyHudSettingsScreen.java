@@ -123,6 +123,11 @@ public final class EnemyHudSettingsScreen extends Screen {
                 4.0, 128.0, 4.0, cfg.maxDistance,
                 v -> key("maxDistance", (int) Math.round(v)),
                 v -> EnemyHudConfig.get().maxDistance = v));
+        y += ROW_GAP;
+        // 1.20.11：左右各 3 行，避免「左 2 右 4」那种长短腿排版。
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.useServerData)
+                .create(leftX, y, w, ROW_HEIGHT, key("useServerData"),
+                        (b, v) -> EnemyHudConfig.get().useServerData = v));
 
         y = TOP;
         addRenderableWidget(new ValueSlider(rightX, y, w, ROW_HEIGHT,
@@ -139,11 +144,7 @@ public final class EnemyHudSettingsScreen extends Screen {
                 -30.0, 0.0, 1.0, cfg.verticalOffset,
                 v -> key("verticalOffset", signed((int) Math.round(v))),
                 v -> EnemyHudConfig.get().verticalOffset = (int) Math.round(v)));
-        y += ROW_GAP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.useServerData)
-                .create(rightX, y, w, ROW_HEIGHT, key("useServerData"),
-                        (b, v) -> EnemyHudConfig.get().useServerData = v));
-        return 4;
+        return 3;
     }
 
     // ── 玩家设置 ──
