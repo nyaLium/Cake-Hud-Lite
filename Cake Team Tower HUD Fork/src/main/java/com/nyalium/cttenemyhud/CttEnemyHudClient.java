@@ -3,9 +3,6 @@ package com.nyalium.cttenemyhud;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
-import net.minecraft.resources.Identifier;
 
 /**
  * CTT Enemy HUD · 客户端入口。
@@ -22,12 +19,8 @@ public final class CttEnemyHudClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         EnemyHudConfig.load();
-        // 画在「提示信息」之下：OVERLAY_MESSAGE（动作栏）、标题、聊天、玩家列表都在它之后，
-        // 所以血条不会盖住这些 UI 文字；同时它仍在世界渲染之后，所以压得住模型与名牌。
-        HudElementRegistry.attachElementBefore(
-                VanillaHudElements.OVERLAY_MESSAGE,
-                Identifier.fromNamespaceAndPath(MOD_ID, "enemy_hud"),
-                new EnemyHudElement());
+        // 不再注册 GUI 元素：血条改为在「实体名字的提交点」世界空间绘制（mixin
+        // NameTagHudMixin → HudWorldRenderer），因此天然带深度测试，被挡住就看不见。
         // 吞掉本 Mod 自发 /trigger 的聊天回显（成功回显 + 「无法触发该计分项」）。
         // 注意 ALLOW_GAME 的返回值语义：true = 允许显示，false = 拦掉。
         ClientReceiveMessageEvents.ALLOW_GAME.register(

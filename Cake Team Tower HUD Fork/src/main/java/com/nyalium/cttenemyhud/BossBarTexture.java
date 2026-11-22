@@ -77,4 +77,31 @@ final class BossBarTexture {
         g.blitSprite(RenderPipelines.GUI_TEXTURED, (tint == null ? DEFAULT : tint).progress(),
                 x, y, w, h, color);
     }
+
+    // ── 世界空间路径（原版 nameTag 那条路）用 ──
+
+    /**
+     * 空槽纹理文件。GUI 里走的是 GUI 图集里的同名 sprite，这里直接指向
+     * {@code textures/gui/sprites/boss_bar/*.png} 原文件：两者是同一张图，
+     * 资源包替换同样生效，且不需要去碰图集 UV。
+     */
+    static Identifier backgroundTexture(Tint tint) {
+        return texture(tint == null ? DEFAULT : tint, false);
+    }
+
+    /** 已填充段纹理文件。 */
+    static Identifier progressTexture(Tint tint) {
+        return texture(tint == null ? DEFAULT : tint, true);
+    }
+
+    private static Identifier texture(Tint tint, boolean progress) {
+        return Identifier.withDefaultNamespace("textures/gui/sprites/boss_bar/"
+                + tint.name().toLowerCase(java.util.Locale.ROOT)
+                + (progress ? "_progress" : "_background") + ".png");
+    }
+
+    /** {@code 0xRRGGBB} + alpha → {@code 0xAARRGGBB}。 */
+    static int argb(int rgb, int alpha) {
+        return ((alpha & 0xFF) << 24) | (rgb & 0xFFFFFF);
+    }
 }

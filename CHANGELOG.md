@@ -7,7 +7,8 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
-| **1.14.5** | 血条改画在动作栏/标题/聊天之下；新增「被其它实体挡住时隐藏」（屏幕矩形覆盖率 ≥70% 就不画） | `versions/v1.14.5/` |
+| **1.15.0** | 渲染改为世界空间：与原版名字同一个 `submitNameTag` 提交点，深度测试 / 随距离缩放全部对齐；删除 GUI 元素 | `versions/v1.15.0/` |
+| 1.14.5 | 血条改画在动作栏/标题/聊天之下；新增「被其它实体挡住时隐藏」（屏幕矩形覆盖率 ≥70% 就不画） | `versions/v1.14.5/` |
 | 1.14.4 | 新增「换行阈值」`wrapWidth`（40~200，最右=自动=不超过血条长度），折行阈值可调 | `versions/v1.14.4/` |
 | 1.14.3 | 红心写 `❤当前/上限`；整行超过阈值时折两行：红心在上、其余心+护甲在下 | `versions/v1.14.3/` |
 | 1.14.2 | 碎心按符号拆两栏：`> 0` 碎心（暗红 💔）/ `< 0` 粉心（亮紫 💗），负值不再被夹成 0 | `versions/v1.14.2/` |
@@ -32,7 +33,22 @@
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
 
-## 1.14.5（当前）
+## 1.15.0（当前）
+
+- **渲染架构改为世界空间**：血条不再画在 GUI 层，而是挂在
+  `EntityRenderer.submitNameDisplay` 的 `TAIL`（`NameTagHudMixin`）上——
+  **和原版名字用同一个提交函数**（`SubmitNodeCollector.submitNameTag`，`DisplayMode.NORMAL`）。
+  于是遮挡与深度行为与原版名字一致：被墙挡住消失、被更近的模型逐像素裁掉、尺寸随距离缩放。
+- 血条几何用同样的 billboard 三步变换 + `submitCustomGeometry(RenderTypes.text(boss_bar PNG))`，
+  仍是原版 182×5 纹理（直接采文件、UV 铺满），资源包替换照常生效。
+- 新增 `HudWorldRenderer`（取代并删除 `EnemyHudElement`）、`HudRenderBridge`
+  （`FabricRenderState` + `RenderStateDataKey<Entity>`，解决 submit 阶段拿不到实体）。
+- `CttEnemyHudClient` 不再注册 `HudElement`；`BossBarTexture` 增加世界空间用的纹理 id 与 `argb`。
+- 文字行带上了原版名字那种深色背景框；`hideBehindWalls` / `hideBehindEntities`
+  降级为「少提交一点」的额外剔除，真正的遮挡交给深度测试。
+- 自检：`checks=1522 failures=0`（布局逻辑未改）。
+
+## 1.14.5
 
 - **血条不再压住 UI 文字**：`HudElementRegistry.addLast` → `attachElementBefore(VanillaHudElements.OVERLAY_MESSAGE)`，
   动作栏 / 标题 / 聊天 / 玩家列表现在都画在血条之上（血条仍在世界之后）。

@@ -2,7 +2,7 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.14.5**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.15.0**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 设置界面一纵排布（通用 / 敌人 / 玩家 / 恢复默认 + 底部完成）。
 
 | 项目 | 内容 |
@@ -12,7 +12,17 @@
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.14.5.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.15.0.jar` |
+
+## 绘制方式（1.15.0 起）
+
+血条**画在世界空间**，与实体名字共用原版那条提交路径：
+
+- 文字行 → SubmitNodeCollector.submitNameTag（原版画名字的同一个函数，DisplayMode.NORMAL）；
+- 血条 → submitCustomGeometry + RenderTypes.text(boss_bar PNG)，同样的 billboard 变换。
+
+结果是遮挡行为**与原版名字一致**：被方块挡住就消失、被更近的模型逐像素裁掉、
+尺寸随距离缩放。hideBehindWalls / hideBehindEntities 只作为「少提交一点」的额外剔除保留。
 
 ## 显示效果
 
@@ -309,7 +319,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.14.5.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.15.0.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 

@@ -6,6 +6,7 @@
   "client": [
     "BossBarHudRenderMixin",
     "BossHealthOverlayAccessor",
+    "NameTagHudMixin",
     "NameTagScoreMixin"
   ],
   "injectors": {

@@ -1,6 +1,7 @@
 package com.nyalium.cttenemyhud.mixin;
 
 import com.nyalium.cttenemyhud.EnemyHudConfig;
+import com.nyalium.cttenemyhud.HudRenderBridge;
 import com.nyalium.cttenemyhud.HudTarget;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -30,6 +31,9 @@ public abstract class NameTagScoreMixin {
     private void cttEnemyHud$hideBelowNameScore(Entity entity, EntityRenderState state, float partialTick,
                                                 CallbackInfo ci) {
         if (state == null || entity == null) return;
+        // 无论摘不摘分数，都要把实体挂到渲染状态上：submit 阶段只拿得到状态，
+        // 而头顶血条要按实体 UUID 取数据（见 HudRenderBridge）。
+        HudRenderBridge.attach(state, entity);
         if (!EnemyHudConfig.get().hideBelowNameScore) return;
         if (HudTarget.managed(Minecraft.getInstance(), entity)) {
             state.scoreText = null;
