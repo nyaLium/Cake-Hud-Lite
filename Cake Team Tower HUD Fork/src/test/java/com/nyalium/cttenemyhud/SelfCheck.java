@@ -245,6 +245,16 @@ public final class SelfCheck {
         check(BossBarTracker.matchScore(0, true, false, 0)
                         > BossBarTracker.matchScore(0, true, false, 4096),
                 "同分时更近的优先");
+        // 1.20.10：距离优先于粘性，但 2 格以内不换绑
+        check(BossBarTracker.matchScore(0, true, true, 9)
+                        > BossBarTracker.matchScore(0, true, false, 6),
+                "粘性绑定的怪在 2 格以内应继续沿用");
+        check(BossBarTracker.matchScore(0, true, true, 9)
+                        < BossBarTracker.matchScore(0, true, false, 1),
+                "更近的同名怪（差 2 格以上）应接手");
+        check(BossBarTracker.matchScore(0, true, false, 0)
+                        > BossBarTracker.matchScore(0, true, true, 100),
+                "远处的旧绑定不该压过眼前的同名怪");
         check(BossBarTracker.matchScore(0, true, true, 0)
                         > BossBarTracker.matchScore(0, false, true, 0),
                 "名字完全相同优于互相包含");

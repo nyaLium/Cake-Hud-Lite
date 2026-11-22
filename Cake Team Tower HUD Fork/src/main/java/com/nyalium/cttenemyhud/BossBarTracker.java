@@ -185,8 +185,12 @@ public final class BossBarTracker {
      * 认领打分（越大越优先）。
      *
      * <p>1.20.9 起：百分比吻合是**硬门槛**（{@link #acceptable}），门槛内再按
-     * 精确吻合 &gt; 差 ≤2 &gt; 差 ≤容差 排序，然后才是名字完全相同、上一帧绑定、距离。
-     * 这样「附近有同名怪、但血量对不上」时不会继续粘着旧的那只，避免数字不更新。</p>
+     * 精确吻合 &gt; 差 ≤2 &gt; 差 ≤容差 排序。</p>
+     *
+     * <p>1.20.10 起：同一档里先看<b>与玩家的距离</b>（越近越优先），再给上一帧的绑定一个
+     * {@link #STICKY_BONUS} 的粘性奖励。数据包 {@code targetting_enemy.mcfunction} 的选法是
+     * 「在随机一名 CTT 玩家里取离他最近的 E」，所以距离是很强的先验；粘性奖励只够抵消
+     * 2 格内的抖动，超过就让更近的那只接手，避免「数字一直挂在远处那只同名怪身上」。</p>
      */
     static double matchScore(int diff, boolean exactName, boolean sticky, double distanceSq) {
         double score = 0.0;
@@ -194,9 +198,16 @@ public final class BossBarTracker {
         else if (diff <= 2) score += 5.0e8;
         else if (diff <= PERCENT_TOLERANCE) score += 1.0e8;
         if (exactName) score += 1.0e7;
-        if (sticky) score += 1.0e6;
-        return score - distanceSq;
+        score -= distanceSq;
+        if (sticky) score += STICKY_BONUS;
+        return score;
     }
+
+    /**
+     * 粘性奖励（单位 = 格²）：等于「2 格」。上一帧绑定的那只只要在最近候选的 2 格以内就继续用，
+     * 超过就换成更近的那只。
+     */
+    static final double STICKY_BONUS = 4.0;
 
     /**
      * 把每条 bar 认领到唯一一只实体。
@@ -211,9 +222,10 @@ public final class BossBarTracker {
      * <ol>
      *   <li>百分比精确吻合 → 基本可以确定就是它；</li>
      *   <li>百分比差 ≤ 2（同步差一两个 tick）→ 次之；</li>
+     *   <li>百分比差 ≤ {@link #PERCENT_TOLERANCE} → 再次之；差超过容差的候选<b>直接不参与</b>；</li>
      *   <li>名字完全相同优于「互相包含」；</li>
-     *   <li>上一帧的绑定优先（粘性，避免抖动时血条数字在两只怪之间来回跳）；</li>
-     *   <li>最后才看距离。</li>
+     *   <li><b>与玩家的距离</b>（越近越优先）—— 数据包取的是「离某名 CTT 玩家最近的 E」；</li>
+     *   <li>上一帧的绑定给 {@link #STICKY_BONUS}（≈2 格²）的粘性奖励，只压住小抖动。</li>
      * </ol>
      * <p>命中后顺手把本帧的护甲段喂给 {@link ArmourCache}。</p>
      */
