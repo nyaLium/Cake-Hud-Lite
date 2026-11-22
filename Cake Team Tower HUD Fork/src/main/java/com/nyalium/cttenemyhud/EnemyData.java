@@ -122,6 +122,27 @@ public final class EnemyData {
     public static Snapshot fromPayload(int hp, int maxHp, int soul, int black, int blue, int cracked,
                                        int maxSoul, int maxBlack, int maxBlue,
                                        int defence, int[] armour) {
+        return fromPayload(hp, maxHp, soul, black, blue, cracked, maxSoul, maxBlack, maxBlue,
+                defence, armour, false);
+    }
+
+    /**
+     * 玩家（队友）读数：<b>进度固定为 红心 ÷ MaxHP</b>，不随当前心类分层。
+     *
+     * <p>队友头顶那条是<b>绿条</b>（一格颜色固定），数据包 bossbar 那种「按当前心类换色 +
+     * 重新从满格开始」的分层进度放在绿条上会读不出来，所以玩家一律按红心的剩余比例填。
+     * 心数那一行照旧输出全部颜色（{@link #fromPayload} 同一套）。</p>
+     */
+    public static Snapshot fromPayloadPlayer(int hp, int maxHp, int soul, int black, int blue, int cracked,
+                                             int maxSoul, int maxBlack, int maxBlue,
+                                             int defence, int[] armour) {
+        return fromPayload(hp, maxHp, soul, black, blue, cracked, maxSoul, maxBlack, maxBlue,
+                defence, armour, true);
+    }
+
+    private static Snapshot fromPayload(int hp, int maxHp, int soul, int black, int blue, int cracked,
+                                        int maxSoul, int maxBlack, int maxBlue,
+                                        int defence, int[] armour, boolean redProgress) {
         int all = Math.max(0, hp);
         int cap = Math.max(0, maxHp);
         int soulC = Math.max(0, soul);
@@ -134,7 +155,10 @@ public final class EnemyData {
 
         float ratio;
         HeartCounts.Kind kind;
-        if (blueC > 0 && maxBlue > 0) {
+        if (redProgress) {
+            ratio = cap > 0 ? redClamped / (float) cap : 0.0f;
+            kind = HeartCounts.Kind.RED;
+        } else if (blueC > 0 && maxBlue > 0) {
             ratio = blueC / (float) maxBlue;
             kind = HeartCounts.Kind.BLUE;
         } else if (blackC > 0 && maxBlack > 0) {

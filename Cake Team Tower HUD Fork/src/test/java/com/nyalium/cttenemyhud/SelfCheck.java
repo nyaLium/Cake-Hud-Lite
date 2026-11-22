@@ -90,6 +90,15 @@ public final class SelfCheck {
                         tag + " 血条压到名称行");
                 check(r.textTop < EnemyHudLayout.NAME_TOP, tag + " 文字压到名称行");
                 check(r.textTop + 9 <= r.barTop, tag + " 文字与血条重叠");
+
+                // 行距必须 ≥ 原版文字背景框高度（y-1 ~ y+9 = 10 像素）；用 9 会让
+                // 上行的底边与下行的顶边重叠 1 像素，两层半透明黑叠成一道更深的暗带。
+                check(EnemyHudLayout.ROW_STEP >= EnemyHudLayout.TEXT_BOX_HEIGHT,
+                        tag + " ROW_STEP 小于背景框高度");
+                for (int i = 1; i < r.rows.size(); i++) {
+                    check(r.rows.get(i - 1).top + EnemyHudLayout.TEXT_BOX_HEIGHT <= r.rows.get(i).top,
+                            tag + " 第 " + i + " 行与上一行的背景框重叠");
+                }
             }
         }
     }
@@ -312,6 +321,10 @@ public final class SelfCheck {
                 "上面一行要再抬 " + EnemyHudLayout.ROW_STEP + " 像素");
         check(armored.rows.get(1).top == EnemyHudLayout.TEXT_TOP, "下面一行贴着 TEXT_TOP");
         check(armored.textTop == EnemyHudLayout.TEXT_TOP, "textTop 仍指最底一行");
+        // 行距正好等于背景框高度：两行背景相邻但**不重叠**（原版 y-1 ~ y+9 共 10 像素）。
+        check(EnemyHudLayout.TEXT_BOX_HEIGHT == 10, "背景框高度应为 10 像素");
+        check(armored.rows.get(0).top + EnemyHudLayout.TEXT_BOX_HEIGHT == armored.rows.get(1).top,
+                "两行背景框应正好相邻，不留缝也不重叠");
 
         // 换行阈值的解析：最右 = 自动（不超过血条长度），血条关掉时用默认长度兜底。
         check(EnemyHudLayout.resolveWrapWidth(EnemyHudLayout.WRAP_AUTO, 120) == 120,
@@ -461,6 +474,30 @@ public final class SelfCheck {
         check(blue.kind == HeartCounts.Kind.BLUE, "蓝心阶段 kind=" + blue.kind);
         check(Math.abs(blue.ratio - 0.5f) < 1e-6, "蓝心阶段 ratio=" + blue.ratio);
         check(blue.hearts.get(HeartCounts.RED) == 70, "蓝心阶段反算红心=" + blue.hearts.get(HeartCounts.RED));
+
+        // 玩家（队友）的绿条：同一份 payload，进度固定是 红心 ÷ MaxHP，不吃「按心类分层」。
+        // 红 60 / 魂 40 / 黑 30 / 蓝 20，MaxHP 150 → 红 60/150 = 0.4；
+        // 敌人口径则会取蓝心 20/60 ≈ 0.333。
+        EnemyData.Snapshot team = EnemyData.fromPayloadPlayer(150, 150, 40, 30, 20, 0,
+                100, 100, 60, 0, new int[7]);
+        check(team.kind == HeartCounts.Kind.RED, "玩家进度必须走红心口径 kind=" + team.kind);
+        check(Math.abs(team.ratio - 0.4f) < 1e-6, "玩家进度 60/150=" + team.ratio);
+        check(team.hearts.get(HeartCounts.RED) == 60 && team.hearts.get(HeartCounts.SOUL) == 40
+                        && team.hearts.get(HeartCounts.BLACK) == 30
+                        && team.hearts.get(HeartCounts.BLUE) == 20,
+                "玩家的心数行必须和敌人同一套");
+        EnemyData.Snapshot mobSame = EnemyData.fromPayload(150, 150, 40, 30, 20, 0,
+                100, 100, 60, 0, new int[7]);
+        check(mobSame.kind == HeartCounts.Kind.BLUE, "敌人进度仍按当前心类分层 kind=" + mobSame.kind);
+        check(Math.abs(mobSame.ratio - (20f / 60f)) < 1e-5, "敌人分层进度 20/60=" + mobSame.ratio);
+        // 红心被 MaxHP 夹住（红心不会超过上限），进度不得 > 1。
+        EnemyData.Snapshot teamCapped = EnemyData.fromPayloadPlayer(160, 100, 60, 0, 0, 0,
+                100, 0, 0, 0, new int[7]);
+        check(Math.abs(teamCapped.ratio - 1.0f) < 1e-6, "玩家进度应夹到 1: " + teamCapped.ratio);
+        // MaxHP 缺失 → 进度 0（心数行照旧）。
+        EnemyData.Snapshot teamNoMax = EnemyData.fromPayloadPlayer(30, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, new int[7]);
+        check(teamNoMax.ratio == 0.0f, "玩家 MaxHP=0 时 ratio=" + teamNoMax.ratio);
 
         // 黑心次之
         EnemyData.Snapshot black = EnemyData.fromPayload(100, 100, 0, 20, 0, 0, 0, 40, 0, 0, new int[7]);

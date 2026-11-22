@@ -117,7 +117,14 @@ public final class HudWorldRenderer {
         // 队友那一行因此也能画心数（没有 payload 时下面的回退只有 AllHearts/MaxHP）。
         MobHealthPayload.Entry pushed = cfg.useServerData ? ClientMobHealthCache.lookup(id) : null;
         if (pushed != null) {
-            EnemyData.Snapshot data = EnemyData.fromPayload(pushed.hp(), pushed.maxHp(),
+            // 玩家头顶是那条**绿条**：进度按 红心 ÷ MaxHP 填，不跟当前心类分层
+            // （分层进度换色换满格，放在单色绿条上读不出来）。敌人仍按数据包口径。
+            EnemyData.Snapshot data = teammate
+                    ? EnemyData.fromPayloadPlayer(pushed.hp(), pushed.maxHp(),
+                    pushed.soul(), pushed.black(), pushed.blue(), pushed.cracked(),
+                    pushed.maxSoul(), pushed.maxBlack(), pushed.maxBlue(),
+                    pushed.defence(), pushed.armour())
+                    : EnemyData.fromPayload(pushed.hp(), pushed.maxHp(),
                     pushed.soul(), pushed.black(), pushed.blue(), pushed.cracked(),
                     pushed.maxSoul(), pushed.maxBlack(), pushed.maxBlue(),
                     pushed.defence(), pushed.armour());
@@ -131,6 +138,7 @@ public final class HudWorldRenderer {
             refresh(mc);
             TeamBarTitle.Entry entry = teamEntries.get(id);
             if (entry == null) return null;
+            // 没有服务端组件时队伍条只给 AllHearts / MaxHP，拆不出红心 —— 只能按它填。
             return EnemyData.exact(entry.hp, entry.maxHp, entry.ratio(), 0, NO_ARMOUR,
                     HeartCounts.unknown());
         }

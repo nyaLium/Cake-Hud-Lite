@@ -39,8 +39,19 @@ public final class EnemyHudLayout {
     /** 名称行高度（原版字体行高）。 */
     public static final int NAME_HEIGHT = 9;
 
-    /** 行高：文字折成多行时，每往上一行抬这么多像素（与原版字体行高一致）。 */
-    public static final int ROW_STEP = 9;
+    /**
+     * 一行文字的<b>背景框</b>高度。
+     *
+     * <p>原版 {@code Font.PreparedTextBuilder.markBackground} 是从 {@code y - 1} 画到
+     * {@code y + 9}，比字体的 9 像素行高<b>多出 1 像素</b>（上下各留半像素，落地成 y-1 与 y+9）。
+     * 两行文字挨着画时，如果行距也用 9，上行的底边（{@code y + 9}）与下行的顶边
+     * （{@code y' - 1 = y + 8}）就会重叠 1 像素 —— 两层半透明黑叠在一起，中间那道
+     * 「阴影」明显更深一条。所以行距必须是这个值。</p>
+     */
+    public static final int TEXT_BOX_HEIGHT = NAME_HEIGHT + 1;
+
+    /** 行高：文字折成多行时，每往上一行抬这么多像素。必须 ≥ {@link #TEXT_BOX_HEIGHT}。 */
+    public static final int ROW_STEP = TEXT_BOX_HEIGHT;
 
     /** 换行阈值可调下限（像素）。 */
     public static final int WRAP_MIN = 40;
