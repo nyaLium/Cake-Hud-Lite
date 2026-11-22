@@ -66,7 +66,7 @@ public final class EnemyData {
         public final float ratio;
         /**
          * 当前血条表现的心类（决定纹理配色）；null = 红条。
-         * 由 Boss 栏认领或服务端组件填，见 {@link EnemyHudElement}。
+         * 由 Boss 栏认领或服务端组件填，见 {@link HudWorldRenderer}。
          */
         public HeartCounts.Kind kind;
 

@@ -24,7 +24,7 @@ import java.util.Map;
  *       为真时本 Mod 才会画出数值、血条与<b>名称</b>。</li>
  * </ol>
  *
- * <p><b>两处必须完全一致</b>：{@link EnemyHudElement} 用 {@link #visible} 决定画不画，
+ * <p><b>两处必须完全一致</b>：{@link HudWorldRenderer} 用 {@link #visible} 决定画不画，
  * {@code NameTagScoreMixin} 用它决定要不要把原版名称清掉。判据一旦有偏差，就会出现
  * 「名称被清掉但没重画」的空档，或者「原版名称与自绘名称叠在一起」的重影。</p>
  *

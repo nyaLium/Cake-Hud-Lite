@@ -285,33 +285,33 @@ public final class HudWorldRenderer {
         // 与文字同一套映射：1 单位 = 1 个名牌像素，y 向下为正；缩放与文字一致。
         pose.scale(0.025f * scale, -0.025f * scale, 0.025f * scale);
 
-        // 两段**不重叠**：填充段用 progress 纹理，空槽段用 background 纹理。
-        // 早先是「整条 background + 压在它上面的 progress」，两张共面四边形在深度
-        // 测试下会互相抢像素，移动视角时表现为血条边缘的竖条纹闪烁。
+        // 原版 BossBar 的画法：**整条背景** + 把进度纹理**从左裁到 fill 宽度**叠在上面。
+        // 以前是「进度段 + 空槽段」两段adjacent 拼接，接缝处会露出一条 1 px 的缝
+        // （两张纹理各裁一半，端盖都对不上）；改成整条背景打底就没有接缝了。
         //
-        // UV 再往里收半个纹素：182×5 的纹理被拉伸到几十个屏幕像素时，采样正好落在
-        // 纹理边缘会采到相邻纹素（端盖那两列深色），同样表现为细竖条。
+        // 两张四边形共面，所以背景往远处挪 0.02 个名牌像素（原版文字背景也是 -0.01，
+        // 负 z = 更远），这样无论深度写不写、先画谁，进度永远压在背景上面。
+        //
+        // UV 往里收半个纹素：182×5 的纹理被拉伸到几十个屏幕像素时，采样正好落在
+        // 纹理边缘会采到相邻纹素（端盖那两列深色），表现为细竖条。
         final float u0 = 0.5f / BossBarTexture.NATIVE_WIDTH;
         final float u1 = 1.0f - 0.5f / BossBarTexture.NATIVE_WIDTH;
         final float v0 = 0.5f / BossBarTexture.NATIVE_HEIGHT;
         final float v1 = 1.0f - 0.5f / BossBarTexture.NATIVE_HEIGHT;
+        final float BACKGROUND_Z = -0.02f;
 
         RenderType background = RenderTypes.text(BossBarTexture.backgroundTexture(tint));
         RenderType progress = RenderTypes.text(BossBarTexture.progressTexture(tint));
 
-        if (fill <= 0.0f) {
-            collector.submitCustomGeometry(pose, background, (p, vc) ->
-                    quad(vc, p, x0, y0, x0 + width, y1, u0, u1, v0, v1, color, light));
-        } else if (fill >= width - 0.5f) {
+        // ① 整条背景（含空槽）
+        collector.submitCustomGeometry(pose, background, (p, vc) ->
+                quad(vc, p, x0, y0, x0 + width, y1, u0, u1, v0, v1, color, light, BACKGROUND_Z));
+
+        // ② 填充段：从左裁到 fill（和原版 blitSprite 的 width 参数一样）
+        if (fill > 0.0f) {
+            float uFill = u0 + (u1 - u0) * Math.min(1.0f, fill / width);
             collector.submitCustomGeometry(pose, progress, (p, vc) ->
-                    quad(vc, p, x0, y0, x0 + width, y1, u0, u1, v0, v1, color, light));
-        } else {
-            float split = x0 + fill;
-            collector.submitCustomGeometry(pose, progress, (p, vc) ->
-                    quad(vc, p, x0, y0, split, y1, u0, u1, v0, v1, color, light));
-            float uSplit = u0 + (u1 - u0) * (fill / width);
-            collector.submitCustomGeometry(pose, background, (p, vc) ->
-                    quad(vc, p, split, y0, x0 + width, y1, uSplit, u1, v0, v1, color, light));
+                    quad(vc, p, x0, y0, x0 + fill, y1, u0, uFill, v0, v1, color, light, 0.0f));
         }
         pose.popPose();
     }
@@ -320,15 +320,15 @@ public final class HudWorldRenderer {
     private static void quad(VertexConsumer vc, PoseStack.Pose pose,
                              float x0, float y0, float x1, float y1,
                              float u0, float u1, float v0, float v1,
-                             int argb, int light) {
+                             int argb, int light, float z) {
         int a = (argb >>> 24) & 0xFF;
         int r = (argb >>> 16) & 0xFF;
         int g = (argb >>> 8) & 0xFF;
         int b = argb & 0xFF;
-        vc.addVertex(pose, x0, y0, 0.0f).setColor(r, g, b, a).setUv(u0, v0).setLight(light);
-        vc.addVertex(pose, x0, y1, 0.0f).setColor(r, g, b, a).setUv(u0, v1).setLight(light);
-        vc.addVertex(pose, x1, y1, 0.0f).setColor(r, g, b, a).setUv(u1, v1).setLight(light);
-        vc.addVertex(pose, x1, y0, 0.0f).setColor(r, g, b, a).setUv(u1, v0).setLight(light);
+        vc.addVertex(pose, x0, y0, z).setColor(r, g, b, a).setUv(u0, v0).setLight(light);
+        vc.addVertex(pose, x0, y1, z).setColor(r, g, b, a).setUv(u0, v1).setLight(light);
+        vc.addVertex(pose, x1, y1, z).setColor(r, g, b, a).setUv(u1, v1).setLight(light);
+        vc.addVertex(pose, x1, y0, z).setColor(r, g, b, a).setUv(u1, v0).setLight(light);
     }
 
     // ── 布局选项 ──
