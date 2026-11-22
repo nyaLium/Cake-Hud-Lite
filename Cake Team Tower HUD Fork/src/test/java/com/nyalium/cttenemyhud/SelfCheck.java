@@ -32,6 +32,7 @@ public final class SelfCheck {
         lobbyTriggerGuard();
         bossBarBinding();
         filterGridWidth();
+        panelModes();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -270,6 +271,70 @@ public final class SelfCheck {
         check(SelfStatsFilterScreen.columnWidth(150) == 60, "极窄屏兜底 60");
     }
 
+    // ── 1f. 属性面板显示方式：两套配置 ──
+
+    /** 1.20.14：HUD / 容器界面各一套位置·列数·缩放·不透明度；模式 0/1。 */
+    private static void panelModes() {
+        EnemyHudConfig.Cfg c = EnemyHudConfig.get();
+        int oldMode = c.selfStatsMode;
+        try {
+            c.selfStatsMode = 0;
+            check(!EnemyHudConfig.containerMode(), "模式 0 不该是容器模式");
+            c.selfStatsX = 11;
+            c.selfStatsColumns = 3;
+            c.selfStatsScale = 1.5;
+            c.selfStatsOpacity = 0.6;
+            EnemyHudConfig.Panel hud = EnemyHudConfig.panel();
+            check(hud.x == 11 && hud.columns == 3 && hud.scale == 1.5 && hud.opacity == 0.6,
+                    "HUD 模式应取 selfStats* 那一套");
+
+            c.selfStatsMode = 1;
+            check(EnemyHudConfig.containerMode(), "模式 1 应是容器模式");
+            c.containerX = 22;
+            c.containerColumns = 1;
+            c.containerScale = 2.0;
+            c.containerOpacity = 0.3;
+            EnemyHudConfig.Panel box = EnemyHudConfig.panel();
+            check(box.x == 22 && box.columns == 1 && box.scale == 2.0 && box.opacity == 0.3,
+                    "容器模式应取 container* 那一套");
+
+            // 移动只改当前模式那一套
+            EnemyHudConfig.movePanel(33, 44);
+            check(c.containerX == 33 && c.containerY == 44, "容器模式下移动应写 container*");
+            check(c.selfStatsX == 11, "HUD 那一套不该被改");
+            EnemyHudConfig.setPanelColumns(2);
+            check(c.containerColumns == 2 && c.selfStatsColumns == 3, "setPanelColumns 应只改当前模式");
+        } finally {
+            c.selfStatsMode = oldMode;
+        }
+
+        // 迁移：v6 之前没有 container*，应从 selfStats* 复制
+        EnemyHudConfig.Cfg old = new EnemyHudConfig.Cfg();
+        old.configVersion = 6;
+        old.selfStatsX = 123;
+        old.selfStatsY = 45;
+        old.selfStatsColumns = 3;
+        old.selfStatsScale = 1.3;
+        old.selfStatsOpacity = 0.7;
+        EnemyHudConfig.migrate("{\"configVersion\":6}", old);
+        check(old.containerX == 123 && old.containerY == 45 && old.containerColumns == 3,
+                "v6 → v7 应把 HUD 配置复制给容器那套");
+        check(Math.abs(old.containerScale - 1.3) < 1e-9 && Math.abs(old.containerOpacity - 0.7) < 1e-9,
+                "v6 → v7 缩放/不透明度也应复制");
+
+        // 夹取：模式 0~1、容器缩放 ≥ 1.0
+        EnemyHudConfig.Cfg wild = new EnemyHudConfig.Cfg();
+        wild.selfStatsMode = 9;
+        wild.containerScale = 0.1;
+        wild.containerColumns = 9;
+        wild.selfStatsScale = 0.1;
+        EnemyHudConfig.normalize(wild);
+        check(wild.selfStatsMode == 1, "selfStatsMode 9 应夹到 1");
+        check(wild.containerScale == 1.0, "containerScale 0.1 应夹到 1.0（字号最小 1.00）");
+        check(wild.containerColumns == 3, "containerColumns 9 应夹到 3");
+        check(wild.selfStatsScale == 1.0, "selfStatsScale 0.1 应夹到 1.0（字号最小 1.00）");
+    }
+
     // ── 2. 血条长度 ──
 
     private static void barWidthSweep() {
@@ -348,7 +413,7 @@ public final class SelfCheck {
         check(defaults.verticalOffset == 0, "默认垂直偏移应为 0");
         check(defaults.opacity == 0.75, "默认透明度应为 0.75");
         check(defaults.showBar, "默认应画血条");
-        check(defaults.hideBehindWalls, "默认应忽略被墙挡住的怪");
+        check(!defaults.hideBehindWalls, "1.20.14 起默认不再按墙隐藏");
         check(defaults.hideBehindEntities, "默认应忽略被其它实体挡住的怪");
         check(defaults.hideBelowNameScore, "默认应隐藏 below_name 分数");
         check(defaults.hideEnemyBossBar, "默认应隐藏上方 Boss 栏里的最近敌人信息");
@@ -1257,7 +1322,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(EnemyHudConfig.CURRENT_VERSION == 6, "配置版本应为 6");
+        check(EnemyHudConfig.CURRENT_VERSION == 7, "配置版本应为 7");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1266,7 +1331,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 6, "v3 → v6 应升版本号");
+        check(v3.configVersion == 7, "v3 → v7 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1402,7 +1467,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
-        check(EnemyHudConfig.CURRENT_VERSION == 6, "配置版本应为 6");
+        check(EnemyHudConfig.CURRENT_VERSION == 7, "配置版本应为 7");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1425,7 +1490,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 6, "v4 → v6 应升版本号");
+        check(v4.configVersion == 7, "v4 → v7 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板

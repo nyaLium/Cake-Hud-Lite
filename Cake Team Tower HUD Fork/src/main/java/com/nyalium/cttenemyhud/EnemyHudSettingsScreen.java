@@ -5,6 +5,7 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.screens.Screen;
@@ -73,7 +74,7 @@ public final class EnemyHudSettingsScreen extends Screen {
 
     // ── 通用设置 ──
 
-    /** @return 占用的行数（左列最多 3，右列最多 4） */
+    /** @return 占用的行数（左列 3，右列 3） */
     private int initGeneral(EnemyHudConfig.Cfg cfg, int w, int leftX, int rightX) {
         int y = TOP;
         addRenderableWidget(CycleButton.onOffBuilder(cfg.enabled)
@@ -93,10 +94,7 @@ public final class EnemyHudSettingsScreen extends Screen {
                 v -> EnemyHudConfig.get().opacity = v / 100.0));
 
         y = TOP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideBehindWalls)
-                .create(rightX, y, w, ROW_HEIGHT, key("hideBehindWalls"),
-                        (b, v) -> EnemyHudConfig.get().hideBehindWalls = v));
-        y += ROW_GAP;
+        // 1.20.14：「被墙挡住时隐藏」默认关闭且不再提供开关（改为始终显示，避免 HUD 突然消失）。
         addRenderableWidget(CycleButton.onOffBuilder(cfg.hideBehindEntities)
                 .create(rightX, y, w, ROW_HEIGHT, key("hideBehindEntities"),
                         (b, v) -> EnemyHudConfig.get().hideBehindEntities = v));
@@ -187,12 +185,20 @@ public final class EnemyHudSettingsScreen extends Screen {
 
     /** @return 占用的行数 */
     private int initSelfStats(EnemyHudConfig.Cfg cfg, int w, int leftX, int rightX) {
+        boolean enabled = cfg.showSelfStats;
+        boolean forced = SelfStats.forcedByServer(this.minecraft);
+        java.util.List<AbstractWidget> dependent = new java.util.ArrayList<>();
+
         int y = TOP;
         addRenderableWidget(CycleButton.onOffBuilder(cfg.showSelfStats)
                 .create(leftX, y, w, ROW_HEIGHT, key("showSelfStats"),
-                        (b, v) -> EnemyHudConfig.get().showSelfStats = v));
+                        (b, v) -> {
+                            EnemyHudConfig.get().showSelfStats = v;
+                            // 开关一变就重建，让下面那些项立刻变成可/不可交互。
+                            this.rebuildWidgets();
+                        }));
         y += ROW_GAP;
-        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
+        ValueSlider refresh = new ValueSlider(leftX, y, w, ROW_HEIGHT,
                 1.0, 5.0, 1.0, cfg.selfStatsSeconds,
                 v -> {
                     // 服务器强制 3 秒时直接显示生效值（配置值仍保留，切到单机就恢复）。
@@ -202,31 +208,65 @@ public final class EnemyHudSettingsScreen extends Screen {
                     return Math.round(v) <= 1 ? key("refreshNow") : key("selfStatsSeconds", (int) Math.round(v));
                 },
                 v -> EnemyHudConfig.get().selfStatsSeconds = (int) Math.round(v))
-                .tooltip(key("selfStatsSeconds.tooltip")));
+                .tooltip(key(forced ? "selfStatsSeconds.tooltipForced" : "selfStatsSeconds.tooltip"));
+        // 服务器强制 3 秒时这一项不可拖动（但配置值仍保留）。
+        refresh.active = enabled && !forced;
+        addRenderableWidget(refresh);
+        dependent.add(refresh);
+
         y += ROW_GAP;
-        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
-                1.0, 3.0, 1.0, cfg.selfStatsColumns,
+        ValueSlider columns = new ValueSlider(leftX, y, w, ROW_HEIGHT,
+                1.0, 3.0, 1.0, EnemyHudConfig.panel().columns,
                 v -> key("selfStatsColumns", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().selfStatsColumns = (int) Math.round(v)));
+                v -> EnemyHudConfig.setPanelColumns((int) Math.round(v)));
+        addRenderableWidget(columns);
+        dependent.add(columns);
+
         y += ROW_GAP;
-        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
-                0.5, 2.0, 0.05, cfg.selfStatsScale,
+        ValueSlider scale = new ValueSlider(leftX, y, w, ROW_HEIGHT,
+                1.0, 2.0, 0.05, EnemyHudConfig.panel().scale,
                 v -> key("selfStatsScale", String.format(Locale.ROOT, "%.2f", v)),
-                v -> EnemyHudConfig.get().selfStatsScale = v));
+                v -> EnemyHudConfig.setPanelScale(v));
+        addRenderableWidget(scale);
+        dependent.add(scale);
 
         y = TOP;
-        addRenderableWidget(new ValueSlider(rightX, y, w, ROW_HEIGHT,
-                0.2, 1.0, 0.05, cfg.selfStatsOpacity,
+        Button mode = Button.builder(key("selfStatsMode",
+                        Component.translatable(cfg.selfStatsMode == 1
+                                ? "ctt_enemy_hud.config.selfStatsMode.container"
+                                : "ctt_enemy_hud.config.selfStatsMode.always")), b -> {
+                    EnemyHudConfig.Cfg c = EnemyHudConfig.get();
+                    c.selfStatsMode = c.selfStatsMode == 1 ? 0 : 1;
+                    // 两种显示方式各有一套配置：切换后立刻按新模式重建/重绘。
+                    this.rebuildWidgets();
+                })
+                .bounds(rightX, y, w, ROW_HEIGHT).build();
+        addRenderableWidget(mode);
+        dependent.add(mode);
+        y += ROW_GAP;
+        ValueSlider opacity = new ValueSlider(rightX, y, w, ROW_HEIGHT,
+                0.2, 1.0, 0.05, EnemyHudConfig.panel().opacity,
                 v -> key("selfStatsOpacity", Math.round(v * 100.0) + "%"),
-                v -> EnemyHudConfig.get().selfStatsOpacity = v));
+                v -> EnemyHudConfig.setPanelOpacity(v));
+        addRenderableWidget(opacity);
+        dependent.add(opacity);
         y += ROW_GAP;
-        addRenderableWidget(Button.builder(key("selfStatsMove"),
+        Button move = Button.builder(key("selfStatsMove"),
                         b -> this.minecraft.gui.setScreen(new SelfStatsLayoutScreen(this)))
-                .bounds(rightX, y, w, ROW_HEIGHT).build());
+                .bounds(rightX, y, w, ROW_HEIGHT).build();
+        addRenderableWidget(move);
+        dependent.add(move);
         y += ROW_GAP;
-        addRenderableWidget(Button.builder(key("selfStatsFilter"),
+        Button filter = Button.builder(key("selfStatsFilter"),
                         b -> this.minecraft.gui.setScreen(new SelfStatsFilterScreen(this)))
-                .bounds(rightX, y, w, ROW_HEIGHT).build());
+                .bounds(rightX, y, w, ROW_HEIGHT).build();
+        addRenderableWidget(filter);
+        dependent.add(filter);
+
+        // 关闭属性面板后，其余项全部不可交互（1.20.14 的反馈）。
+        if (!enabled) {
+            for (AbstractWidget widget : dependent) widget.active = false;
+        }
         return 4;
     }
 

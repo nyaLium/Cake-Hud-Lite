@@ -40,10 +40,12 @@ final class SelfStatsPanel implements HudElement {
         if (mc == null || mc.player == null) return;
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         if (!cfg.enabled || !cfg.showSelfStats) return;
+        // 1.20.14：「在容器界面显示」模式下 HUD 上不画，改由 ContainerPanelMixin 画在容器界面上。
+        if (EnemyHudConfig.containerMode()) return;
         if (!SelfStats.visible()) return;
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
-        EnemyHudConfig.Panel panel = EnemyHudConfig.panel();
+        EnemyHudConfig.Panel panel = EnemyHudConfig.panelFor(false);
         draw(g, mc.font, lines, panel, cfg.textShadow);
         if (cfg.debug) {
             // 排查用：屏幕/面板尺寸、过滤前后的行数（debug=true 时左下角一行，避开地图顶部的字）。
@@ -58,8 +60,20 @@ final class SelfStatsPanel implements HudElement {
         }
     }
 
-    /** 画整块面板（HUD 元素与「移动面板」预览共用）。 */
-    static void draw(GuiGraphicsExtractor g, Font font, List<Component> lines,
+    /** 在容器界面上画属性面板（「在容器界面显示」模式）。 */
+    static void drawOnContainer(GuiGraphicsExtractor g) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null) return;
+        EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
+        if (!cfg.enabled || !cfg.showSelfStats) return;
+        if (!EnemyHudConfig.containerMode()) return;
+        if (!SelfStats.visible()) return;
+        List<Component> lines = SelfStats.lines();
+        if (lines.isEmpty()) return;
+        draw(g, mc.font, lines, EnemyHudConfig.panelFor(true), cfg.textShadow);
+    }
+
+    /** 画整块面板（HUD 元素与「移动面板」预览共用）。 */    static void draw(GuiGraphicsExtractor g, Font font, List<Component> lines,
                      EnemyHudConfig.Panel panel, boolean shadow) {
         if (g == null || font == null || lines == null || lines.isEmpty() || panel == null) return;
         int cols = Math.max(1, Math.min(3, panel.columns));

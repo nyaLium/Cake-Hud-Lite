@@ -63,8 +63,8 @@ public final class EnemyHudConfig {
         public double scale = 0.9;
         /** 整组 UI 的垂直微调（原版名牌像素），-30 ~ 0，负数=更高。 */
         public int verticalOffset = 0;
-        /** 被方块挡住视线时不绘制（防止隔墙看到血条）。 */
-        public boolean hideBehindWalls = true;
+        /** 被方块挡住视线时不绘制（防止隔墙看到血条）。1.20.14 起默认关闭、界面不再提供开关。 */
+        public boolean hideBehindWalls = false;
         /** 被更近的实体挡住时不绘制（防止后方血条压住前面的名字和模型）。 */
         public boolean hideBehindEntities = true;
         /** 左上角打印每帧统计（排查用）。 */
@@ -81,6 +81,17 @@ public final class EnemyHudConfig {
         /** 属性面板左上角屏幕坐标（GUI 像素）。 */
         public int selfStatsX = 4;
         public int selfStatsY = 40;
+        /**
+         * 属性面板显示方式（1.20.14）：0 = 始终显示（HUD 元素），1 = 在容器界面显示
+         * （打开箱子/背包等容器界面时画在界面上，HUD 上不画）。两种方式各有一套配置。
+         */
+        public int selfStatsMode = 0;
+        /** 容器界面那一套配置（位置 / 列数 / 缩放 / 不透明度）。 */
+        public int containerX = 4;
+        public int containerY = 20;
+        public int containerColumns = 2;
+        public double containerScale = 1.0;
+        public double containerOpacity = 1.0;
         /** 属性面板文字缩放，0.50 ~ 2.00（1.20.4）。 */
         public double selfStatsScale = 1.0;
         /** 属性面板文字不透明度，0.20 ~ 1.00（1.20.4）。 */
@@ -126,7 +137,7 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 6;
+    public static final int CURRENT_VERSION = 7;
     /** 旧版默认血条长度（1.18.0 起默认改成 75）。 */
     private static final double LEGACY_BAR_WIDTH = 100.0;
     /** 旧版默认缩放（1.19.0 起默认改成 0.9）。 */
@@ -195,9 +206,54 @@ public final class EnemyHudConfig {
 
     /** 属性面板当前生效的布局（位置 / 列数 / 缩放 / 透明度）。 */
     public static Panel panel() {
+        return panelFor(get().selfStatsMode == 1);
+    }
+
+    /** 指定上下文的面板布局：{@code container = true} 取容器界面那一套。 */
+    public static Panel panelFor(boolean container) {
         Cfg c = get();
+        if (container) {
+            return new Panel(c.containerX, c.containerY, c.containerColumns,
+                    c.containerScale, c.containerOpacity);
+        }
         return new Panel(c.selfStatsX, c.selfStatsY, c.selfStatsColumns,
                 c.selfStatsScale, c.selfStatsOpacity);
+    }
+
+    /** 当前模式是否为「在容器界面显示」。 */
+    public static boolean containerMode() {
+        return get().selfStatsMode == 1;
+    }
+
+    /** 移动当前模式那一套面板（拖动界面用）。 */
+    public static void movePanel(int x, int y) {
+        Cfg c = get();
+        if (c.selfStatsMode == 1) {
+            c.containerX = x;
+            c.containerY = y;
+        } else {
+            c.selfStatsX = x;
+            c.selfStatsY = y;
+        }
+    }
+
+    /** 写当前模式那一套的列数 / 缩放 / 不透明度。 */
+    public static void setPanelColumns(int columns) {
+        Cfg c = get();
+        if (c.selfStatsMode == 1) c.containerColumns = columns;
+        else c.selfStatsColumns = columns;
+    }
+
+    public static void setPanelScale(double scale) {
+        Cfg c = get();
+        if (c.selfStatsMode == 1) c.containerScale = scale;
+        else c.selfStatsScale = scale;
+    }
+
+    public static void setPanelOpacity(double opacity) {
+        Cfg c = get();
+        if (c.selfStatsMode == 1) c.containerOpacity = opacity;
+        else c.selfStatsOpacity = opacity;
     }
 
     /** 当前生效的「隐藏类」集合。 */
@@ -272,6 +328,14 @@ public final class EnemyHudConfig {
             if (cfg.scale == LEGACY_SCALE) cfg.scale = DEFAULT_SCALE;
             if (cfg.teamScale == LEGACY_SCALE) cfg.teamScale = DEFAULT_SCALE;
         }
+        if (version < 7) {
+            // 容器界面那一套从 HUD 那套复制，避免升级后两套配置对不上。
+            cfg.containerX = cfg.selfStatsX;
+            cfg.containerY = cfg.selfStatsY;
+            cfg.containerColumns = cfg.selfStatsColumns;
+            cfg.containerScale = cfg.selfStatsScale;
+            cfg.containerOpacity = cfg.selfStatsOpacity;
+        }
         cfg.configVersion = CURRENT_VERSION;
     }
 
@@ -299,9 +363,16 @@ public final class EnemyHudConfig {
         read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);
         read.selfStatsX = (int) clamp(read.selfStatsX, 0.0, 4000.0);
         read.selfStatsY = (int) clamp(read.selfStatsY, 0.0, 4000.0);
-        // 1.20.4：文字缩放 0.5~2.0、不透明度 0.2~1.0、内容过滤
-        read.selfStatsScale = clamp(read.selfStatsScale, 0.5, 2.0);
+        // 1.20.4：文字缩放、不透明度、内容过滤；1.20.14 起字号最小 1.00、范围 1.0~2.0
+        read.selfStatsScale = clamp(read.selfStatsScale, 1.0, 2.0);
         read.selfStatsOpacity = clamp(read.selfStatsOpacity, 0.2, 1.0);
+        // 1.20.14：显示方式（0=始终显示 HUD，1=在容器界面显示）+ 容器那一套配置
+        read.selfStatsMode = (int) clamp(read.selfStatsMode, 0.0, 1.0);
+        read.containerColumns = (int) clamp(read.containerColumns, 1.0, 3.0);
+        read.containerX = (int) clamp(read.containerX, 0.0, 4000.0);
+        read.containerY = (int) clamp(read.containerY, 0.0, 4000.0);
+        read.containerScale = clamp(read.containerScale, 1.0, 2.0);
+        read.containerOpacity = clamp(read.containerOpacity, 0.2, 1.0);
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
         return read;
     }

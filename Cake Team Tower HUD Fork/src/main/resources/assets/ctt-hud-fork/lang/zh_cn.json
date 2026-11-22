@@ -29,6 +29,11 @@
   "ctt_enemy_hud.config.maxDistance": "显示距离：%s 格",
 
   "ctt_enemy_hud.config.showSelfStats": "显示属性面板",
+  "ctt_enemy_hud.config.selfStatsMode": "显示方式：%s",
+  "ctt_enemy_hud.config.selfStatsMode.always": "始终显示",
+  "ctt_enemy_hud.config.selfStatsMode.container": "在容器界面显示",
+  "ctt_enemy_hud.config.selfStatsMode.current": "当前正在调整：%s",
+  "ctt_enemy_hud.config.selfStatsSeconds.tooltipForced": "服务器强制 3 秒刷新（配置值仍保留，单机存档继续用你设置的值）。",
   "ctt_enemy_hud.config.selfStatsSeconds": "刷新间隔：%s 秒（现实时间）",
   "ctt_enemy_hud.config.refreshNow": "立即",
   "ctt_enemy_hud.config.selfStatsSecondsForced": "刷新间隔：%s 秒（服务器固定）",

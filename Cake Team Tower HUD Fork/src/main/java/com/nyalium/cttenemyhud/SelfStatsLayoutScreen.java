@@ -37,8 +37,9 @@ public final class SelfStatsLayoutScreen extends Screen {
     protected void init() {
         int y = this.height - ROW_HEIGHT - 8;
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.selfStatsMove.reset"), b -> {
-            EnemyHudConfig.get().selfStatsX = 4;
-            EnemyHudConfig.get().selfStatsY = 40;
+            // 只重置当前显示方式那一套（HUD / 容器界面各有一套）。
+            EnemyHudConfig.movePanel(4, EnemyHudConfig.containerMode() ? 20 : 40);
+            this.rebuildWidgets();
         }).bounds(this.width / 2 - BUTTON_WIDTH - GAP / 2, y, BUTTON_WIDTH, ROW_HEIGHT).build());
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
                 .bounds(this.width / 2 + GAP / 2, y, BUTTON_WIDTH, ROW_HEIGHT).build());
@@ -54,6 +55,12 @@ public final class SelfStatsLayoutScreen extends Screen {
         graphics.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFFFF);
         graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsMove.hint"),
                 this.width / 2, 36, 0xFFFFD060);
+        // 提示当前在改哪一套配置（HUD / 容器界面）。
+        graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsMode.current",
+                        Component.translatable(EnemyHudConfig.containerMode()
+                                ? "ctt_enemy_hud.config.selfStatsMode.container"
+                                : "ctt_enemy_hud.config.selfStatsMode.always")),
+                this.width / 2, 50, 0xFF9FE8FF);
 
         List<Component> lines = SelfStats.lines();
         boolean demo = lines.isEmpty();
@@ -96,11 +103,10 @@ public final class SelfStatsLayoutScreen extends Screen {
             // 用**增量**而不是绝对坐标：和原版滑块一致，也对不同输入后端更稳
             // （有的后端在拖动过程中只给相对位移）。
             int[] bounds = currentBounds();
-            EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
-            cfg.selfStatsX = SelfStatsPanel.clampX(
-                    cfg.selfStatsX + (int) Math.round(dragX), bounds[2], this.width);
-            cfg.selfStatsY = SelfStatsPanel.clampY(
-                    cfg.selfStatsY + (int) Math.round(dragY), bounds[3], this.height);
+            EnemyHudConfig.Panel panel = EnemyHudConfig.panel();
+            EnemyHudConfig.movePanel(
+                    SelfStatsPanel.clampX(panel.x + (int) Math.round(dragX), bounds[2], this.width),
+                    SelfStatsPanel.clampY(panel.y + (int) Math.round(dragY), bounds[3], this.height));
             return true;
         }
         return super.mouseDragged(event, dragX, dragY);

@@ -29,6 +29,11 @@
   "ctt_enemy_hud.config.maxDistance": "Distance: %s blocks",
 
   "ctt_enemy_hud.config.showSelfStats": "Show stats panel",
+  "ctt_enemy_hud.config.selfStatsMode": "Display mode: %s",
+  "ctt_enemy_hud.config.selfStatsMode.always": "Always",
+  "ctt_enemy_hud.config.selfStatsMode.container": "In container screens",
+  "ctt_enemy_hud.config.selfStatsMode.current": "Now editing: %s",
+  "ctt_enemy_hud.config.selfStatsSeconds.tooltipForced": "Forced to 3 s on this server (your value is kept for singleplayer).",
   "ctt_enemy_hud.config.selfStatsSeconds": "Refresh every %s s (real time)",
   "ctt_enemy_hud.config.refreshNow": "Immediate",
   "ctt_enemy_hud.config.selfStatsSecondsForced": "Refresh every %s s (forced by server)",
