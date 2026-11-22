@@ -116,6 +116,17 @@ public final class EnemyHudConfig {
          * 会在读取时自动展开成对应的一串细类。</p>
          */
         public java.util.List<String> selfStatsHidden = new java.util.ArrayList<>();
+
+        /** 盾牌指示器（1.20.19 合并自 CTT Shield Indicator）。 */
+        public boolean shieldEnabled = true;
+        /** 0 = 副手槽上方，1 = 屏幕中心。 */
+        public int shieldPosition = 0;
+        /** 可见宽度 = 20px × scale。 */
+        public double shieldScale = 1.1;
+        /** 水平偏移（像素）。 */
+        public int shieldOffset = 0;
+        /** 副手槽模式：与 actionbar 的间距（像素）。 */
+        public int shieldGap = 2;
     }
 
     /**
@@ -511,6 +522,11 @@ public final class EnemyHudConfig {
         read.bothContainerScale = clamp(read.bothContainerScale, 1.0, 2.0);
         read.bothContainerOpacity = clamp(read.bothContainerOpacity, 0.2, 1.0);
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
+        // 盾牌指示器
+        read.shieldPosition = (int) clamp(read.shieldPosition, 0.0, 1.0);
+        read.shieldScale = clamp(read.shieldScale, 0.5, 3.0);
+        read.shieldOffset = (int) clamp(read.shieldOffset, -160.0, 160.0);
+        read.shieldGap = (int) clamp(read.shieldGap, 0.0, 40.0);
         return read;
     }
 

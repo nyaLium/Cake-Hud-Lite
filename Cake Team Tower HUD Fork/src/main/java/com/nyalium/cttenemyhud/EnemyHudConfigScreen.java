@@ -2,6 +2,7 @@ package com.nyalium.cttenemyhud;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -42,26 +43,43 @@ public final class EnemyHudConfigScreen extends Screen {
     protected void init() {
         int x = this.width / 2 - BUTTON_WIDTH / 2;
         int y = TOP;
+        EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
 
-        addRenderableWidget(Button.builder(section("general"),
-                        b -> open(EnemyHudSettingsScreen.Section.GENERAL))
-                .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build());
+        // 总开关（1.20.19 从「通用设置」移到外层）。
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.enabled)
+                .create(x, y, BUTTON_WIDTH, ROW_HEIGHT,
+                        Component.translatable("ctt_enemy_hud.config.enabled"),
+                        (b, v) -> {
+                            EnemyHudConfig.get().enabled = v;
+                            this.rebuildWidgets();
+                        }));
         y += ROW_GAP;
-        addRenderableWidget(Button.builder(section("enemy"),
-                        b -> open(EnemyHudSettingsScreen.Section.ENEMY))
-                .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build());
+
+        Button entity = Button.builder(section("entity"),
+                        b -> this.minecraft.gui.setScreen(new EntityHudSettingsScreen(this)))
+                .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build();
+        if (!cfg.enabled) entity.active = false;
+        addRenderableWidget(entity);
         y += ROW_GAP;
-        addRenderableWidget(Button.builder(section("player"),
-                        b -> open(EnemyHudSettingsScreen.Section.PLAYER))
-                .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build());
-        y += ROW_GAP;
-        addRenderableWidget(Button.builder(section("self_stats"),
+
+        Button stats = Button.builder(section("self_stats"),
                         b -> open(EnemyHudSettingsScreen.Section.SELF_STATS))
-                .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build());
+                .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build();
+        if (!cfg.enabled) stats.active = false;
+        addRenderableWidget(stats);
         y += ROW_GAP;
+
+        Button shield = Button.builder(section("shield"),
+                        b -> this.minecraft.gui.setScreen(new ShieldIndicatorSettingsScreen(this)))
+                .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build();
+        if (!cfg.enabled) shield.active = false;
+        addRenderableWidget(shield);
+        y += ROW_GAP;
+
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.reset"), b -> {
             // 只改内存、不落盘：还要点「完成」才写盘。
             EnemyHudConfig.reset();
+            this.rebuildWidgets();
         }).bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build());
 
         // 完成：永远贴屏幕最底部。

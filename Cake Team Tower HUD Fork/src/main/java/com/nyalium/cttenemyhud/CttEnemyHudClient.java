@@ -41,6 +41,11 @@ public final class CttEnemyHudClient implements ClientModInitializer {
                 VanillaHudElements.CHAT,
                 Identifier.fromNamespaceAndPath(MOD_ID, "self_stats"),
                 new SelfStatsPanel());
+        // 盾牌计量条（1.20.19 合并自 CTT Shield Indicator）。
+        HudElementRegistry.attachElementBefore(
+                VanillaHudElements.CHAT,
+                Identifier.fromNamespaceAndPath(MOD_ID, "shield_indicator"),
+                new ShieldIndicatorHud());
         // 每 tick 检查是否该刷新属性面板（内部自己节流），顺便处理设置快捷键。
         ClientTickEvents.END_CLIENT_TICK.register(SelfStats::tick);
         ClientTickEvents.END_CLIENT_TICK.register(CttEnemyHudClient::tickKeys);

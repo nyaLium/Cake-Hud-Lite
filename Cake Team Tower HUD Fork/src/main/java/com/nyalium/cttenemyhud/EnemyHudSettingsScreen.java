@@ -233,7 +233,7 @@ public final class EnemyHudSettingsScreen extends Screen {
         Button mode = Button.builder(key("selfStatsMode",
                         Component.translatable(modeLabelKey(cfg.selfStatsMode))), b -> {
                     EnemyHudConfig.Cfg c = EnemyHudConfig.get();
-                    c.selfStatsMode = (c.selfStatsMode + 1) % 3;   // 0 → 1 → 2 → 0
+                    c.selfStatsMode = nextMode(c.selfStatsMode);   // 2 → 0 → 1 → 2
                     this.editContainer = false;                     // 切模式后默认编辑 HUD 那套
                     // 每种显示方式各有一套配置：切换后立刻按新模式重建/重绘。
                     this.rebuildWidgets();
@@ -281,6 +281,15 @@ public final class EnemyHudSettingsScreen extends Screen {
             for (AbstractWidget widget : dependent) widget.active = false;
         }
         return modeNow == 2 ? 5 : 4;
+    }
+
+    /** 显示方式循环顺序：HUD + 容器界面(2) → HUD 显示(0) → 容器界面显示(1) → 回到 2。 */
+    static int nextMode(int mode) {
+        return switch (mode) {
+            case 2 -> 0;
+            case 0 -> 1;
+            default -> 2;
+        };
     }
 
     /** 显示方式按钮的翻译键（0/1/2）。 */
