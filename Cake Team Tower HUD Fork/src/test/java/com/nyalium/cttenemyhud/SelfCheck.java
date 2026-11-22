@@ -30,6 +30,8 @@ public final class SelfCheck {
         selfStatsFineKinds();
         percentOnlyText();
         lobbyTriggerGuard();
+        bossBarBinding();
+        filterGridWidth();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -209,6 +211,53 @@ public final class SelfCheck {
                         net.minecraft.network.chat.Component.literal("Triggered [ViewStats]"), true),
                 "overlay（动作栏）不做处理");
         ChatTriggerFilter.noteTriggerSent(0L);          // 收尾：别影响别的用例
+    }
+
+    // ── 1d. 同名怪：bossbar 认领要「血量对得上」才认 ──
+
+    /**
+     * 1.20.9：同名怪附近时，bossbar 只认血量差 ≤ {@link BossBarTracker#PERCENT_TOLERANCE} 的实体，
+     * 不再因为「上一帧绑过」或「名字一样」就继续粘着旧的那只。
+     */
+    private static void bossBarBinding() {
+        check(BossBarTracker.PERCENT_TOLERANCE == 5, "容差应为 5 个百分点");
+        check(BossBarTracker.percentDiff(99, 99) == 0, "99 vs 99 差 0");
+        check(BossBarTracker.percentDiff(99, 97) == 2, "99 vs 97 差 2");
+        check(BossBarTracker.percentDiff(99, 90) == 9, "99 vs 90 差 9");
+        check(BossBarTracker.percentDiff(-1, 99) == Integer.MAX_VALUE, "bar 没数字时不可比");
+        check(BossBarTracker.percentDiff(99, -1) == Integer.MAX_VALUE, "实体没有 HealthPercent 时不可比");
+
+        check(BossBarTracker.acceptable(0), "差 0 应认领");
+        check(BossBarTracker.acceptable(5), "差 5 应认领（容差边界）");
+        check(!BossBarTracker.acceptable(6), "差 6 不该认领");
+        check(!BossBarTracker.acceptable(Integer.MAX_VALUE), "不可比时不该认领");
+
+        // 排序：精确 > 差≤2 > 差≤容差 > 粘性 > 名字 > 距离
+        check(BossBarTracker.matchScore(0, true, false, 100)
+                        > BossBarTracker.matchScore(2, true, true, 0),
+                "精确吻合应压过「差2 + 粘性」");
+        check(BossBarTracker.matchScore(2, true, false, 0)
+                        > BossBarTracker.matchScore(5, true, true, 0),
+                "差≤2 应压过「差≤容差 + 粘性」");
+        check(BossBarTracker.matchScore(0, true, true, 0)
+                        > BossBarTracker.matchScore(0, true, false, 0),
+                "同分时粘性优先");
+        check(BossBarTracker.matchScore(0, true, false, 0)
+                        > BossBarTracker.matchScore(0, true, false, 4096),
+                "同分时更近的优先");
+        check(BossBarTracker.matchScore(0, true, true, 0)
+                        > BossBarTracker.matchScore(0, false, true, 0),
+                "名字完全相同优于互相包含");
+    }
+
+    // ── 1e. 过滤界面：按钮宽度参照原版（200），窄屏才收缩 ──
+
+    private static void filterGridWidth() {
+        check(SelfStatsFilterScreen.columnWidth(853) == 200, "宽屏（GUI 853）两列按钮应为原版宽度 200");
+        check(SelfStatsFilterScreen.columnWidth(426) == 196, "GUI 426 收缩到 196（200 放不下两个）");
+        check(SelfStatsFilterScreen.columnWidth(320) < 200, "窄屏（GUI 320）应收缩到可用宽度");
+        check(SelfStatsFilterScreen.columnWidth(320) >= 60, "再窄也不该小于 60");
+        check(SelfStatsFilterScreen.columnWidth(150) == 60, "极窄屏兜底 60");
     }
 
     // ── 2. 血条长度 ──

@@ -2,18 +2,18 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.20.8**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.20.9**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/字号/透明度，
 > 60 个属性逐项开关（**双列按钮 + 滚动**），快捷键 `F8` 打开设置。
 
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.20.8` |
+| 版本 | `1.20.9` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.20.8.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.20.9.jar` |
 
 ## 绘制方式（1.15.0 起）
 
@@ -291,7 +291,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | 采集 | 触发后 1.5 s 窗口，来一行续 1.5 s，单次上限 8 s；只收「数字开头 / ❤ / 属性图标 / `Misc_View_Stats_*` / 纯图标」的行 |
 | 防刷屏 | 收下的行**不显示**在聊天栏（和上游一样） |
 | 解析 | `heartKindOf(字形, 颜色)`：❤+红/黄/黑/蓝 → 红/魂/黑/蓝；私有区字形 + 暗红/亮紫 → 碎/粉；`amountBefore` 取字形前紧邻的数字 |
-| 面板 | 列优先排版，列数 1~3，位置 `selfStatsX/Y`（**GUI 像素**），支持字号/透明度 |
+| 面板 | 列优先排版，列数 1~3，位置 `selfStatsX/Y`（**GUI 像素**，界面上用「移动面板」拖动），支持字号/透明度 |
 | 门控 | 地图回「Game not started」时整块不画 |
 
 ### 1.20.4：提示行、闪烁、可调与过滤（职业过滤已在 1.20.5 移除）
@@ -374,7 +374,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | `verticalOffset` | 敌人垂直微调，负值更高 | -30 ~ 0 |
 | `hideBehindEntities` | 被更近的实体挡住（屏幕矩形覆盖 ≥70%）时不绘制；解决「后方血条压住前面名字/模型」 | — |
 | `hideBehindWalls` | 被方块挡住视线时不画 | — |
-| `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，0=关）/ 列数 / 左上角 GUI 坐标 | 0~600 / 1~3 / 0~4000 |
+| `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，0=关）/ 列数 / 左上角 GUI 坐标（1.20.9 起界面上只能拖动，JSON 仍生效） | 0~600 / 1~3 / 0~4000 |
 | `selfStatsScale` / `selfStatsOpacity` | 属性面板文字大小 / 不透明度 | 0.50~2.00（默认 1.0）/ 0.20~1.00（默认 1.0） |
 | `selfStatsHidden` | 要隐藏的属性（如 `["heart_red", "mana_recharge"]`）；共 60 项，见 `SelfStatsKind`；旧配置里的粗类（`health`/`attack`/…）会自动展开成细项 | — |
 | `debug` | 左下角打印 `panel x,y cols scale op / lines 显示/总数 / gui WxH fb WxH`（**仅配置文件，界面无此项**） | — |
@@ -400,7 +400,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**5076 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**5096 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
 护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）、
@@ -412,7 +412,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.20.8.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.20.9.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 
@@ -447,7 +447,8 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 1.20.5 | 刷新单位写明「现实时间」；删除职业过滤；过滤界面改成可滚动列表并按属性细分到 60 项；配置 v6（粗类自动展开） |
 | 1.20.6 | 过滤界面换成双列带边框按钮 + 滚轮翻行；Mod 改名 **CTT HUD - Fork**，配置文件改为 `ctt-hud-fork.json`（旧文件自动复制迁移）；钓鱼/业力/塔内回血/蜂蚁点按码位精确区分 |
 | 1.20.7 | 纯客户端（只有 `HealthPercent`）时敌人也显示**百分比数字**（`40%` + 血条），不再只有条没有字 |
-| **1.20.8** | 大厅里不再发 `/trigger ViewStats`（用「自己有没有 `HealthPercent` 分数 / 本人 bossbar」判断是否已开局）；「无法触发该计分项」回显被吞并冷却 60 s；回到大厅清空上一局面板 |
+| 1.20.8 | 大厅里不再发 `/trigger ViewStats`（用「自己有没有 `HealthPercent` 分数 / 本人 bossbar」判断是否已开局）；「无法触发该计分项」回显被吞并冷却 60 s；回到大厅清空上一局面板 |
+| **1.20.9** | 面板位置只留拖动（删掉 X/Y 滑条）；过滤页双列按钮固定 200（原版宽度）并居中；bossbar 认领加 5 个百分点硬门槛（同名怪不再粘错）；血条补一层透视副本（被挡住时不会整条消失） |
 
 ## 已知限制
 

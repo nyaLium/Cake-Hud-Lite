@@ -205,16 +205,6 @@ public final class EnemyHudSettingsScreen extends Screen {
                 0.5, 2.0, 0.05, cfg.selfStatsScale,
                 v -> key("selfStatsScale", String.format(Locale.ROOT, "%.2f", v)),
                 v -> EnemyHudConfig.get().selfStatsScale = v));
-        y += ROW_GAP;
-        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
-                0.0, 800.0, 1.0, cfg.selfStatsX,
-                v -> key("selfStatsX", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().selfStatsX = (int) Math.round(v)));
-        y += ROW_GAP;
-        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
-                0.0, 800.0, 1.0, cfg.selfStatsY,
-                v -> key("selfStatsY", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().selfStatsY = (int) Math.round(v)));
 
         y = TOP;
         addRenderableWidget(new ValueSlider(rightX, y, w, ROW_HEIGHT,
@@ -229,7 +219,7 @@ public final class EnemyHudSettingsScreen extends Screen {
         addRenderableWidget(Button.builder(key("selfStatsFilter"),
                         b -> this.minecraft.gui.setScreen(new SelfStatsFilterScreen(this)))
                 .bounds(rightX, y, w, ROW_HEIGHT).build());
-        return 6;
+        return 4;
     }
 
     @Override

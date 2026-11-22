@@ -26,6 +26,8 @@ public final class SelfStatsFilterScreen extends Screen {
 
     /** 列数：两列按钮。 */
     static final int COLUMNS = 2;
+    /** 单个按钮的目标宽度：和原版菜单按钮一致（200）。窄屏时按可用宽度收缩。 */
+    static final int COLUMN_WIDTH = 200;
     /** 按钮高度。 */
     static final int ROW_HEIGHT = 20;
     /** 行间距。 */
@@ -56,6 +58,7 @@ public final class SelfStatsFilterScreen extends Screen {
         this.scroll = clampScroll(this.scroll, maxScroll());
 
         int width = columnWidth();
+        int left = gridLeft();
         int rows = visibleRows(listHeight());
         SelfStatsKind[] kinds = SelfStatsKind.FILTERABLE;
         for (int row = 0; row < rows; row++) {
@@ -63,7 +66,7 @@ public final class SelfStatsFilterScreen extends Screen {
                 int index = itemAt(this.scroll + row, column, COLUMNS, kinds.length);
                 if (index < 0) continue;
                 SelfStatsKind kind = kinds[index];
-                int x = SIDE + column * (width + COLUMN_GAP);
+                int x = left + column * (width + COLUMN_GAP);
                 int y = TOP + row * (ROW_HEIGHT + ROW_GAP);
                 addRenderableWidget(Button.builder(label(kind), b -> toggle(kind))
                         .bounds(x, y, width, ROW_HEIGHT).build());
@@ -138,9 +141,21 @@ public final class SelfStatsFilterScreen extends Screen {
         return this.height - BOTTOM_PAD - TOP;
     }
 
+    /** 单个按钮宽度：目标 200（原版），屏幕窄时按可用宽度收缩。 */
     private int columnWidth() {
-        int total = this.width - SIDE * 2 - SCROLLBAR_WIDTH - 2;
-        return Math.max(40, (total - COLUMN_GAP) / COLUMNS);
+        return columnWidth(this.width);
+    }
+
+    /** 纯函数版：屏幕宽度 → 单列按钮宽度（≤ {@link #COLUMN_WIDTH}）。 */
+    static int columnWidth(int screenWidth) {
+        int avail = (screenWidth - SIDE * 2 - SCROLLBAR_WIDTH - 2 - COLUMN_GAP) / COLUMNS;
+        return Math.max(60, Math.min(COLUMN_WIDTH, avail));
+    }
+
+    /** 两列整体居中后的左边起点。 */
+    private int gridLeft() {
+        int total = columnWidth() * COLUMNS + COLUMN_GAP;
+        return Math.max(SIDE, (this.width - total) / 2);
     }
 
     private int visibleRows() {
@@ -165,12 +180,12 @@ public final class SelfStatsFilterScreen extends Screen {
         graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsFilter.scrollHint"),
                 this.width / 2, 48, 0xFFA0A0A0);
 
-        // 右侧滚动条
+        // 右侧滚动条（贴着两列按钮的右边）
         int visible = visibleRows();
         int trackTop = TOP;
         int trackHeight = visible * (ROW_HEIGHT + ROW_GAP) - ROW_GAP;
         if (trackHeight > 0) {
-            int x = SIDE + columnWidth() * COLUMNS + COLUMN_GAP + 2;
+            int x = gridLeft() + columnWidth() * COLUMNS + COLUMN_GAP + 4;
             graphics.fill(x, trackTop, x + SCROLLBAR_WIDTH, trackTop + trackHeight, 0x30000000);
             int rows = rowCount(SelfStatsKind.FILTERABLE.length, COLUMNS);
             if (rows > visible && visible > 0) {

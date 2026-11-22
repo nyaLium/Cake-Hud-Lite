@@ -161,6 +161,44 @@ public final class BossBarTracker {
     private static final Map<UUID, UUID> BINDINGS = new HashMap<>();
 
     /**
+     * 认领时允许的百分比误差（百分点）。超过这个误差就**不认领**：
+     * 宁可让这只怪退回百分比显示，也不能把别的怪的数字挂到它头上。
+     *
+     * <p>取 5 是因为 {@code HealthPercent} 与 bossbar 标题的 {@code (x/y)} 是两条独立同步的
+     * 数据，极端时能差一两个 tick（1~2 个百分点）；5 已经留足余量，又能挡住「两只同名怪
+     * 血量差很多」的情况。</p>
+     */
+    static final int PERCENT_TOLERANCE = 5;
+
+    /** 两个百分比的差值；任一未知返回 {@link Integer#MAX_VALUE}。 */
+    static int percentDiff(int expected, int percent) {
+        if (expected < 0 || percent < 0) return Integer.MAX_VALUE;
+        return Math.abs(expected - percent);
+    }
+
+    /** 是否值得把这条 bar 认给这只怪（差值在容差内）。 */
+    static boolean acceptable(int diff) {
+        return diff <= PERCENT_TOLERANCE;
+    }
+
+    /**
+     * 认领打分（越大越优先）。
+     *
+     * <p>1.20.9 起：百分比吻合是**硬门槛**（{@link #acceptable}），门槛内再按
+     * 精确吻合 &gt; 差 ≤2 &gt; 差 ≤容差 排序，然后才是名字完全相同、上一帧绑定、距离。
+     * 这样「附近有同名怪、但血量对不上」时不会继续粘着旧的那只，避免数字不更新。</p>
+     */
+    static double matchScore(int diff, boolean exactName, boolean sticky, double distanceSq) {
+        double score = 0.0;
+        if (diff == 0) score += 1.0e9;
+        else if (diff <= 2) score += 5.0e8;
+        else if (diff <= PERCENT_TOLERANCE) score += 1.0e8;
+        if (exactName) score += 1.0e7;
+        if (sticky) score += 1.0e6;
+        return score - distanceSq;
+    }
+
+    /**
      * 把每条 bar 认领到唯一一只实体。
      *
      * <h2>同名怪物怎么办</h2>
@@ -212,14 +250,11 @@ public final class BossBarTracker {
                 if (!exact && !nameMatches(entity, bar.name, false)) continue;
 
                 int percent = EnemyData.healthPercentOf(sb, entity);
-                int diff = (expected < 0 || percent < 0) ? Integer.MAX_VALUE : Math.abs(expected - percent);
+                int diff = percentDiff(expected, percent);
+                if (!acceptable(diff)) continue;   // 血量对不上：不认领，宁可显示百分比
 
-                double score = 0.0;
-                if (diff == 0) score += 1.0e9;
-                else if (diff <= 2) score += 5.0e8;
-                if (exact) score += 1.0e7;
-                if (bound != null && bound.equals(entity.getUUID())) score += 1.0e6;
-                score -= entity.position().distanceToSqr(playerPos);
+                double score = matchScore(diff, exact, bound != null && bound.equals(entity.getUUID()),
+                        entity.position().distanceToSqr(playerPos));
                 if (score > bestScore) {
                     bestScore = score;
                     best = entity;

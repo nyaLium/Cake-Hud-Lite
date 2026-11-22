@@ -304,8 +304,15 @@ public final class HudWorldRenderer {
 
         RenderType background = RenderTypes.text(BossBarTexture.backgroundTexture(tint));
         RenderType progress = RenderTypes.text(BossBarTexture.progressTexture(tint));
+        // 1.20.9：血条也补一层「透视副本」，和文字一致 —— 被天花板/方块挡住时不会整条消失，
+        // 只会变成半透明的一条（以前只有文字有这层，条会被直接裁掉）。
+        RenderType seeBackground = RenderTypes.textSeeThrough(BossBarTexture.backgroundTexture(tint));
+        RenderType seeProgress = RenderTypes.textSeeThrough(BossBarTexture.progressTexture(tint));
+        int seeColor = (Math.max(0, alpha * 128 / 255) << 24) | 0xFFFFFF;
 
         // ① 整条背景（含空槽）：两端圆角按原尺寸，中段拉伸
+        submitBarSpan(collector, pose, seeBackground, x0, x0 + width, 0.0f, nativeWidth,
+                y0, y1, seeColor, light, BACKGROUND_Z);
         submitBarSpan(collector, pose, background, x0, x0 + width, 0.0f, nativeWidth,
                 y0, y1, color, light, BACKGROUND_Z);
 
@@ -313,6 +320,8 @@ public final class HudWorldRenderer {
         //    裁到满格时 ub 正好是纹理右端，右端盖才会画出来 —— 与原版一致。
         if (fill > 0.0f) {
             float uFill = nativeWidth * Math.min(1.0f, fill / width);
+            submitBarSpan(collector, pose, seeProgress, x0, x0 + fill, 0.0f, uFill,
+                    y0, y1, seeColor, light, 0.01f);
             submitBarSpan(collector, pose, progress, x0, x0 + fill, 0.0f, uFill,
                     y0, y1, color, light, 0.0f);
         }
