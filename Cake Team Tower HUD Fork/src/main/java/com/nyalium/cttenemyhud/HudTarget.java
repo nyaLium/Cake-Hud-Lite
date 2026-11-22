@@ -56,7 +56,12 @@ public final class HudTarget {
         if (!entity.isAlive() || entity.isInvisible()) return false;
 
         if (entity instanceof Player player) {
-            return cfg.showTeammates && BossBarTracker.isTeammate(mc, player);
+            if (!cfg.showTeammates) return false;
+            if (BossBarTracker.isTeammate(mc, player)) return true;
+            // 队伍条里没有他时的回退：地图给本局参战玩家（tag CTTAll）都算了
+            // below_name 的 HealthPercent（health.mcfunction:102-104），有这条分数
+            // 就说明他在这局里 = 队友；没有就不管（大厅里的其他玩家）。
+            return EnemyData.healthPercentOf(mc.level.getScoreboard(), player) >= 0;
         }
         // 有数据才算「数据包管控的敌人」——这一条也排除了掉落物、船、画等。
         return EnemyData.hasData(mc.level.getScoreboard(), entity);

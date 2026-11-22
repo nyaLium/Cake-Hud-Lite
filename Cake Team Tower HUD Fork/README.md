@@ -1,18 +1,19 @@
-﻿# Cake Team Tower HUD - Fork
+# Cake Team Tower HUD - Fork
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.16.0**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
-> 设置界面一纵排布（通用 / 敌人 / 玩家 / 恢复默认 + 底部完成）。
+> 当前版本 **1.20.4**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/字号/透明度、按内容类过滤、
+> 按职业分别过滤，快捷键 `F8` 打开设置。
 
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.14.0` |
+| 版本 | `1.20.4` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.16.0.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.20.4.jar` |
 
 ## 绘制方式（1.15.0 起）
 
@@ -288,11 +289,24 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | 采集 | 触发后 1.5 s 窗口，来一行续 1.5 s，单次上限 8 s；只收「数字开头 / ❤ / 属性图标 / `Misc_View_Stats_*` / 纯图标」的行 |
 | 防刷屏 | 收下的行**不显示**在聊天栏（和上游一样） |
 | 解析 | `heartKindOf(字形, 颜色)`：❤+红/黄/黑/蓝 → 红/魂/黑/蓝；私有区字形 + 暗红/亮紫 → 碎/粉；`amountBefore` 取字形前紧邻的数字 |
-| 面板 | 列优先排版，列数 1~3，位置 `selfStatsX/Y`（**GUI 像素**），背景半透明黑 |
+| 面板 | 列优先排版，列数 1~3，位置 `selfStatsX/Y`（**GUI 像素**），支持字号/透明度 |
 | 门控 | 地图回「Game not started」时整块不画 |
 
+### 1.20.4：提示行、闪烁、可调与过滤
+
+| 问题 | 处理 |
+| --- | --- |
+| `Misc_View_Stats_1/2`（「Your Stats:」「Hover over an icon…」）出现在面板上 | 按 `TranslatableContents#getKey()` 认键，**提示类永不上面板**（不依赖是否装了地图资源包） |
+| 缺地图语言文件时，计时行显示成 `Misc_View_Stats_7800:00:19` | 含**未解析翻译键**的行整行丢弃 |
+| 每次刷新面板先空一下再长出来 | 双缓冲：新数据先进 `PENDING`，这一趟收完再整体替换上屏内容 |
+| 位置只能手改 JSON | 设置界面新增「移动面板」：拖拽 + 实时 `x/y`；另有水平/垂直滑块 |
+| 字号/透明度不能调 | `selfStatsScale`（0.5~2.0）、`selfStatsOpacity`（0.2~1.0） |
+| 不能挑内容 | 内容过滤：15 类开关（四色心/碎/粉/生命/攻击/防御/元素护甲/速度/法力/杂项/状态/计时） |
+| 不同职业想看的东西不同 | 职业过滤：`OFF` / `AUTO`（从「`<自己> has become <职业键>`」公告认）/ 手动指定；每个职业一份隐藏表 |
+
 > **拿不到别人**：地图那 147 条 `tellraw` 全是 `@s`，没有一条发给 `@a`，所以这个通道**只能问到自己**。
-> 队友的心数/血量只能靠「队伍血量」bossbar（(x/y) 百分比）或本 Mod 的服务端组件 payload。
+> 队友的**心数拆分**只能靠本 Mod 的服务端组件 payload（1.16.0 起）；没有 payload 时，
+> 1.20.4 起会用 `below_name = HealthPercent`（= 红心 ÷ MaxHP）补一条百分比绿条。
 
 ## 配置
 
@@ -300,6 +314,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 
 ```json
 {
+  "configVersion": 5,
   "enabled": true,
   "opacity": 0.75,
   "textShadow": true,
@@ -325,7 +340,12 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
   "selfStatsSeconds": 30,
   "selfStatsColumns": 2,
   "selfStatsX": 4,
-  "selfStatsY": 40
+  "selfStatsY": 40,
+  "selfStatsScale": 1.0,
+  "selfStatsOpacity": 1.0,
+  "selfStatsHidden": [],
+  "selfStatsClass": "AUTO",
+  "selfStatsClassHidden": {}
 }
 ```
 
@@ -350,14 +370,20 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | `hideBehindEntities` | 被更近的实体挡住（屏幕矩形覆盖 ≥70%）时不绘制；解决「后方血条压住前面名字/模型」 | — |
 | `hideBehindWalls` | 被方块挡住视线时不画 | — |
 | `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，0=关）/ 列数 / 左上角 GUI 坐标 | 0~600 / 1~3 / 0~4000 |
-| `debug` | 左上角打印 `entities= / withData= / mates= / drawn=`（**仅配置文件，界面无此项**） | — |
+| `selfStatsScale` / `selfStatsOpacity` | 属性面板文字大小 / 不透明度 | 0.50~2.00（默认 1.0）/ 0.20~1.00（默认 1.0） |
+| `selfStatsHidden` | 默认隐藏的内容类（如 `["heart_red"]`） | 类 id，见 `SelfStatsKind` |
+| `selfStatsClass` | 职业过滤：`OFF` / `AUTO` / 职业键（如 `class_select_12`） | 非法值回落 `AUTO` |
+| `selfStatsClassHidden` | 按职业分开的隐藏表：`{"class_select_12": []}`；**空列表 = 该职业什么都不隐藏** | 键必须是已知职业 |
+| `debug` | 左下角打印 `panel x,y cols scale op / lines 显示/总数 / gui WxH fb WxH`（**仅配置文件，界面无此项**） | — |
 
 > 1.13.3 起 `showNumbers` / `showHeartCounts` / `showArmor` 已删除（永久开启），
 > 老配置文件里的这几个键会被忽略，下次「完成」时自动消失。
 > `autoPartyBossbar` 在 1.13.3 一度移除，1.13.4 恢复（默认开）。
 > 1.14.4 加的 `wrapWidth` 已在 1.19.0 删除（布局改固定三段，自动折行），旧配置里的键会被忽略。
-> `configVersion` 现在是 **3**：v1→v2 把血条默认长度 100 改成 75，v2→v3 把默认缩放 1.0 改成 0.9，
-> 只在「值仍等于旧默认值」时才迁移，手工调过的值不动。
+> `configVersion` 现在是 **5**：v1→v2 把血条默认长度 100 改成 75，v2→v3 把默认缩放 1.0 改成 0.9，
+> v3→v4 新增自身属性面板字段，v4→v5 新增字号/透明度/内容过滤/职业过滤字段；
+> 只在「值仍等于旧默认值」时才迁移，手工调过的值不动，新字段一律有默认值。
+> 手改坏配置文件（类型不对 / JSON 语法错）时**保留上一份可用配置**并在日志里 warn，不再静默恢复默认。
 
 ## 未知诅咒
 
@@ -371,10 +397,11 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**4799 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**4861 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
-护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）。
+护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）、
+属性面板（心数解析、内容分类、提示键识别、过滤表清洗、职业识别、缩放/位置夹取）。
 
 ## 构建
 
@@ -382,7 +409,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.20.3.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.20.4.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 
@@ -412,6 +439,8 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 1.20.0 | 敌人心类每次一种 / 玩家魂↔黑轮换；玩家特殊心固定最上；护甲段之间两个空格 |
 | 1.20.1 | 血条改回原版画法（整条背景 + 左侧裁切进度），修掉未满时中间 1 px 接缝 |
 | **1.20.2** | 血条**两端端盖按纹素原尺寸**分段绘制（圆头，不再是长方形）；竖向 UV 回 0~1 保留上下深色描边 |
+| 1.20.3 | + 自身属性面板（纯客户端 `/trigger ViewStats`，抓地图回传行、吞聊天、解析心数） |
+| **1.20.4** | 面板去提示行（`Misc_View_Stats_1/2`、未解析键行）、双缓冲不再闪；字号/透明度可调；「移动面板」拖拽；内容过滤 15 类；按职业过滤 + `AUTO` 职业识别；`F8` 打开设置；队友 `HealthPercent` 百分比回退 |
 
 ## 已知限制
 
@@ -419,5 +448,10 @@ gradlew selfCheck      # gradlew build 会自动带上
 - **纯客户端**下精确血量只覆盖 Boss 栏指向的那一只，其余是百分比；装了服务端组件后每只怪都有绝对值。
 - 队友的黑/蓝/碎心客户端拿不到（`spectator_bossbar` 只有 `AllHearts/MaxHP`），那一行保持 `当前/最大`；
   同一套服务端通道扩一列即可补上，尚未做。
-- 队友头顶条依赖「队伍血量」这条 Boss 栏自身存在（自动开启会替你开，3 s 冷却 + 10 分钟熔断）。
+- 队友头顶条优先用「队伍血量」这条 Boss 栏；1.20.4 起在队伍条没有该条目时，用
+  `below_name = HealthPercent`（红心 ÷ MaxHP）画百分比回退 —— 这条回退**还没在真局里和真人队友一起验证过**。
+- 属性面板的**职业识别**依赖地图选职业时喊的那句 `<自己> has become <职业>`；快捷开局可能不喊，
+  这时 `AUTO` 认不出来，需要在设置里手动指定职业。
+- 「移动面板」的拖拽用的是原版滑块同款增量位移；自动化环境只能验证「面板会动、坐标会更新」，
+  拖到具体位置的精度没法在无头环境里证明。
 

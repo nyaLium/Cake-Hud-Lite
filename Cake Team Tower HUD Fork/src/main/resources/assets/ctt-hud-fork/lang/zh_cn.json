@@ -6,6 +6,7 @@
   "ctt_enemy_hud.config.section.general": "通用设置",
   "ctt_enemy_hud.config.section.enemy": "敌人设置",
   "ctt_enemy_hud.config.section.player": "玩家设置",
+  "ctt_enemy_hud.config.section.self_stats": "属性面板",
   "ctt_enemy_hud.config.back": "返回",
   "ctt_enemy_hud.config.reset": "恢复默认",
 
@@ -25,5 +26,45 @@
   "ctt_enemy_hud.config.barWidth": "血条长度：%s",
   "ctt_enemy_hud.config.scale": "整体缩放：%s",
   "ctt_enemy_hud.config.verticalOffset": "垂直偏移：%s",
-  "ctt_enemy_hud.config.maxDistance": "显示距离：%s 格"
+  "ctt_enemy_hud.config.maxDistance": "显示距离：%s 格",
+
+  "ctt_enemy_hud.config.showSelfStats": "显示属性面板",
+  "ctt_enemy_hud.config.selfStatsSeconds": "刷新间隔：%s 秒",
+  "ctt_enemy_hud.config.selfStatsColumns": "列数：%s",
+  "ctt_enemy_hud.config.selfStatsScale": "文字大小：%s",
+  "ctt_enemy_hud.config.selfStatsOpacity": "不透明度：%s",
+  "ctt_enemy_hud.config.selfStatsX": "水平位置：%s",
+  "ctt_enemy_hud.config.selfStatsY": "垂直位置：%s",
+  "ctt_enemy_hud.config.selfStatsMove": "移动面板",
+  "ctt_enemy_hud.config.selfStatsFilter": "内容过滤",
+  "ctt_enemy_hud.config.selfStatsClass": "职业过滤",
+  "ctt_enemy_hud.config.class.off": "关闭",
+  "ctt_enemy_hud.config.class.auto": "自动",
+
+  "ctt_enemy_hud.config.selfStatsMove.hint": "按住面板拖到想要的位置；「重置位置」回左上角",
+  "ctt_enemy_hud.config.selfStatsMove.reset": "重置位置",
+  "ctt_enemy_hud.config.selfStatsMove.demo": "（示例数据）",
+
+  "ctt_enemy_hud.config.selfStatsFilter.showAll": "全部显示",
+  "ctt_enemy_hud.config.selfStatsFilter.targetDefault": "当前编辑：默认过滤（职业过滤已关闭）",
+  "ctt_enemy_hud.config.selfStatsFilter.targetUnknown": "当前编辑：默认过滤（还没识别到职业）",
+  "ctt_enemy_hud.config.selfStatsFilter.targetClass": "当前编辑：%s 专属过滤",
+
+  "ctt_enemy_hud.config.kind.time": "计时",
+  "ctt_enemy_hud.config.kind.heart_red": "红心",
+  "ctt_enemy_hud.config.kind.heart_soul": "魂心",
+  "ctt_enemy_hud.config.kind.heart_black": "黑心",
+  "ctt_enemy_hud.config.kind.heart_blue": "蓝心",
+  "ctt_enemy_hud.config.kind.heart_cracked": "碎心",
+  "ctt_enemy_hud.config.kind.heart_pink": "粉心",
+  "ctt_enemy_hud.config.kind.health": "生命 / 治疗",
+  "ctt_enemy_hud.config.kind.attack": "力量 / 攻速",
+  "ctt_enemy_hud.config.kind.defence": "防御",
+  "ctt_enemy_hud.config.kind.element": "元素护甲",
+  "ctt_enemy_hud.config.kind.speed": "速度",
+  "ctt_enemy_hud.config.kind.mana": "法力",
+  "ctt_enemy_hud.config.kind.misc": "杂项",
+  "ctt_enemy_hud.config.kind.status": "状态效果",
+
+  "key.ctt_enemy_hud.open_config": "打开 CTT 设置"
 }

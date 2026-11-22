@@ -78,16 +78,61 @@ public final class EnemyHudConfig {
         public int selfStatsSeconds = 30;
         /** 属性面板列数，1 ~ 3。 */
         public int selfStatsColumns = 2;
-        /** 属性面板左上角屏幕坐标。 */
+        /** 属性面板左上角屏幕坐标（GUI 像素）。 */
         public int selfStatsX = 4;
         public int selfStatsY = 40;
+        /** 属性面板文字缩放，0.50 ~ 2.00（1.20.4）。 */
+        public double selfStatsScale = 1.0;
+        /** 属性面板文字不透明度，0.20 ~ 1.00（1.20.4）。 */
+        public double selfStatsOpacity = 1.0;
+        /**
+         * 默认（不分职业）时要隐藏的内容类，取值见 {@link SelfStatsKind#id}。
+         *
+         * <p>例如 {@code ["heart_red"]} = 红心那几行不上面板。</p>
+         */
+        public java.util.List<String> selfStatsHidden = new java.util.ArrayList<>();
+        /**
+         * 职业过滤模式（1.20.4）：{@link ClassTracker#MODE_OFF} 关闭 /
+         * {@link ClassTracker#MODE_AUTO} 按聊天里识别到的职业自动切 / 某个职业键（手动指定）。
+         */
+        public String selfStatsClass = ClassTracker.MODE_AUTO;
+        /**
+         * 按职业分开的「隐藏类」表：职业键 → 隐藏类列表。
+         *
+         * <p>职业识别不到、或这个职业没有条目时，用 {@link #selfStatsHidden}。</p>
+         */
+        public java.util.Map<String, java.util.List<String>> selfStatsClassHidden =
+                new java.util.LinkedHashMap<>();
+    }
+
+    /**
+     * 属性面板的布局快照（绘制用）。位置 / 列数 / 缩放 / 透明度对所有职业统一 ——
+     * 这属于「屏幕布局」，跟职业无关；按职业分开的只有「看什么」，见
+     * {@link Cfg#selfStatsClassHidden}。
+     */
+    public static final class Panel {
+        public final int x;
+        public final int y;
+        public final int columns;
+        public final double scale;
+        public final double opacity;
+
+        public Panel(int x, int y, int columns, double scale, double opacity) {
+            this.x = x;
+            this.y = y;
+            this.columns = columns;
+            this.scale = scale;
+            this.opacity = opacity;
+        }
     }
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final org.slf4j.Logger LOGGER =
+            org.slf4j.LoggerFactory.getLogger("ctt-hud/config");
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 4;
+    public static final int CURRENT_VERSION = 5;
     /** 旧版默认血条长度（1.18.0 起默认改成 75）。 */
     private static final double LEGACY_BAR_WIDTH = 100.0;
     /** 旧版默认缩放（1.19.0 起默认改成 0.9）。 */
@@ -147,6 +192,42 @@ public final class EnemyHudConfig {
         cfg = new Cfg();
     }
 
+    /** 属性面板当前生效的布局（位置 / 列数 / 缩放 / 透明度）。 */
+    public static Panel panel() {
+        Cfg c = get();
+        return new Panel(c.selfStatsX, c.selfStatsY, c.selfStatsColumns,
+                c.selfStatsScale, c.selfStatsOpacity);
+    }
+
+    /** 当前生效的「隐藏类」集合（按职业解析后）。 */
+    public static java.util.Set<String> hiddenKinds() {
+        Cfg c = get();
+        return new java.util.LinkedHashSet<>(hiddenListOf(c));
+    }
+
+    /**
+     * 过滤界面正在编辑的那一份列表（可直接增删）。
+     *
+     * <p>认到了职业 → 编辑该职业的条目（第一次编辑时从默认复制一份）；
+     * 否则编辑默认那份。</p>
+     */
+    public static java.util.List<String> hiddenList() {
+        Cfg c = get();
+        String cls = ClassTracker.resolvedClass(c, ClassTracker.current());
+        if (cls == null) return c.selfStatsHidden;
+        return c.selfStatsClassHidden.computeIfAbsent(cls,
+                key -> new java.util.ArrayList<>(c.selfStatsHidden));
+    }
+
+    private static java.util.List<String> hiddenListOf(Cfg c) {
+        String cls = ClassTracker.resolvedClass(c, ClassTracker.current());
+        if (cls != null) {
+            java.util.List<String> list = c.selfStatsClassHidden.get(cls);
+            if (list != null) return list;
+        }
+        return c.selfStatsHidden;
+    }
+
     /** 当前配置的深拷贝，用作设置界面「取消」的回滚点（不落盘）。 */
     public static Cfg copy() {
         Cfg copy = GSON.fromJson(GSON.toJson(cfg), Cfg.class);
@@ -171,13 +252,17 @@ public final class EnemyHudConfig {
     }
 
     private static void read() {
+        Cfg previous = cfg;
         try {
             String json = Files.readString(file, StandardCharsets.UTF_8);
             Cfg read = GSON.fromJson(json, Cfg.class);
             cfg = normalize(read);
             migrate(json, cfg);
         } catch (Exception e) {
-            cfg = new Cfg();
+            // 手改坏了（类型不对 / JSON 写错）时**保留上一份可用配置**，不要静默恢复默认值
+            // ——否则玩家以为自己只改错了一行，实际整套设置被清空。
+            cfg = previous != null ? previous : new Cfg();
+            LOGGER.warn("配置文件解析失败，继续使用上一份可用配置: {}", e.toString());
         }
     }
 
@@ -231,7 +316,46 @@ public final class EnemyHudConfig {
         read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);
         read.selfStatsX = (int) clamp(read.selfStatsX, 0.0, 4000.0);
         read.selfStatsY = (int) clamp(read.selfStatsY, 0.0, 4000.0);
+        // 1.20.4：文字缩放 0.5~2.0、不透明度 0.2~1.0、内容过滤、职业过滤
+        read.selfStatsScale = clamp(read.selfStatsScale, 0.5, 2.0);
+        read.selfStatsOpacity = clamp(read.selfStatsOpacity, 0.2, 1.0);
+        read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
+        read.selfStatsClassHidden = sanitizeProfiles(read.selfStatsClassHidden);
+        if (read.selfStatsClass == null || !ClassTracker.options().contains(read.selfStatsClass)) {
+            // 手写错的 / 地图改了键名的 → 回到「自动」，而不是把不存在的职业当过滤目标
+            read.selfStatsClass = ClassTracker.MODE_AUTO;
+        }
         return read;
+    }
+
+    /** 只留下真正可过滤的类 id，去掉 null / 未知 / 重复。 */
+    static java.util.List<String> sanitizeKinds(java.util.List<String> raw) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (raw == null) return out;
+        for (String id : raw) {
+            SelfStatsKind kind = SelfStatsKind.byId(id);
+            if (kind == null || !kind.filterable) continue;
+            if (!out.contains(kind.id)) out.add(kind.id);
+        }
+        return out;
+    }
+
+    /**
+     * 职业表：键必须是已知职业，值走 {@link #sanitizeKinds}。
+     *
+     * <p><b>空列表要保留</b>：它的语义是「这个职业什么都不隐藏」，和「这个职业没有条目 →
+     * 跟随默认表」是两回事。</p>
+     */
+    static java.util.Map<String, java.util.List<String>> sanitizeProfiles(
+            java.util.Map<String, java.util.List<String>> raw) {
+        java.util.Map<String, java.util.List<String>> out = new java.util.LinkedHashMap<>();
+        if (raw == null) return out;
+        for (java.util.Map.Entry<String, java.util.List<String>> entry : raw.entrySet()) {
+            String key = entry.getKey();
+            if (key == null || !ClassTracker.isKnownClass(key)) continue;
+            out.put(key, sanitizeKinds(entry.getValue()));
+        }
+        return out;
     }
 
     private static double clamp(double v, double lo, double hi) {

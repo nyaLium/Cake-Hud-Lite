@@ -220,10 +220,15 @@ public final class HudWorldRenderer {
         if (teammate) {
             refresh(mc);
             TeamBarTitle.Entry entry = teamEntries.get(id);
-            if (entry == null) return null;
-            // 没有服务端组件时队伍条只给 AllHearts / MaxHP，拆不出红心 —— 只能按它填。
-            return EnemyData.exact(entry.hp, entry.maxHp, entry.ratio(), 0, NO_ARMOUR,
-                    HeartCounts.unknown());
+            if (entry != null) {
+                // 没有服务端组件时队伍条只给 AllHearts / MaxHP，拆不出红心 —— 只能按它填。
+                return EnemyData.exact(entry.hp, entry.maxHp, entry.ratio(), 0, NO_ARMOUR,
+                        HeartCounts.unknown());
+            }
+            // 队伍条里没这一条（没开队伍条 / 解析时没认到他）→ 退回队友自己的
+            // below_name HealthPercent（= 红心 ÷ MaxHP 的百分比，地图对所有参战玩家都算）。
+            // 效果：绿条按百分比填、数字显示 "73%"，总比什么都没有强。
+            return EnemyData.read(mc.level.getScoreboard(), entity);
         }
 
         Scoreboard scoreboard = mc.level.getScoreboard();

@@ -55,6 +55,10 @@ public final class EnemyHudConfigScreen extends Screen {
                         b -> open(EnemyHudSettingsScreen.Section.PLAYER))
                 .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build());
         y += ROW_GAP;
+        addRenderableWidget(Button.builder(section("self_stats"),
+                        b -> open(EnemyHudSettingsScreen.Section.SELF_STATS))
+                .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build());
+        y += ROW_GAP;
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.reset"), b -> {
             // 只改内存、不落盘：还要点「完成」才写盘。
             EnemyHudConfig.reset();

@@ -17,8 +17,8 @@ import net.minecraft.network.chat.Component;
  */
 public final class EnemyHudSettingsScreen extends Screen {
 
-    /** 三个子页面。 */
-    public enum Section { GENERAL, ENEMY, PLAYER }
+    /** 四个子页面。 */
+    public enum Section { GENERAL, ENEMY, PLAYER, SELF_STATS }
 
     private static final int ROW_HEIGHT = 20;
     private static final int ROW_GAP = 24;
@@ -40,6 +40,7 @@ public final class EnemyHudSettingsScreen extends Screen {
             case GENERAL -> "general";
             case ENEMY -> "enemy";
             case PLAYER -> "player";
+            case SELF_STATS -> "self_stats";
         };
     }
 
@@ -54,6 +55,7 @@ public final class EnemyHudSettingsScreen extends Screen {
             case GENERAL -> initGeneral(cfg, w, leftX, rightX);
             case ENEMY -> initEnemy(cfg, w, leftX, rightX);
             case PLAYER -> initPlayer(cfg, w, leftX, rightX);
+            case SELF_STATS -> initSelfStats(cfg, w, leftX, rightX);
         };
 
         int totalWidth = w * 2 + COLUMN_GAP;
@@ -178,6 +180,68 @@ public final class EnemyHudSettingsScreen extends Screen {
                 v -> key("verticalOffset", signed((int) Math.round(v))),
                 v -> EnemyHudConfig.get().teamVerticalOffset = (int) Math.round(v)));
         return 3;
+    }
+
+    // ── 自身属性面板设置 ──
+
+    /** @return 占用的行数 */
+    private int initSelfStats(EnemyHudConfig.Cfg cfg, int w, int leftX, int rightX) {
+        int y = TOP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.showSelfStats)
+                .create(leftX, y, w, ROW_HEIGHT, key("showSelfStats"),
+                        (b, v) -> EnemyHudConfig.get().showSelfStats = v));
+        y += ROW_GAP;
+        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
+                0.0, 60.0, 1.0, cfg.selfStatsSeconds,
+                v -> key("selfStatsSeconds", (int) Math.round(v)),
+                v -> EnemyHudConfig.get().selfStatsSeconds = (int) Math.round(v)));
+        y += ROW_GAP;
+        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
+                1.0, 3.0, 1.0, cfg.selfStatsColumns,
+                v -> key("selfStatsColumns", (int) Math.round(v)),
+                v -> EnemyHudConfig.get().selfStatsColumns = (int) Math.round(v)));
+        y += ROW_GAP;
+        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
+                0.5, 2.0, 0.05, cfg.selfStatsScale,
+                v -> key("selfStatsScale", String.format(Locale.ROOT, "%.2f", v)),
+                v -> EnemyHudConfig.get().selfStatsScale = v));
+        y += ROW_GAP;
+        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
+                0.0, 800.0, 1.0, cfg.selfStatsX,
+                v -> key("selfStatsX", (int) Math.round(v)),
+                v -> EnemyHudConfig.get().selfStatsX = (int) Math.round(v)));
+        y += ROW_GAP;
+        addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
+                0.0, 800.0, 1.0, cfg.selfStatsY,
+                v -> key("selfStatsY", (int) Math.round(v)),
+                v -> EnemyHudConfig.get().selfStatsY = (int) Math.round(v)));
+
+        y = TOP;
+        addRenderableWidget(new ValueSlider(rightX, y, w, ROW_HEIGHT,
+                0.2, 1.0, 0.05, cfg.selfStatsOpacity,
+                v -> key("selfStatsOpacity", Math.round(v * 100.0) + "%"),
+                v -> EnemyHudConfig.get().selfStatsOpacity = v));
+        y += ROW_GAP;
+        addRenderableWidget(Button.builder(key("selfStatsMove"),
+                        b -> this.minecraft.gui.setScreen(new SelfStatsLayoutScreen(this)))
+                .bounds(rightX, y, w, ROW_HEIGHT).build());
+        y += ROW_GAP;
+        addRenderableWidget(Button.builder(key("selfStatsFilter"),
+                        b -> this.minecraft.gui.setScreen(new SelfStatsFilterScreen(this)))
+                .bounds(rightX, y, w, ROW_HEIGHT).build());
+        y += ROW_GAP;
+        addRenderableWidget(CycleButton.builder(EnemyHudSettingsScreen::classLabel, cfg.selfStatsClass)
+                .withValues(ClassTracker.options())
+                .create(rightX, y, w, ROW_HEIGHT, key("selfStatsClass"),
+                        (b, v) -> EnemyHudConfig.get().selfStatsClass = v));
+        return 6;
+    }
+
+    /** 职业过滤下拉框的取值文本：关 / 自动 / 职业名。 */
+    private static Component classLabel(String value) {
+        if (ClassTracker.MODE_OFF.equals(value)) return Component.translatable("ctt_enemy_hud.config.class.off");
+        if (ClassTracker.MODE_AUTO.equals(value)) return Component.translatable("ctt_enemy_hud.config.class.auto");
+        return Component.literal(ClassTracker.displayName(value));
     }
 
     @Override

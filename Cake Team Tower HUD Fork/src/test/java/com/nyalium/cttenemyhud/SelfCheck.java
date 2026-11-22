@@ -27,6 +27,7 @@ public final class SelfCheck {
         curseKeys();
         teamBarTitles();
         selfStatsAndPanel();
+        selfStatsV4();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -1048,17 +1049,17 @@ public final class SelfCheck {
                         .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED))))
                 .append(net.minecraft.network.chat.Component.literal("\u2764")
                         .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED))));
-        SelfStats.parseHearts(redLine);
+        int[] h = SelfStats.heartsOf(redLine);
+        check(h[1] == 120, "端到端：红心应解析为 120，实际 " + h[1]);
         var multi = net.minecraft.network.chat.Component.empty()
                 .append(net.minecraft.network.chat.Component.literal("40")
                         .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.YELLOW))))
                 .append(net.minecraft.network.chat.Component.literal("\u2764")
                         .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.YELLOW))));
-        SelfStats.parseHearts(multi);
-        int[] h = SelfStats.heartCounts();
-        check(h[1] == 120, "端到端：红心应解析为 120，实际 " + h[1]);
-        check(h[2] == 40, "端到端：魂心应解析为 40，实际 " + h[2]);
-        check(h[3] == 0 && h[4] == 0 && h[5] == 0 && h[6] == 0, "没出现的颜色应保持 0");
+        int[] h2 = SelfStats.heartsOf(multi);
+        check(h2[2] == 40, "端到端：魂心应解析为 40，实际 " + h2[2]);
+        check(h2[1] == 0 && h2[3] == 0 && h2[4] == 0 && h2[5] == 0 && h2[6] == 0,
+                "没出现的颜色应保持 0");
         SelfStats.reset();
         int[] cleared = SelfStats.heartCounts();
         check(cleared[1] == 0 && cleared[2] == 0, "reset 后心数应清零");
@@ -1092,7 +1093,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(EnemyHudConfig.CURRENT_VERSION == 4, "配置版本应为 4");
+        check(EnemyHudConfig.CURRENT_VERSION == 5, "配置版本应为 5");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 30, "自身属性面板默认 30 s 刷新");
@@ -1101,8 +1102,178 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 4, "v3 → v4 应升版本号");
+        check(v3.configVersion == 5, "v3 → v5 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
+    }
+
+    /** 1.20.4：内容分类 / 提示行过滤 / 双缓冲 / 过滤 / 缩放透明度 / 职业识别。 */
+    private static void selfStatsV4() {
+        net.minecraft.network.chat.MutableComponent hint =
+                net.minecraft.network.chat.Component.translatable("Misc_View_Stats_1");
+        check(SelfStats.classify(SelfStats.analyze(hint)) == SelfStatsKind.HINT,
+                "标题行（Misc_View_Stats_1）应归为 HINT");
+        check(SelfStats.analyze(hint).unresolvedKey,
+                "没有地图语言文件时，标题行应被标成「未解析翻译键」");
+
+        check(kindOfKey(4) == SelfStatsKind.HEALTH, "键 4 应归为生命");
+        check(kindOfKey(5) == SelfStatsKind.HEALTH, "键 5 应归为生命");
+        check(kindOfKey(10) == SelfStatsKind.ATTACK, "键 10 应归为攻击");
+        check(kindOfKey(16) == SelfStatsKind.DEFENCE, "键 16 应归为防御");
+        check(kindOfKey(25) == SelfStatsKind.ELEMENT, "键 25 应归为元素护甲");
+        check(kindOfKey(33) == SelfStatsKind.SPEED, "键 33 应归为速度");
+        check(kindOfKey(40) == SelfStatsKind.MANA, "键 40 应归为法力");
+        check(kindOfKey(56) == SelfStatsKind.STATUS, "键 56 应归为状态效果");
+        check(kindOfKey(78) == SelfStatsKind.TIME, "键 78 应归为计时");
+
+        check(glyphKind("120\u2764", SelfStats.RED) == SelfStatsKind.HEART_RED, "红心行应归为红心");
+        check(glyphKind("40\u2764", SelfStats.YELLOW) == SelfStatsKind.HEART_SOUL, "黄心行应归为魂心");
+        check(glyphKind("0\u2764", SelfStats.BLACK) == SelfStatsKind.HEART_BLACK, "黑心行应归为黑心");
+        check(glyphKind("5\u2764", SelfStats.BLUE) == SelfStatsKind.HEART_BLUE, "蓝心行应归为蓝心");
+        check(glyphKind("10\u2764%", SelfStats.RED) == SelfStatsKind.HEALTH,
+                "「10❤%」是治疗百分比，不该当成红心");
+        check(glyphKind("0\u2764", SelfStats.GRAY) == SelfStatsKind.HEALTH,
+                "灰色的 ❤（负生命）应归为生命");
+        check(glyphKind("1\uD83D\uDDE1", SelfStats.RED) == SelfStatsKind.ATTACK, "🗡 应归为攻击");
+        check(glyphKind("0\uD83D\uDEE1", 0x5555FF) == SelfStatsKind.DEFENCE, "🛡 应归为防御");
+        check(glyphKind("15\uD83D\uDEE1\uD83D\uDD25", 0xFFAA00) == SelfStatsKind.ELEMENT,
+                "🛡🔥 应归为元素护甲");
+        check(glyphKind("15\u270F", 0xFFAA00) == SelfStatsKind.MANA, "✏ 应归为法力");
+        check(glyphKind("5\u2708", 0x55FFFF) == SelfStatsKind.SPEED, "✈ 应归为速度");
+        check(glyphKind("0\u2620", SelfStats.RED) == SelfStatsKind.MISC, "☠ 应归为杂项");
+
+        // 过滤：隐藏类只认可过滤的 id
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("heart_red")).size() == 1,
+                "合法隐藏类应保留");
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("hint")).isEmpty(),
+                "提示类（hint）不该能进过滤表");
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("nope")).isEmpty(),
+                "未知类应被丢掉");
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("heart_red", "heart_red")).size() == 1,
+                "重复的隐藏类应去重");
+        check(EnemyHudConfig.sanitizeKinds(null).isEmpty(), "null 隐藏表应变成空表");
+
+        java.util.Map<String, java.util.List<String>> rawProfiles = new java.util.LinkedHashMap<>();
+        rawProfiles.put("class_select_12", java.util.List.of("heart_red"));
+        rawProfiles.put("not_a_class", java.util.List.of("heart_blue"));
+        rawProfiles.put("class_select_13", java.util.List.of("hint"));
+        java.util.Map<String, java.util.List<String>> profiles =
+                EnemyHudConfig.sanitizeProfiles(rawProfiles);
+        check(profiles.size() == 2 && profiles.containsKey("class_select_12"),
+                "职业表只保留已知职业（未知职业被丢掉）");
+        check(profiles.containsKey("class_select_13") && profiles.get("class_select_13").isEmpty(),
+                "空列表要保留（= 该职业什么都不隐藏），不能当成「没这条」");
+
+        // 职业识别
+        var announcement = net.minecraft.network.chat.Component.empty()
+                .append(net.minecraft.network.chat.Component.literal("Player785"))
+                .append(net.minecraft.network.chat.Component.literal(" has become "))
+                .append(net.minecraft.network.chat.Component.translatable("class_select_12"));
+        check("class_select_12".equals(ClassTracker.detect(announcement, "Player785")),
+                "「我」选职业的公告应被识别");
+        check(ClassTracker.detect(announcement, "SomeoneElse") == null,
+                "别人选职业的公告不该认成自己的");
+        check(ClassTracker.detect(announcement, null) != null,
+                "不给名字时（自检路径）应能认出职业");
+        check(ClassTracker.detect(net.minecraft.network.chat.Component.literal("hello"), "Player785") == null,
+                "普通聊天不该被当成职业公告");
+        check(ClassTracker.displayName("class_select_12").equals("Swan"), "职业键应能显示成英文名");
+        check(ClassTracker.displayName("class_select_999").equals("class_select_999"),
+                "未知职业键退化成键本身");
+        check(ClassTracker.options().get(0).equals(ClassTracker.MODE_OFF), "职业下拉第一项应为「关」");
+
+        EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
+        check(ClassTracker.MODE_AUTO.equals(cfg.selfStatsClass), "职业过滤默认「自动」");
+        check(ClassTracker.resolvedClass(cfg, "class_select_12") != null, "自动模式应使用识别到的职业");
+        cfg.selfStatsClass = ClassTracker.MODE_OFF;
+        check(ClassTracker.resolvedClass(cfg, "class_select_12") == null, "关闭模式应无视职业");
+        cfg.selfStatsClass = "class_select_13";
+        check("class_select_13".equals(ClassTracker.resolvedClass(cfg, null)),
+                "手动指定职业时不依赖识别结果");
+
+        // 面板布局：缩放会按比例改外框，位置夹在屏幕内
+        var panel1 = new EnemyHudConfig.Panel(10, 20, 2, 1.0, 1.0);
+        var panel2 = new EnemyHudConfig.Panel(10, 20, 2, 2.0, 1.0);
+        int[] widths = {60, 40};
+        int[] b1 = SelfStatsPanel.boundsOf(widths, 3, panel1);
+        int[] b2 = SelfStatsPanel.boundsOf(widths, 3, panel2);
+        check(b1[0] == 10 && b1[1] == 20, "外框原点应等于面板坐标");
+        check(b1[2] == 60 + SelfStatsPanel.COLUMN_GAP + 40, "外框宽度应为各列宽 + 间距");
+        check(b1[3] == 3 * SelfStatsPanel.ROW_HEIGHT, "外框高度应为行数 × 行高");
+        check(b2[2] == b1[2] * 2 && b2[3] == b1[3] * 2, "2 倍缩放外框应翻倍");
+        check(SelfStatsPanel.boundsOf(new int[0], 0, panel1)[2] == 0, "空面板外框宽度应为 0");
+        check(SelfStatsPanel.clampX(-50, 100, 800) == 0, "x 不该小于 0");
+        check(SelfStatsPanel.clampX(9999, 100, 800) <= 800, "x 不该把面板推出屏幕");
+        check(SelfStatsPanel.clampY(-5, 50, 400) == 0, "y 不该小于 0");
+        check(SelfStatsPanel.clampX(0, 100, 800) == 0, "x=0 应保持 0");
+
+        // 配置：缩放 / 透明度 / 职业表的夹取
+        EnemyHudConfig.Cfg wild = new EnemyHudConfig.Cfg();
+        wild.selfStatsScale = 99.0;
+        wild.selfStatsOpacity = -3.0;
+        wild.selfStatsClass = "bogus";
+        wild.selfStatsHidden = new java.util.ArrayList<>(java.util.List.of("heart_red", "hint", "heart_red"));
+        EnemyHudConfig.normalize(wild);
+        check(wild.selfStatsScale == 2.0, "selfStatsScale 99 应夹到 2.0");
+        check(wild.selfStatsOpacity == 0.2, "selfStatsOpacity -3 应夹到 0.2");
+        check(ClassTracker.MODE_AUTO.equals(wild.selfStatsClass), "非法职业模式应回落「自动」");
+        check(wild.selfStatsHidden.size() == 1 && wild.selfStatsHidden.get(0).equals("heart_red"),
+                "隐藏表应去掉 hint 与重复项");
+
+        // 过滤真的会作用到 lines()：先塞一篇 SHOWN，再隐藏红心
+        EnemyHudConfig.Cfg live = EnemyHudConfig.get();
+        live.selfStatsClass = ClassTracker.MODE_OFF;
+        live.selfStatsHidden = new java.util.ArrayList<>();
+        ClassTracker.setForTest(null);
+        SelfStats.reset();
+        check(SelfStats.lines().isEmpty(), "没有数据时 lines() 应为空");
+        // 直接喂两条：红心 + 魂心（不走聊天，走解析器）
+        check(SelfStats.heartsOf(redHeartLine("120")).length == 7, "心数数组长度应为 7");
+        live.selfStatsHidden.add(SelfStatsKind.HEART_RED.id);
+        check(EnemyHudConfig.hiddenKinds().contains(SelfStatsKind.HEART_RED.id),
+                "隐藏表应被 hiddenKinds() 读到");
+        live.selfStatsHidden.clear();
+        check(EnemyHudConfig.hiddenKinds().isEmpty(), "清空后 hiddenKinds() 应为空");
+
+        // 职业用得到「按职业分开的过滤表」
+        ClassTracker.setForTest("class_select_12");
+        live.selfStatsClass = ClassTracker.MODE_AUTO;
+        java.util.List<String> classHidden = EnemyHudConfig.hiddenList();
+        check(classHidden != null, "识别到职业时应能拿到该职业的过滤表");
+        classHidden.add(SelfStatsKind.HEART_SOUL.id);
+        check(live.selfStatsClassHidden.containsKey("class_select_12"),
+                "编辑职业过滤时应落进 selfStatsClassHidden");
+        check(EnemyHudConfig.hiddenKinds().contains(SelfStatsKind.HEART_SOUL.id),
+                "职业过滤表应生效");
+        ClassTracker.setForTest(null);
+        check(EnemyHudConfig.hiddenKinds().isEmpty(), "职业未知时应回落到默认过滤表");
+        EnemyHudConfig.reset();
+        live = EnemyHudConfig.get();
+        live.selfStatsClass = ClassTracker.MODE_AUTO;
+        live.selfStatsHidden = new java.util.ArrayList<>();
+        live.selfStatsClassHidden.clear();
+        ClassTracker.setForTest(null);
+        SelfStats.reset();
+    }
+
+    private static SelfStatsKind kindOfKey(int key) {
+        var component = net.minecraft.network.chat.Component.empty()
+                .append(net.minecraft.network.chat.Component.literal("100"))
+                .append(net.minecraft.network.chat.Component.translatable("Misc_View_Stats_" + key));
+        return SelfStats.classify(SelfStats.analyze(component));
+    }
+
+    private static SelfStatsKind glyphKind(String flat, int rgb) {
+        java.util.List<Integer> colors = new java.util.ArrayList<>();
+        for (int i = 0; i < flat.length(); i++) colors.add(rgb);
+        return SelfStats.glyphKind(flat, colors);
+    }
+
+    private static net.minecraft.network.chat.MutableComponent redHeartLine(String amount) {
+        return net.minecraft.network.chat.Component.empty()
+                .append(net.minecraft.network.chat.Component.literal(amount)
+                        .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED))))
+                .append(net.minecraft.network.chat.Component.literal("\u2764")
+                        .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED))));
     }
 
     private static void check(boolean condition, String message) {

@@ -6,6 +6,7 @@
   "ctt_enemy_hud.config.section.general": "General settings",
   "ctt_enemy_hud.config.section.enemy": "Enemy settings",
   "ctt_enemy_hud.config.section.player": "Player settings",
+  "ctt_enemy_hud.config.section.self_stats": "Stats panel",
   "ctt_enemy_hud.config.back": "Back",
   "ctt_enemy_hud.config.reset": "Reset to defaults",
 
@@ -25,5 +26,45 @@
   "ctt_enemy_hud.config.barWidth": "Bar length: %s",
   "ctt_enemy_hud.config.scale": "Scale: %s",
   "ctt_enemy_hud.config.verticalOffset": "Vertical offset: %s",
-  "ctt_enemy_hud.config.maxDistance": "Distance: %s blocks"
+  "ctt_enemy_hud.config.maxDistance": "Distance: %s blocks",
+
+  "ctt_enemy_hud.config.showSelfStats": "Show stats panel",
+  "ctt_enemy_hud.config.selfStatsSeconds": "Refresh every %s s",
+  "ctt_enemy_hud.config.selfStatsColumns": "Columns: %s",
+  "ctt_enemy_hud.config.selfStatsScale": "Text size: %s",
+  "ctt_enemy_hud.config.selfStatsOpacity": "Opacity: %s",
+  "ctt_enemy_hud.config.selfStatsX": "X position: %s",
+  "ctt_enemy_hud.config.selfStatsY": "Y position: %s",
+  "ctt_enemy_hud.config.selfStatsMove": "Move panel",
+  "ctt_enemy_hud.config.selfStatsFilter": "Content filter",
+  "ctt_enemy_hud.config.selfStatsClass": "Per-class filter",
+  "ctt_enemy_hud.config.class.off": "Off",
+  "ctt_enemy_hud.config.class.auto": "Automatic",
+
+  "ctt_enemy_hud.config.selfStatsMove.hint": "Drag the panel where you want it; \"Reset position\" puts it back top-left",
+  "ctt_enemy_hud.config.selfStatsMove.reset": "Reset position",
+  "ctt_enemy_hud.config.selfStatsMove.demo": " (sample data)",
+
+  "ctt_enemy_hud.config.selfStatsFilter.showAll": "Show all",
+  "ctt_enemy_hud.config.selfStatsFilter.targetDefault": "Editing: default filter (per-class filter off)",
+  "ctt_enemy_hud.config.selfStatsFilter.targetUnknown": "Editing: default filter (class not detected yet)",
+  "ctt_enemy_hud.config.selfStatsFilter.targetClass": "Editing: %s filter",
+
+  "ctt_enemy_hud.config.kind.time": "Timer",
+  "ctt_enemy_hud.config.kind.heart_red": "Red hearts",
+  "ctt_enemy_hud.config.kind.heart_soul": "Soul hearts",
+  "ctt_enemy_hud.config.kind.heart_black": "Black hearts",
+  "ctt_enemy_hud.config.kind.heart_blue": "Blue hearts",
+  "ctt_enemy_hud.config.kind.heart_cracked": "Cracked hearts",
+  "ctt_enemy_hud.config.kind.heart_pink": "Pink hearts",
+  "ctt_enemy_hud.config.kind.health": "Health / healing",
+  "ctt_enemy_hud.config.kind.attack": "Strength / speed",
+  "ctt_enemy_hud.config.kind.defence": "Defence",
+  "ctt_enemy_hud.config.kind.element": "Elemental armour",
+  "ctt_enemy_hud.config.kind.speed": "Movement speed",
+  "ctt_enemy_hud.config.kind.mana": "Mana",
+  "ctt_enemy_hud.config.kind.misc": "Misc",
+  "ctt_enemy_hud.config.kind.status": "Status effects",
+
+  "key.ctt_enemy_hud.open_config": "Open CTT settings"
 }
