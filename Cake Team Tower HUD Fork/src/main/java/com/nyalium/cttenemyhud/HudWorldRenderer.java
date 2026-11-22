@@ -84,7 +84,11 @@ public final class HudWorldRenderer {
 
         EnemyHudLayout.Options options = teammate ? teamOptions(cfg) : options(cfg);
         // 元素护甲每页 2 项，按时间循环（用实体 id 错开，避免同一帧全体翻页）。
-        options.armourPage = ArmourCycle.page(data.armor, System.currentTimeMillis(), entity.getId());
+        long now = System.currentTimeMillis();
+        options.armourPage = ArmourCycle.page(data.armor, now, entity.getId());
+        // 心数行只显示红心 + 一种其它心，按时间轮换（玩家只在魂/黑之间换）。
+        options.playerStyle = teammate;
+        options.cycleKind = HeartCycle.pick(data.hearts, teammate, now, entity.getId());
         EnemyHudLayout.Result layout = EnemyHudLayout.compute(
                 data.hp, data.maxHp, data.percentOnly,
                 data.defence, data.armor, data.hearts, options, mc.font::width);
@@ -347,8 +351,6 @@ public final class HudWorldRenderer {
         o.showArmor = false;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.teamBarWidth;
-        // 玩家的心数允许自动换行（阈值写死 = 血条长度）。
-        o.wrapHearts = true;
         o.verticalOffset = cfg.teamVerticalOffset;
         o.textShadow = cfg.textShadow;
         o.scale = cfg.teamScale;

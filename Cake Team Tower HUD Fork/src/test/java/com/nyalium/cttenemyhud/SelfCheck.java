@@ -17,6 +17,7 @@ public final class SelfCheck {
         armorEdgeCases();
         heartCountsAndRows();
         armourPaging();
+        heartCycling();
         bigNumbers();
         barOwnershipScoring();
         screenOcclusion();
@@ -292,10 +293,11 @@ public final class SelfCheck {
         check(HeartCounts.unknown().get(99) == HeartCounts.UNKNOWN, "越界下标应安全");
         check(HeartCounts.forMob(160, 100).knownSum() == 160, "已知心数之和应等于 AllHearts");
 
-        // 文字行：红心是「当前/上限」，其余心只隔一个空格，同一行内不插分隔符。
+        // 文字行：红心 + **一种**其它心（由 HeartCycle 挑出来，这里直接指定 cycleKind）。
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
         o.showArmor = false;
         o.showBar = false;
+        o.cycleKind = HeartCounts.SOUL;
         EnemyHudLayout.Result r = run("心数行", new Data("两色", 160, 100, false, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
         String joined = join(r);
@@ -312,25 +314,32 @@ public final class SelfCheck {
                 HeartCounts.of(70, 0, 0, 0, 0), o, SelfCheck::width);
         check(join(noCap).equals("❤70"), "上限未知时不该写 /0: " + join(noCap));
 
-        // 碎心 / 粉心是同一 objective 的两面，画出来互斥、各用各的颜色。
-        // 1.19.0 起碎心/粉心被挪到**最上面那一行**，红心留在心数行。
+        // 敌人：碎心/粉心/蓝心也走轮换，每次只显示一种，固定一行。
+        o.cycleKind = HeartCounts.CRACKED;
         EnemyHudLayout.Result crackedLine = EnemyHudLayout.compute(50, 50, false, 0,
                 new int[7], HeartCounts.of(50, 0, 0, 0, 5), o, SelfCheck::width);
-        check(crackedLine.rowCount() == 2, "有碎心时应分成两行: " + crackedLine.rowCount());
-        check(rowText(crackedLine, 0).equals("💔5"), "碎心应在最上面一行: " + rowText(crackedLine, 0));
-        check(rowText(crackedLine, 1).equals("❤50/50"), "红心应在下面一行: " + rowText(crackedLine, 1));
+        check(crackedLine.rowCount() == 1, "敌人心数固定一行: " + crackedLine.rowCount());
+        check(rowText(crackedLine, 0).equals("❤50/50 💔5"),
+                "轮换到碎心时应显示: " + rowText(crackedLine, 0));
+        o.cycleKind = HeartCounts.PINK;
         EnemyHudLayout.Result pinkLine = EnemyHudLayout.compute(50, 50, false, 0,
                 new int[7], HeartCounts.of(50, 0, 0, 0, -5), o, SelfCheck::width);
-        check(rowText(pinkLine, 0).equals("💗5"), "粉心应在最上面一行: " + rowText(pinkLine, 0));
-        check(rowText(pinkLine, 1).equals("❤50/50"), "红心应在下面一行: " + rowText(pinkLine, 1));
+        check(rowText(pinkLine, 0).equals("❤50/50 💗5"),
+                "轮换到粉心时应显示: " + rowText(pinkLine, 0));
         check(HeartCounts.COLORS[HeartCounts.CRACKED] == 0xAA0000, "碎心配色应为 dark_red");
         check(HeartCounts.COLORS[HeartCounts.PINK] == 0xFF55FF, "粉心配色应为 light_purple");
 
-        // 蓝心也归到最上面那一行。
+        o.cycleKind = HeartCounts.BLUE;
         EnemyHudLayout.Result blueLine = EnemyHudLayout.compute(50, 50, false, 0,
                 new int[7], HeartCounts.of(30, 0, 0, 20, 0), o, SelfCheck::width);
-        check(rowText(blueLine, 0).equals("💙20"), "蓝心应在最上面一行: " + rowText(blueLine, 0));
-        check(rowText(blueLine, 1).equals("❤30/50"), "红心应在下面一行: " + rowText(blueLine, 1));
+        check(rowText(blueLine, 0).equals("❤30/50 💙20"),
+                "轮换到蓝心时应显示: " + rowText(blueLine, 0));
+
+        // 轮换到该类心不存在时，只显示红心。
+        EnemyHudLayout.Result noBlue = EnemyHudLayout.compute(50, 50, false, 0, new int[7],
+                HeartCounts.of(50, 0, 0, 0, 0), o, SelfCheck::width);
+        check(rowText(noBlue, 0).equals("❤50/50"), "不存在的类型不该显示: " + rowText(noBlue, 0));
+        o.cycleKind = HeartCounts.SOUL;
 
         // 拆不出心数（percentOnly / 未知）→ 退回「当前/最大」。
         EnemyHudLayout.Result fallback = run("回退", new Data("只有百分比", 73, 100, true, 0,
@@ -345,9 +354,10 @@ public final class SelfCheck {
                 new int[]{0, 0, 0, 0, 0, 0, 0}), noHearts);
         check(join(numbers).equals("160/100"), "关掉心数应退回绝对血量: " + join(numbers));
 
-        // 1.18.0 起固定两行：护甲在最上面，心数紧贴血条；行数不随内容宽度变化。
+        // 1.20.0：护甲在最上面一行，🛡 与元素护甲之间**两个空格**。
         EnemyHudLayout.Options withArmor = new EnemyHudLayout.Options();
         withArmor.showBar = false;
+        withArmor.cycleKind = HeartCounts.SOUL;
         EnemyHudLayout.Result narrowArmor = run("窄护甲", new Data("一个护甲", 100, 100, false, 0,
                 new int[]{3, 0, 0, 0, 0, 0, 0}), withArmor);
         check(narrowArmor.rowCount() == 2, "有护甲时固定两行: " + narrowArmor.rowCount());
@@ -358,10 +368,10 @@ public final class SelfCheck {
         EnemyHudLayout.Result armored = run("心数+护甲", new Data("带护甲", 160, 100, false, 3,
                 new int[]{0, 5, 0, 0, 0, 0, 0}), withArmor);
         check(armored.rowCount() == 2, "有护甲时固定两行: " + armored.rowCount());
-        check(rowText(armored, 0).equals("\uD83D\uDEE13 " + EnemyData.ARMOR_ICONS[1] + "5"),
-                "第一行应是护甲: " + rowText(armored, 0));
+        check(rowText(armored, 0).equals("\uD83D\uDEE13  " + EnemyData.ARMOR_ICONS[1] + "5"),
+                "护甲与元素护甲之间应有两个空格: " + rowText(armored, 0));
         check(rowText(armored, 1).equals("❤100/100 💛60"),
-                "第二行应是全部心数: " + rowText(armored, 1));
+                "第二行应是红心 + 一种轮换心: " + rowText(armored, 1));
         check(armored.rows.get(0).top == EnemyHudLayout.TEXT_TOP - EnemyHudLayout.ROW_STEP,
                 "护甲行要再抬 " + EnemyHudLayout.ROW_STEP + " 像素");
         check(armored.rows.get(1).top == EnemyHudLayout.TEXT_TOP, "心数行贴着 TEXT_TOP（紧贴血条）");
@@ -373,20 +383,23 @@ public final class SelfCheck {
         check(armored.rows.get(0).top + EnemyHudLayout.TEXT_BOX_HEIGHT == armored.rows.get(1).top,
                 "两行背景框应正好相邻，不留缝也不重叠");
 
-        // 心数行不折行（敌人的 wrapHearts=false）：红/魂/黑永远一行，碎心/蓝心在最上面一行。
-        EnemyHudLayout.Result wideHearts = EnemyHudLayout.compute(9999, 9999, false, 0, new int[7],
-                HeartCounts.of(9999, 9999, 9999, 9999, 9999), o, SelfCheck::width);
-        check(wideHearts.rowCount() == 2, "敌人：特殊心一行 + 心数一行: " + wideHearts.rowCount());
-        check(rowText(wideHearts, 0).contains("💔9999") && rowText(wideHearts, 0).contains("💙9999"),
-                "碎心/蓝心应在最上面一行: " + rowText(wideHearts, 0));
-        check(!rowText(wideHearts, 1).contains("💔") && !rowText(wideHearts, 1).contains("💙"),
-                "心数行不该再有碎心/蓝心: " + rowText(wideHearts, 1));
+        // 敌人有 5 类心时，心数行也只出现「当前那一种」。
+        EnemyHudLayout.Options oneKind = new EnemyHudLayout.Options();
+        oneKind.showBar = false;
+        oneKind.cycleKind = HeartCounts.BLACK;
+        EnemyHudLayout.Result one = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
+                HeartCounts.of(60, 40, 30, 20, 2), oneKind, SelfCheck::width);
+        check(one.rowCount() == 1, "敌人心数固定一行: " + one.rowCount());
+        check(rowText(one, 0).equals("❤60/150 🖤30"),
+                "敌人只显示一种轮换心: " + rowText(one, 0));
 
-        // 队友（玩家）也能有心数：有 payload 时和敌人一样画心，没 payload 时退回「当前/最大」。
+        // 玩家排版（playerStyle）：碎心/粉心 + 蓝心固定在最上面一行，心数行只轮换魂/黑。
         EnemyHudLayout.Options teamLike = new EnemyHudLayout.Options();
         teamLike.showHearts = true;
         teamLike.showArmor = true;
         teamLike.showBar = false;
+        teamLike.playerStyle = true;
+        teamLike.cycleKind = HeartCounts.SOUL;
 
         EnemyHudLayout.Result teamNoHearts = EnemyHudLayout.compute(73, 120, false, 0, new int[7],
                 HeartCounts.unknown(), teamLike, SelfCheck::width);
@@ -395,42 +408,27 @@ public final class SelfCheck {
 
         EnemyHudLayout.Result teamHearts = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
                 HeartCounts.of(60, 40, 30, 20, 2), teamLike, SelfCheck::width);
-        check(teamHearts.rowCount() == 2, "队友：特殊心一行 + 心数一行: " + teamHearts.rowCount());
-        check(rowText(teamHearts, 0).equals("💔2 💙20"), "队友最上面一行=" + rowText(teamHearts, 0));
-        check(rowText(teamHearts, 1).equals("❤60/150 💛40 🖤30"),
-                "队友心数行=" + rowText(teamHearts, 1));
+        check(teamHearts.rowCount() == 2, "玩家：特殊心 + 心数，共两行: " + teamHearts.rowCount());
+        check(rowText(teamHearts, 0).equals("💔2 💙20"),
+                "玩家最上面一行 = 碎心 + 蓝心: " + rowText(teamHearts, 0));
+        check(rowText(teamHearts, 1).equals("❤60/150 💛40"),
+                "玩家心数行只轮换魂/黑: " + rowText(teamHearts, 1));
 
-        // 玩家心数允许自动换行：阈值写死为血条长度（这里用 10 px/字符的假测量器）。
-        EnemyHudLayout.WidthMeasurer wideMeasure = s -> s.length() * 10;
-        EnemyHudLayout.Options teamWrap = new EnemyHudLayout.Options();
-        teamWrap.showHearts = true;
-        teamWrap.showArmor = false;
-        teamWrap.showBar = true;
-        teamWrap.barWidth = 100;
-        teamWrap.wrapHearts = true;
-        EnemyHudLayout.Result teamWrapped = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
-                HeartCounts.of(60, 40, 30, 0, 0), teamWrap, wideMeasure);
-        check(teamWrapped.rowCount() == 2, "玩家心数应换取行（条宽 100）: " + teamWrapped.rowCount());
-        check(rowText(teamWrapped, 0).equals("❤60/150"), "换行第一行=" + rowText(teamWrapped, 0));
-        check(rowText(teamWrapped, 1).equals("💛40 🖤30"), "换行第二行=" + rowText(teamWrapped, 1));
+        teamLike.cycleKind = HeartCounts.BLACK;
+        EnemyHudLayout.Result teamBlack = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
+                HeartCounts.of(60, 40, 30, 20, 2), teamLike, SelfCheck::width);
+        check(rowText(teamBlack, 1).equals("❤60/150 🖤30"),
+                "轮换到黑心时: " + rowText(teamBlack, 1));
 
-        // 条更短（50）→ 每段各占一行。
-        teamWrap.barWidth = 50;
-        EnemyHudLayout.Result teamNarrow = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
-                HeartCounts.of(60, 40, 30, 0, 0), teamWrap, wideMeasure);
-        check(teamNarrow.rowCount() == 3, "条宽 50 时三段各一行: " + teamNarrow.rowCount());
-        check(rowText(teamNarrow, 2).equals("🖤30"), "最后一行应是黑心: " + rowText(teamNarrow, 2));
+        teamLike.cycleKind = HeartCounts.SOUL;
+        EnemyHudLayout.Result teamPlain = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
+                HeartCounts.of(60, 40, 0, 0, 0), teamLike, SelfCheck::width);
+        check(teamPlain.rowCount() == 1, "玩家没有碎心/蓝心时只有一行: " + teamPlain.rowCount());
+        check(rowText(teamPlain, 0).equals("❤60/150 💛40"),
+                "玩家心数行=" + rowText(teamPlain, 0));
 
-        // 同一份数据给敌人（wrapHearts=false）→ 心数不换行。
-        EnemyHudLayout.Options enemyNoWrap = new EnemyHudLayout.Options();
-        enemyNoWrap.showHearts = true;
-        enemyNoWrap.showArmor = false;
-        enemyNoWrap.showBar = true;
-        enemyNoWrap.barWidth = 50;
-        EnemyHudLayout.Result enemyWide = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
-                HeartCounts.of(60, 40, 30, 0, 0), enemyNoWrap, wideMeasure);
-        check(enemyWide.rowCount() == 1, "敌人心数不换行: " + enemyWide.rowCount());
-        check(rowText(enemyWide, 0).equals("❤60/150 💛40 🖤30"), "敌人心数行=" + rowText(enemyWide, 0));
+        // 玩家排版下，红心与轮换心的顺序固定：红心在前。
+        check(rowText(teamHearts, 1).startsWith("❤60/150"), "红心永远在最前面");
 
         // 1.16.3 起：队友**只画心与血条**，护甲段一律不画 —— 即使 payload 带了 defence / 元素护甲。
         EnemyHudLayout.Options teamNoArmor = new EnemyHudLayout.Options();
@@ -438,6 +436,8 @@ public final class SelfCheck {
         teamNoArmor.showArmor = false;
         teamNoArmor.showBar = true;
         teamNoArmor.barWidth = 100;
+        teamNoArmor.playerStyle = true;
+        teamNoArmor.cycleKind = HeartCounts.SOUL;
 
         EnemyHudLayout.Result teamArmored = EnemyHudLayout.compute(150, 150, false, 5,
                 new int[]{3, 1, 0, 0, 0, 0, 0}, HeartCounts.of(60, 40, 30, 20, 2),
@@ -446,21 +446,25 @@ public final class SelfCheck {
         check(!teamFlat.contains("\uD83D\uDEE1"), "队友不该出现 🛡 护甲段: " + teamFlat);
         check(!teamFlat.contains(EnemyData.ARMOR_ICONS[1]), "队友不该出现 🔥 元素护甲段: " + teamFlat);
         check(!teamFlat.contains("|"), "队友不该出现护甲分隔符: " + teamFlat);
-        // 折成两行时 join() 会把两行首尾相接，所以去掉空格再比（特殊心在最上面一行）。
-        check(teamFlat.replace(" ", "").equals("💔2💙20❤60/150💛40🖤30"),
+        // join() 把几行首尾相接，去掉空格再比（玩家：特殊心行 + 红心/轮换心行）。
+        check(teamFlat.replace(" ", "").equals("💔2💙20❤60/150💛40"),
                 "队友这几行只应有心: " + teamFlat);
         check(teamArmored.barWidth == 100, "队友的血条仍要画: " + teamArmored.barWidth);
 
-        // 同样的数据给敌人，护甲段照旧要在（确认只改了队友那一套选项）。
+        // 同样的数据给敌人：护甲在最上面，心数行只有一种轮换心。
         EnemyHudLayout.Options enemyArmor = new EnemyHudLayout.Options();
         enemyArmor.showHearts = true;
         enemyArmor.showArmor = true;
         enemyArmor.showBar = false;
         enemyArmor.barWidth = 100;
+        enemyArmor.cycleKind = HeartCounts.BLACK;
         EnemyHudLayout.Result mobArmored = EnemyHudLayout.compute(150, 150, false, 5,
                 new int[]{3, 1, 0, 0, 0, 0, 0}, HeartCounts.of(60, 40, 30, 20, 2),
                 enemyArmor, SelfCheck::width);
-        check(join(mobArmored).contains("\uD83D\uDEE1"), "敌人的防御段不该被误伤: " + join(mobArmored));
+        check(rowText(mobArmored, 0).equals("\uD83D\uDEE15  \uD83D\uDD253 \u26031"),
+                "敌人护甲行（两个空格 + 元素护甲）: " + rowText(mobArmored, 0));
+        check(rowText(mobArmored, 1).equals("❤60/150 🖤30"),
+                "敌人心数行只显示一种轮换心: " + rowText(mobArmored, 1));
         // 用转义写死期望值：🛡 在源码里常被写成「🛡+U+FE0F」，直接比字面量会踩变体选择符。
         check(join(armored).contains("\uD83D\uDEE13"), "防御段缺失: " + join(armored));
         check(join(armored).contains(EnemyData.ARMOR_ICONS[1] + "5"), "元素护甲段缺失: " + join(armored));
@@ -507,6 +511,7 @@ public final class SelfCheck {
             o.showArmor = true;
             o.showBar = false;
             o.armourPage = page;
+            o.cycleKind = HeartCounts.SOUL;
             EnemyHudLayout.Result r = EnemyHudLayout.compute(150, 150, false, 5, five,
                     HeartCounts.of(60, 40, 0, 0, 0), o, SelfCheck::width);
             String text = join(r);
@@ -525,6 +530,7 @@ public final class SelfCheck {
         p0.showArmor = true;
         p0.showBar = false;
         p0.armourPage = 0;
+        p0.cycleKind = HeartCounts.SOUL;
         String zero = join(EnemyHudLayout.compute(150, 150, false, 5, five,
                 HeartCounts.of(60, 40, 0, 0, 0), p0, SelfCheck::width));
         for (int i = 1; i < otherPages.length; i++) {
@@ -539,7 +545,44 @@ public final class SelfCheck {
         check(clamped.contains("\u26936"), "页号越界应夹到最后一页: " + clamped);
     }
 
-    // ── 4c. 大数值缩写（1.17.0） ──
+    // ── 4c. 心类轮换（1.20.0） ──
+
+    private static void heartCycling() {
+        HeartCounts enemy = HeartCounts.of(60, 40, 30, 20, 2);   // 魂/黑/蓝/碎 四种
+        check(HeartCycle.presentCount(enemy, false) == 4,
+                "敌人可轮换心类=4: " + HeartCycle.presentCount(enemy, false));
+        check(HeartCycle.presentCount(enemy, true) == 2,
+                "玩家可轮换心类=2（魂/黑）: " + HeartCycle.presentCount(enemy, true));
+        check(HeartCycle.presentCount(null, false) == 0, "hearts=null 时没有可轮换的");
+        check(HeartCycle.presentCount(HeartCounts.of(50, 0, 0, 0, 0), false) == 0,
+                "只有红心时没有可轮换的");
+        check(HeartCycle.pick(null, false, 0, 0) == -1, "hearts=null → -1");
+
+        long ms = HeartCycle.KIND_MS;
+        check(HeartCycle.pick(enemy, false, 0, 0) == HeartCounts.SOUL, "t=0 敌人应显示魂心");
+        check(HeartCycle.pick(enemy, false, ms, 0) == HeartCounts.BLACK, "t=1 敌人应显示黑心");
+        check(HeartCycle.pick(enemy, false, ms * 2, 0) == HeartCounts.BLUE, "t=2 敌人应显示蓝心");
+        check(HeartCycle.pick(enemy, false, ms * 3, 0) == HeartCounts.CRACKED, "t=3 敌人应显示碎心");
+        check(HeartCycle.pick(enemy, false, ms * 4, 0) == HeartCounts.SOUL, "t=4 敌人应回到魂心");
+        check(HeartCycle.pick(enemy, false, ms, 1) == HeartCounts.BLUE, "salt=1 应错开一格");
+
+        check(HeartCycle.pick(enemy, true, 0, 0) == HeartCounts.SOUL, "t=0 玩家应显示魂心");
+        check(HeartCycle.pick(enemy, true, ms, 0) == HeartCounts.BLACK, "t=1 玩家应显示黑心");
+        check(HeartCycle.pick(enemy, true, ms * 2, 0) == HeartCounts.SOUL, "t=2 玩家应回到魂心");
+
+        // 粉心单独存在时也能轮到。
+        HeartCounts pink = HeartCounts.of(50, 0, 0, 0, -5);
+        check(HeartCycle.pick(pink, false, 0, 0) == HeartCounts.PINK, "只有粉心时应显示粉心");
+
+        // 消失的类型跳过（只有魂 + 蓝 → 两步循环）。
+        HeartCounts two = HeartCounts.of(50, 10, 0, 20, 0);
+        check(HeartCycle.presentCount(two, false) == 2, "魂+蓝 = 2 种");
+        check(HeartCycle.pick(two, false, 0, 0) == HeartCounts.SOUL, "两步循环第一步魂");
+        check(HeartCycle.pick(two, false, ms, 0) == HeartCounts.BLUE, "两步循环第二步蓝");
+        check(HeartCycle.pick(two, false, ms * 2, 0) == HeartCounts.SOUL, "两步循环回到魂");
+    }
+
+    // ── 4d. 大数值缩写（1.17.0） ──
 
     private static void bigNumbers() {
         check(EnemyHudLayout.num(0).equals("0"), "num(0)");
@@ -564,6 +607,7 @@ public final class SelfCheck {
         o.showHearts = true;
         o.showBar = false;
         o.barWidth = 100;
+        o.cycleKind = HeartCounts.SOUL;
         String text = join(EnemyHudLayout.compute(999_999, 999_999, false, 0, new int[7],
                 HeartCounts.of(999_999, 999_999, 999_999, 999_999, 999_999), o, SelfCheck::width));
         check(!text.contains("999999"), "大数值应先缩写: " + text);
