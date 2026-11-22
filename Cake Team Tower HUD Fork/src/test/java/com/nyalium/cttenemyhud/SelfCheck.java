@@ -1613,8 +1613,8 @@ public final class SelfCheck {
         check(!SelfStats.statGlyphLine("3楼集合"), "中文聊天不该算属性行");
 
         SelfStats.reset();
-        SelfStats.beginCapture(1_000L);
-        check(SelfStats.onGameMessage(Component.literal("120\u2764"), false, 1_100L), "属性行应被吞掉");
+        SelfStats.beginCapture(1_000L, true);
+        check(SelfStats.onGameMessage(Component.literal("120\u2764"), false, 1_100L), "自动采集：属性行应被吞掉");
         check(!SelfStats.onGameMessage(Component.literal("ok"), false, 1_100L), "两字聊天不该被吞");
         check(!SelfStats.onGameMessage(Component.literal("123"), false, 1_100L), "纯数字聊天不该被吞");
         check(!SelfStats.onGameMessage(Component.translatable("chat.type.text", "A", Component.literal("hi")),
@@ -1622,12 +1622,16 @@ public final class SelfCheck {
         check(SelfStats.onGameMessage(Component.translatable("Misc_View_Stats_78"), false, 1_100L),
                 "计时行应被吞");
 
-        // 玩家手动 /trigger ViewStats：标题行自己开一趟采集（之后的行照样进面板、不进聊天）
+        // 玩家手动 /trigger ViewStats：**不吞**（上游 hideCapture=false 同款），但要进面板
         SelfStats.reset();
-        check(SelfStats.onGameMessage(Component.translatable("Misc_View_Stats_1"), false, 5_000L),
-                "标题行应开一趟采集并被吞掉");
-        check(SelfStats.onGameMessage(Component.literal("87\u2764"), false, 5_050L),
-                "手动触发之后紧跟的属性行也应被采集");
+        check(!SelfStats.onGameMessage(Component.translatable("Misc_View_Stats_1"), false, 5_000L),
+                "手动触发：标题行不该被吞");
+        check(!SelfStats.onGameMessage(Component.literal("87\u2764"), false, 5_050L),
+                "手动触发：属性行不该被吞");
+        check(!SelfStats.onGameMessage(Component.translatable("Misc_View_Stats_78"), false, 5_100L),
+                "手动触发：计时行不该被吞");
+        check(SelfStats.storedLineCount() >= 1,
+                "手动触发的内容也要进面板: " + SelfStats.storedLineCount());
 
         // 游戏时间冻住：同样文本 + 间隔够才计数
         check(SelfStats.nextSameTimeRounds(null, "T", 3_000, 0) == 0, "第一次采样不算冻住");

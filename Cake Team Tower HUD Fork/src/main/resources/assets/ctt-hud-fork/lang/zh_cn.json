@@ -41,7 +41,6 @@
   "ctt_enemy_hud.config.selfStatsY": "垂直位置：%s",
   "ctt_enemy_hud.config.selfStatsMove": "移动面板",
   "ctt_enemy_hud.config.selfStatsFilter": "内容过滤",
-  "ctt_enemy_hud.config.selfStatsMove.hint": "按住面板拖到想要的位置；「回到初始位置」回左上角",
   "ctt_enemy_hud.config.selfStatsMove.reset": "回到初始位置",
   "ctt_enemy_hud.config.selfStatsMove.target": "对象：%s",
   "ctt_enemy_hud.config.selfStatsMove.demo": "（示例数据）",

@@ -57,8 +57,6 @@ public final class ShieldLayoutScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFFFF);
-        graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsMove.hint"),
-                this.width / 2, 36, 0xFFFFD060);
 
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         int[] pos = position(cfg);

@@ -34,10 +34,10 @@ public final class SelfStatsFilterScreen extends Screen {
     static final int ROW_GAP = 5;
     /** 列间距。 */
     static final int COLUMN_GAP = 8;
-    /** 列表上边（GUI 像素）：标题 + 统计 + 提示占掉的部分。 */
-    static final int TOP = 58;
-    /** 底部留给按钮的高度。 */
-    static final int BOTTOM_PAD = 58;
+    /** 列表上边（GUI 像素）：标题 + 名称 + 统计/提示合成一行，占掉的部分。 */
+    static final int TOP = 54;
+    /** 底部留给按钮的高度（底部按钮 20 高、贴 height-26；这里再留 14 px 呼吸）。 */
+    static final int BOTTOM_PAD = 40;
     /** 左右边距 + 滚动条宽度。 */
     static final int SIDE = 10;
     static final int SCROLLBAR_WIDTH = 3;
@@ -174,11 +174,12 @@ public final class SelfStatsFilterScreen extends Screen {
         graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.title"),
                 this.width / 2, 10, 0xFFFFFFFF);
         graphics.centeredText(this.font, this.title, this.width / 2, 24, 0xFFFFD060);
-        graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsFilter.count",
-                        SelfStatsKind.FILTERABLE.length, this.hidden.size()),
-                this.width / 2, 38, 0xFF9FE8FF);
-        graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsFilter.scrollHint"),
-                this.width / 2, 48, 0xFFA0A0A0);
+        // 1.20.24：计数与「滚轮/点击」提示合成一行，给列表多腾一行高度。
+        Component countLine = Component.translatable("ctt_enemy_hud.config.selfStatsFilter.count",
+                        SelfStatsKind.FILTERABLE.length, this.hidden.size())
+                .copy().append("  ·  ")
+                .append(Component.translatable("ctt_enemy_hud.config.selfStatsFilter.scrollHint"));
+        graphics.centeredText(this.font, countLine, this.width / 2, 40, 0xFF9FE8FF);
 
         // 右侧滚动条（贴着两列按钮的右边）
         int visible = visibleRows();

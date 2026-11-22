@@ -45,8 +45,10 @@ import java.util.Set;
  */
 public final class SelfStats {
 
-    /** 采集窗口：触发后这么久之内到达的 chat 都算本次 ViewStats 的输出。 */
-    static final long CAPTURE_WINDOW_MS = 1500L;
+    /** 采集窗口：触发后这么久之内到达的 chat 都算本次 ViewStats 的输出（上游 3000 ms 同款）。 */
+    static final long CAPTURE_WINDOW_MS = 3000L;
+    /** 一趟最快什么时候可以收尾（等计时行；等不到就按这个超时收）。 */
+    static final long CAPTURE_TIMEOUT_MS = 3000L;
     /** 一次爆发最长持续多久（地图一趟 ViewStats 是分多个 tick 发的）。 */
     static final long CAPTURE_HARD_MS = 8000L;
     /** 一次最多攒多少行（地图一趟大约 20~40 行，留点余量）。 */
@@ -85,6 +87,13 @@ public final class SelfStats {
     private static long hardEndMs = 0L;
     private static long nextTriggerMs = 0L;
     private static boolean notStarted = false;
+    /**
+     * 这一趟是不是**我们自己**发的 {@code /trigger ViewStats}。
+     * 只有自己发的才把输出从聊天栏吞掉；玩家手动触发的照常显示（对齐上游 {@code hideCapture}）。
+     */
+    private static boolean selfTriggered;
+    /** 这一趟开始的时间（毫秒），用于超时收尾。 */
+    private static long captureStartMs;
 
     // ── 1.20.23：游戏时间没走 → 数据是「冻住的」，面板不上屏 ──
 
@@ -155,7 +164,7 @@ public final class SelfStats {
     public static void tick(net.minecraft.client.Minecraft mc) {
         if (mc == null) return;
         long now = System.currentTimeMillis();
-        settle(now);
+        settleIfTimedOut(now);
         if (mc.player == null || mc.getConnection() == null) return;
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         if (!cfg.enabled || !cfg.showSelfStats) return;
@@ -171,12 +180,14 @@ public final class SelfStats {
                 PENDING.clear();
                 java.util.Arrays.fill(HEARTS, 0);
                 capturing = false;
+                selfTriggered = false;
             }
             nextTriggerMs = now + GATE_RECHECK_MS;
             return;
         }
         nextTriggerMs = now + seconds * 1000L;
-        begin(now);
+        // auto = true：这一趟的输出要从聊天栏里吞掉（上游 hideCapture 的同一套思路）。
+        beginCapture(now, true);
         ChatTriggerFilter.noteTriggerSent(now);
         try {
             mc.getConnection().sendCommand("trigger ViewStats");
@@ -251,34 +262,46 @@ public final class SelfStats {
      */
     private static final long DENIED_BACKOFF_MS = 10_000L;
 
-    /** 开始一趟采集：只清 PENDING，屏上的旧内容继续显示（避免闪一下空白）。 */
-    private static void begin(long now) {
-        beginCapture(now);
-    }
-
-    /** 包可见版本：{@code selfCheck} 用它开一趟采集窗口打「谁会被吞」。 */
-    static void beginCapture(long now) {
+    /**
+     * 开始一趟采集（1.20.24 起对齐上游 {@code StatsData} 的做法）。
+     *
+     * @param now  当前毫秒
+     * @param auto {@code true} = 本模组自己发的 {@code /trigger ViewStats}：这一趟的输出要
+     *             <b>从聊天栏吞掉</b>；{@code false} = 玩家自己手动触发的：<b>照常显示</b>，
+     *             只是顺便收进面板（上游的 {@code markAutoTriggered()} / {@code hideCapture} 同一回事）
+     */
+    static void beginCapture(long now, boolean auto) {
         PENDING.clear();
         java.util.Arrays.fill(PENDING_HEARTS, 0);
         capturing = true;
+        selfTriggered = auto;
+        captureStartMs = now;
         notStarted = false;
         pendingTimeText = null;
-        windowEndMs = now + CAPTURE_WINDOW_MS;
+        windowEndMs = now + CAPTURE_TIMEOUT_MS;
         hardEndMs = now + CAPTURE_HARD_MS;
     }
 
+    /** 超时收尾（计时行没等到时靠它兜底）。 */
+    private static void settleIfTimedOut(long now) {
+        if (!capturing) return;
+        if (now - captureStartMs <= CAPTURE_TIMEOUT_MS && now <= hardEndMs) return;
+        endCapture(now);
+    }
+
     /**
-     * 这一趟发完了（或超时）：把 PENDING 整体换到 SHOWN。
+     * 收尾一趟：把 PENDING 整体换到 SHOWN，并复位「要不要吞」。
      *
-     * <p>空结果默认不覆盖旧面板（偶发丢包时不闪）。1.20.11：连续 {@value #MAX_EMPTY_CAPTURES}
+     * <p>空结果默认不覆盖旧面板（偶发丢包时不闪）。连续 {@value #MAX_EMPTY_CAPTURES}
      * 趟都拿不到任何行，就当作「当前取不到数据」，清空面板 —— 否则两局之间/旁观时会一直挂着
      * 上一局的时间和心数。</p>
      */
-    private static void settle(long now) {
+    private static void endCapture(long now) {
         if (!capturing) return;
-        if (now <= windowEndMs && now <= hardEndMs) return;
         capturing = false;
+        selfTriggered = false;
         if (PENDING.isEmpty()) {
+            pendingTimeText = null;
             if (++emptyCaptures >= MAX_EMPTY_CAPTURES) {
                 SHOWN.clear();
                 java.util.Arrays.fill(HEARTS, 0);
@@ -348,6 +371,8 @@ public final class SelfStats {
         java.util.Arrays.fill(HEARTS, 0);
         java.util.Arrays.fill(PENDING_HEARTS, 0);
         capturing = false;
+        selfTriggered = false;
+        captureStartMs = 0L;
         emptyCaptures = 0;
         KIND_HOVER.clear();
         windowEndMs = 0L;
@@ -371,55 +396,72 @@ public final class SelfStats {
     public static boolean onGameMessage(Component message, boolean overlay, long nowMs) {
         if (overlay || message == null) return false;
         // 玩家聊天（chat.type.text / chat.type.announcement…）**永远不吞**。
-        // 之前「有概率吞掉聊天」就是这里没有这层保险：采集窗口刚好开着时，
-        // 任何「数字开头」或「两个字以内」的聊天都会被当成属性行吃掉。
         if (isPlayerChat(message)) return false;
         String flat = message.getString();
         if (flat == null) return false;
 
-        // 不在采集窗口里：只认「标题行」当玩家手动 /trigger ViewStats 的开头，其余一律不动。
-        if (!capturing || nowMs > windowEndMs || nowMs > hardEndMs) {
-            if (!isViewStatsTitle(message)) return false;
-            beginCapture(nowMs);
-        }
+        // 采集超时先收尾（等不到计时行时靠它兜底）。
+        settleIfTimedOut(nowMs);
+
+        // 「没开局 / 触发项没 enable」这两种回执：清面板、停这一趟。
         if (isGameNotStarted(flat)) {
+            boolean hide = selfTriggered;
             notStarted = true;
             capturing = false;
+            selfTriggered = false;
             SHOWN.clear();                 // 地图明确说「没开局」：清空，别留上一局的数字
             java.util.Arrays.fill(HEARTS, 0);
-            return true;
+            return hide;
         }
         if (isTriggerDenied(flat)) {
             // 触发项还没 enable（对局没开始 / 两局之间 / 这张图不给触发）：
-            // 吞掉提示、停掉这一趟，并且**清空面板** —— 上一局的时间/心数继续挂着会误导。
-            // 1.20.11：冷却从 60 s 缩短到 10 s，开局后最多 10 s 就能重新取到数。
+            // 停掉这一趟、清空面板；自己是自动触发时顺手把这行提示吞掉。
+            boolean hide = selfTriggered;
             notStarted = true;
             capturing = false;
+            selfTriggered = false;
             SHOWN.clear();
             PENDING.clear();
             java.util.Arrays.fill(HEARTS, 0);
             nextTriggerMs = nowMs + DENIED_BACKOFF_MS;
-            return true;
+            return hide;
         }
 
+        // 「已触发 ViewStats」的确认行：只有自动触发时吞。
+        if (isTriggerAck(flat)) return selfTriggered;
+
+        // 标题行（Your Stats / 统计信息 / Misc_View_Stats_1）：
+        // 不在采集里就说明是**玩家手动**触发的 —— 开一趟，但这一趟不吞。
+        if (isViewStatsTitle(message)) {
+            if (!capturing) beginCapture(nowMs, false);
+            return selfTriggered;
+        }
+        if (!capturing) return false;
+
+        // 提示行（Hover over / 停留…）：不开面板，但算这一趟的输出。
+        if (isHintLine(flat)) return selfTriggered;
+
+        // 计时行 = 这一趟结束（上游同样用它当收尾信号），顺手记下来判「时间冻住」。
         Analyzed a = analyze(message);
+        if (a.keys.contains(TIME_KEY) || isGameTimeLine(flat)) {
+            boolean hide = selfTriggered;
+            pendingTimeText = flat;
+            endCapture(nowMs);
+            return hide;
+        }
+
         boolean ours = isViewStatsLine(flat) || a.hasKey() || a.unresolvedKey || statGlyphLine(flat);
         if (!ours) return false;
-        if (a.keys.contains(TIME_KEY)) pendingTimeText = flat;
 
         SelfStatsKind kind = classify(a);
         // 提示性文本（标题 / 悬停说明）不上面板；缺地图语言文件时整行原文也不上屏。
         boolean panelWorthy = kind != SelfStatsKind.HINT && !a.unresolvedKey;
-        // 1.20.13：同一趟里出现完全相同的行只留一条 —— 手动 /trigger 与自动刷新撞在一起时，
-        // 地图会把同一批属性回两遍，面板就会出现「多重显示」。
         if (panelWorthy) rememberHover(kind, message);
         if (panelWorthy && PENDING.size() < MAX_LINES && !containsSameText(PENDING, message)) {
             PENDING.add(new Line(message, kind));
         }
         addHearts(a, PENDING_HEARTS);
-        // 还在发就继续延长窗口（硬上限 CAPTURE_HARD_MS）
-        windowEndMs = Math.min(hardEndMs, nowMs + CAPTURE_WINDOW_MS);
-        return true;
+        return selfTriggered;
     }
 
     // ── 读取（面板用） ──
@@ -623,6 +665,24 @@ public final class SelfStats {
             0x1F6E1, 0x1F5E1, 0x1F3F9, 0x26A1, 0x2708, 0x1F525, 0x2620, 0x270F,
             0x2693, 0x2603, 0x2600, 0x2B07, 0x2B06, 0x21D1, 0x21D3,
     };
+
+    /** 地图回「已触发 ViewStats / Triggered ViewStats」的确认行。 */
+    static boolean isTriggerAck(String flat) {
+        if (flat == null) return false;
+        return (flat.contains("已触发") || flat.contains("Triggered")) && flat.contains("ViewStats");
+    }
+
+    /** ViewStats 里的提示行（原版英文 / 地图中文两套都认）。 */
+    static boolean isHintLine(String flat) {
+        if (flat == null) return false;
+        return flat.contains("Hover over") || flat.contains("停留") || flat.contains("查看属性");
+    }
+
+    /** 计时行（没装地图资源包时只能按「游戏时间 / Game time」这两个词认）。 */
+    static boolean isGameTimeLine(String flat) {
+        if (flat == null) return false;
+        return flat.contains("游戏时间") || flat.contains("Game time");
+    }
 
     /** 玩家聊天：原版一定用 {@code chat.*} 这个可翻译键，据此一票否决。 */
     static boolean isPlayerChat(Component message) {

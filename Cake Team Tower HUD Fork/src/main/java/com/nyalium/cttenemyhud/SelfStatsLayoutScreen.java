@@ -95,8 +95,6 @@ public final class SelfStatsLayoutScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFFFF);
-        graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsMove.hint"),
-                this.width / 2, 36, 0xFFFFD060);
         int mode = EnemyHudConfig.get().selfStatsMode;
         Component modeName = Component.translatable(SelfStatsSettingsScreen.modeLabelKey(mode));
         Component shown = modeName;
@@ -106,7 +104,7 @@ public final class SelfStatsLayoutScreen extends Screen {
                     : "ctt_enemy_hud.config.selfStatsTarget.hud"));
         }
         graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsMode.current", shown),
-                this.width / 2, 50, 0xFF9FE8FF);
+                this.width / 2, 36, 0xFF9FE8FF);
 
         List<Component> lines = SelfStats.lines();
         boolean demo = lines.isEmpty();
