@@ -9,7 +9,8 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
-| **1.20.11** | 没开局时面板不再挂上一局数据（触发被拒立即清空，冷却 60 s→10 s；连续 2 趟空采集也清）；敌人设置页改成两列各 3 行 | `versions/v1.20.11/` |
+| **1.20.12** | 检测到上游 `ctt-health-display` 同时安装时进服提示一次（两个 Mod 各画一份属性面板、bossbar mixin 互相抢注入） | `versions/v1.20.12/` |
+| 1.20.11 | 没开局时面板不再挂上一局数据（触发被拒立即清空，冷却 60 s→10 s；连续 2 趟空采集也清）；敌人设置页改成两列各 3 行 | `versions/v1.20.11/` |
 | 1.20.10 | bossbar 认领在同一血量档里优先**离玩家最近**的同名怪，粘性只保留 2 格（超过就换）；依据是地图 `targetting_enemy` 本身「取离某名 CTT 玩家最近的 E」 | `versions/v1.20.10/` |
 | 1.20.9 | 面板位置只留拖动（删 X/Y 滑条）；过滤页双列按钮固定 200（原版宽度）并居中；bossbar 认领加 5 个百分点硬门槛（同名怪不再粘错）；血条补透视副本 | `versions/v1.20.9/` |
 | 1.20.8 | 修大厅里那句「无法触发该计分项」：开局前不再发 `/trigger ViewStats`（用 `HealthPercent` / 本人 bossbar 判开局），失败回显被吞并冷却 60 s，回大厅清空面板 | `versions/v1.20.8/` |
@@ -55,7 +56,19 @@
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
 
-## 1.20.11（当前）
+## 1.20.12（当前）
+
+- **「双重属性面板」的根因确认**：上游 Cake Tower HUD Plus（mod id `ctt-health-display`）也实现了同一套
+  `/trigger ViewStats` 属性面板；与本 Fork 同时安装时两边各画一份。
+- 本版只加一条**进服提示**（不阻止加载）：检测到 `ctt-health-display` 时发
+  「[CTT HUD] 检测到上游 ctt-health-display 同时安装：属性面板会重复绘制，建议只保留一个。」
+- 顺带记录：同时加载时两个 `BossBarHudRenderMixin` 抢同一个 `@Redirect`，
+  上游那条被跳过（`@Redirect conflict ... already redirected`），开发客户端因此直接崩在启动阶段；
+  证据见 `versions/v1.20.12/coexist-conflict.log.txt`。
+- 自检：`checks=5099 failures=0`。
+- 建议：客户端只留 `cake_team_tower_hud_fork-1.20.12.jar`，删掉 `Cake_HUD_*.jar`；服务端那份也删（客户端 Mod，装了没用）。
+
+## 1.20.11
 
 - **没正式开局时，属性面板不再挂上一局的数据**：
   - 原因：`gamestart.mcfunction:148` 才 `enable @a[tag=CTT] ViewStats`，开局前 `/trigger` 会被拒绝；
