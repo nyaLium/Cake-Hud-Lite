@@ -108,5 +108,8 @@
   "ctt_enemy_hud.config.kind.misc": "其它",
   "ctt_enemy_hud.config.kind.status": "状态效果",
   "key.ctt_enemy_hud.open_config": "打开 CTT 设置",
-  "ctt_enemy_hud.config.selfStatsMode.both": "HUD + 容器界面"
+  "ctt_enemy_hud.config.selfStatsMode.both": "HUD + 容器界面",
+  "ctt_enemy_hud.config.selfStatsTarget": "编辑对象：%s",
+  "ctt_enemy_hud.config.selfStatsTarget.hud": "HUD",
+  "ctt_enemy_hud.config.selfStatsTarget.container": "容器界面"
 }

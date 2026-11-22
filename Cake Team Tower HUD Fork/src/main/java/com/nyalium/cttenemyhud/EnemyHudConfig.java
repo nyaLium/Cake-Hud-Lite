@@ -92,12 +92,18 @@ public final class EnemyHudConfig {
         public int containerColumns = 2;
         public double containerScale = 1.0;
         public double containerOpacity = 1.0;
-        /** 「HUD + 容器界面」那一套配置（模式 2 专用，HUD 与容器界面共用这一套）。 */
+        /** 模式 2 在 HUD 上的那一套配置。 */
         public int bothX = 4;
         public int bothY = 40;
         public int bothColumns = 2;
         public double bothScale = 1.0;
         public double bothOpacity = 1.0;
+        /** 模式 2 在容器界面上的那一套配置（1.20.18 起独立）。 */
+        public int bothContainerX = 4;
+        public int bothContainerY = 20;
+        public int bothContainerColumns = 2;
+        public double bothContainerScale = 1.0;
+        public double bothContainerOpacity = 1.0;
         /** 属性面板文字缩放，0.50 ~ 2.00（1.20.4）。 */
         public double selfStatsScale = 1.0;
         /** 属性面板文字不透明度，0.20 ~ 1.00（1.20.4）。 */
@@ -143,7 +149,7 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 8;
+    public static final int CURRENT_VERSION = 9;
     /** 旧版默认血条长度（1.18.0 起默认改成 75）。 */
     private static final double LEGACY_BAR_WIDTH = 100.0;
     /** 旧版默认缩放（1.19.0 起默认改成 0.9）。 */
@@ -210,21 +216,94 @@ public final class EnemyHudConfig {
         cfg = new Cfg();
     }
 
-    /** 当前显示方式那一套面板布局（三种方式各自独立）。 */
-    public static Panel panel() {
-        return panelForMode(get().selfStatsMode);
-    }
-
-    /** 指定显示方式的面板布局：0 = HUD，1 = 容器界面，2 = HUD + 容器界面。 */
-    public static Panel panelForMode(int mode) {
+    /** 当前显示方式 + 上下文对应的布局；{@code container=true} 取容器界面那一套。 */
+    public static Panel panel(int mode, boolean container) {
         Cfg c = get();
         return switch (mode) {
             case 1 -> new Panel(c.containerX, c.containerY, c.containerColumns,
                     c.containerScale, c.containerOpacity);
-            case 2 -> new Panel(c.bothX, c.bothY, c.bothColumns, c.bothScale, c.bothOpacity);
+            case 2 -> container
+                    ? new Panel(c.bothContainerX, c.bothContainerY, c.bothContainerColumns,
+                            c.bothContainerScale, c.bothContainerOpacity)
+                    : new Panel(c.bothX, c.bothY, c.bothColumns, c.bothScale, c.bothOpacity);
             default -> new Panel(c.selfStatsX, c.selfStatsY, c.selfStatsColumns,
                     c.selfStatsScale, c.selfStatsOpacity);
         };
+    }
+
+    /** 设置界面默认编辑 HUD 那一套。 */
+    public static Panel panel(int mode) {
+        return panel(mode, false);
+    }
+
+    /** 当前模式 + HUD 上下文（旧调用点/测试用）。 */
+    public static Panel panel() {
+        return panel(get().selfStatsMode, false);
+    }
+
+    /** 当前模式 + 当前编辑目标（模式 2 可能是容器界面）。 */
+    public static Panel panelFor(int mode, boolean container) {
+        return panel(mode, container);
+    }
+
+    /** 写位置（拖动界面用）。 */
+    public static void movePanel(int mode, boolean container, int x, int y) {
+        Cfg c = get();
+        switch (mode) {
+            case 1 -> {
+                c.containerX = x;
+                c.containerY = y;
+            }
+            case 2 -> {
+                if (container) {
+                    c.bothContainerX = x;
+                    c.bothContainerY = y;
+                } else {
+                    c.bothX = x;
+                    c.bothY = y;
+                }
+            }
+            default -> {
+                c.selfStatsX = x;
+                c.selfStatsY = y;
+            }
+        }
+    }
+
+    public static void setPanelColumns(int mode, boolean container, int columns) {
+        Cfg c = get();
+        switch (mode) {
+            case 1 -> c.containerColumns = columns;
+            case 2 -> {
+                if (container) c.bothContainerColumns = columns;
+                else c.bothColumns = columns;
+            }
+            default -> c.selfStatsColumns = columns;
+        }
+    }
+
+    public static void setPanelScale(int mode, boolean container, double scale) {
+        Cfg c = get();
+        switch (mode) {
+            case 1 -> c.containerScale = scale;
+            case 2 -> {
+                if (container) c.bothContainerScale = scale;
+                else c.bothScale = scale;
+            }
+            default -> c.selfStatsScale = scale;
+        }
+    }
+
+    public static void setPanelOpacity(int mode, boolean container, double opacity) {
+        Cfg c = get();
+        switch (mode) {
+            case 1 -> c.containerOpacity = opacity;
+            case 2 -> {
+                if (container) c.bothContainerOpacity = opacity;
+                else c.bothOpacity = opacity;
+            }
+            default -> c.selfStatsOpacity = opacity;
+        }
     }
 
     /** 当前模式是否要在容器界面上画（模式 1、2）。 */
@@ -356,6 +435,14 @@ public final class EnemyHudConfig {
             if (cfg.scale == LEGACY_SCALE) cfg.scale = DEFAULT_SCALE;
             if (cfg.teamScale == LEGACY_SCALE) cfg.teamScale = DEFAULT_SCALE;
         }
+        if (version < 9) {
+            // 模式 2 的容器那套从「模式 2 的 HUD 那套」复制。
+            cfg.bothContainerX = cfg.bothX;
+            cfg.bothContainerY = cfg.bothY;
+            cfg.bothContainerColumns = cfg.bothColumns;
+            cfg.bothContainerScale = cfg.bothScale;
+            cfg.bothContainerOpacity = cfg.bothOpacity;
+        }
         if (version < 8) {
             // 模式 2 的那一套从 HUD 那套复制，升级后三种方式各自独立但初值一致。
             cfg.bothX = cfg.selfStatsX;
@@ -418,6 +505,11 @@ public final class EnemyHudConfig {
         read.bothY = (int) clamp(read.bothY, 0.0, 4000.0);
         read.bothScale = clamp(read.bothScale, 1.0, 2.0);
         read.bothOpacity = clamp(read.bothOpacity, 0.2, 1.0);
+        read.bothContainerColumns = (int) clamp(read.bothContainerColumns, 1.0, 3.0);
+        read.bothContainerX = (int) clamp(read.bothContainerX, 0.0, 4000.0);
+        read.bothContainerY = (int) clamp(read.bothContainerY, 0.0, 4000.0);
+        read.bothContainerScale = clamp(read.bothContainerScale, 1.0, 2.0);
+        read.bothContainerOpacity = clamp(read.bothContainerOpacity, 0.2, 1.0);
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
         return read;
     }

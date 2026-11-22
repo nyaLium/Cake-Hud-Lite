@@ -108,5 +108,8 @@
   "ctt_enemy_hud.config.kind.misc": "Misc",
   "ctt_enemy_hud.config.kind.status": "Status effects",
   "key.ctt_enemy_hud.open_config": "Open CTT settings",
-  "ctt_enemy_hud.config.selfStatsMode.both": "HUD + container"
+  "ctt_enemy_hud.config.selfStatsMode.both": "HUD + container",
+  "ctt_enemy_hud.config.selfStatsTarget": "Editing: %s",
+  "ctt_enemy_hud.config.selfStatsTarget.hud": "HUD",
+  "ctt_enemy_hud.config.selfStatsTarget.container": "Container screen"
 }

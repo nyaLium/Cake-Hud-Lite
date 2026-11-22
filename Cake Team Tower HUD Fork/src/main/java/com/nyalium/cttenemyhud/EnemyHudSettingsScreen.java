@@ -29,6 +29,8 @@ public final class EnemyHudSettingsScreen extends Screen {
 
     private final EnemyHudConfigScreen menu;
     private final Section section;
+    /** 模式 2 下「当前编辑对象」：false = HUD 那套，true = 容器界面那套。 */
+    private boolean editContainer;
 
     public EnemyHudSettingsScreen(EnemyHudConfigScreen menu, Section section) {
         super(Component.translatable("ctt_enemy_hud.config.section." + id(section)));
@@ -180,6 +182,10 @@ public final class EnemyHudSettingsScreen extends Screen {
     private int initSelfStats(EnemyHudConfig.Cfg cfg, int w, int leftX, int rightX) {
         boolean enabled = cfg.showSelfStats;
         boolean forced = SelfStats.forcedByServer(this.minecraft);
+        int modeNow = cfg.selfStatsMode;
+        // 模式 0/1 的编辑目标固定；模式 2 由「编辑对象」按钮决定。
+        boolean editContainer = modeNow == 1 || (modeNow == 2 && this.editContainer);
+        EnemyHudConfig.Panel panel = EnemyHudConfig.panel(modeNow, editContainer);
         java.util.List<AbstractWidget> dependent = new java.util.ArrayList<>();
 
         int y = TOP;
@@ -209,17 +215,17 @@ public final class EnemyHudSettingsScreen extends Screen {
 
         y += ROW_GAP;
         ValueSlider columns = new ValueSlider(leftX, y, w, ROW_HEIGHT,
-                1.0, 3.0, 1.0, EnemyHudConfig.panel().columns,
+                1.0, 3.0, 1.0, panel.columns,
                 v -> key("selfStatsColumns", (int) Math.round(v)),
-                v -> EnemyHudConfig.setPanelColumns((int) Math.round(v)));
+                v -> EnemyHudConfig.setPanelColumns(modeNow, editContainer, (int) Math.round(v)));
         addRenderableWidget(columns);
         dependent.add(columns);
 
         y += ROW_GAP;
         ValueSlider scale = new ValueSlider(leftX, y, w, ROW_HEIGHT,
-                1.0, 2.0, 0.05, EnemyHudConfig.panel().scale,
+                1.0, 2.0, 0.05, panel.scale,
                 v -> key("selfStatsScale", String.format(Locale.ROOT, "%.2f", v)),
-                v -> EnemyHudConfig.setPanelScale(v));
+                v -> EnemyHudConfig.setPanelScale(modeNow, editContainer, v));
         addRenderableWidget(scale);
         dependent.add(scale);
 
@@ -228,6 +234,7 @@ public final class EnemyHudSettingsScreen extends Screen {
                         Component.translatable(modeLabelKey(cfg.selfStatsMode))), b -> {
                     EnemyHudConfig.Cfg c = EnemyHudConfig.get();
                     c.selfStatsMode = (c.selfStatsMode + 1) % 3;   // 0 → 1 → 2 → 0
+                    this.editContainer = false;                     // 切模式后默认编辑 HUD 那套
                     // 每种显示方式各有一套配置：切换后立刻按新模式重建/重绘。
                     this.rebuildWidgets();
                 })
@@ -236,14 +243,14 @@ public final class EnemyHudSettingsScreen extends Screen {
         dependent.add(mode);
         y += ROW_GAP;
         ValueSlider opacity = new ValueSlider(rightX, y, w, ROW_HEIGHT,
-                0.2, 1.0, 0.05, EnemyHudConfig.panel().opacity,
+                0.2, 1.0, 0.05, panel.opacity,
                 v -> key("selfStatsOpacity", Math.round(v * 100.0) + "%"),
-                v -> EnemyHudConfig.setPanelOpacity(v));
+                v -> EnemyHudConfig.setPanelOpacity(modeNow, editContainer, v));
         addRenderableWidget(opacity);
         dependent.add(opacity);
         y += ROW_GAP;
         Button move = Button.builder(key("selfStatsMove"),
-                        b -> this.minecraft.gui.setScreen(new SelfStatsLayoutScreen(this)))
+                        b -> this.minecraft.gui.setScreen(new SelfStatsLayoutScreen(this, editContainer)))
                 .bounds(rightX, y, w, ROW_HEIGHT).build();
         addRenderableWidget(move);
         dependent.add(move);
@@ -254,11 +261,26 @@ public final class EnemyHudSettingsScreen extends Screen {
         addRenderableWidget(filter);
         dependent.add(filter);
 
+        // 1.20.18：模式 2 有「HUD 那套 / 容器界面那套」两份，需要选择编辑对象。
+        if (modeNow == 2) {
+            y += ROW_GAP;
+            Button target = Button.builder(key("selfStatsTarget",
+                            Component.translatable(editContainer
+                                    ? "ctt_enemy_hud.config.selfStatsTarget.container"
+                                    : "ctt_enemy_hud.config.selfStatsTarget.hud")), b -> {
+                        this.editContainer = !this.editContainer;
+                        this.rebuildWidgets();
+                    })
+                    .bounds(rightX, y, w, ROW_HEIGHT).build();
+            addRenderableWidget(target);
+            dependent.add(target);
+        }
+
         // 关闭属性面板后，其余项全部不可交互（1.20.14 的反馈）。
         if (!enabled) {
             for (AbstractWidget widget : dependent) widget.active = false;
         }
-        return 4;
+        return modeNow == 2 ? 5 : 4;
     }
 
     /** 显示方式按钮的翻译键（0/1/2）。 */

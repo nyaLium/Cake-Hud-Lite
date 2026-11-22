@@ -25,12 +25,19 @@ public final class SelfStatsLayoutScreen extends Screen {
     private static final int GAP = 8;
 
     private final EnemyHudSettingsScreen parent;
+    /** 编辑哪一套：false = HUD，true = 容器界面（模式 2 下两者独立）。 */
+    private final boolean containerConfig;
 
     private boolean dragging;
 
-    public SelfStatsLayoutScreen(EnemyHudSettingsScreen parent) {
+    public SelfStatsLayoutScreen(EnemyHudSettingsScreen parent, boolean containerConfig) {
         super(Component.translatable("ctt_enemy_hud.config.selfStatsMove"));
         this.parent = parent;
+        this.containerConfig = containerConfig;
+    }
+
+    private EnemyHudConfig.Panel currentPanel() {
+        return EnemyHudConfig.panel(EnemyHudConfig.get().selfStatsMode, this.containerConfig);
     }
 
     @Override
@@ -38,7 +45,7 @@ public final class SelfStatsLayoutScreen extends Screen {
         int y = this.height - ROW_HEIGHT - 8;
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.selfStatsMove.reset"), b -> {
             // 只重置当前显示方式那一套（HUD / 容器界面各有一套）。
-            EnemyHudConfig.movePanel(4, 40);
+            EnemyHudConfig.movePanel(EnemyHudConfig.get().selfStatsMode, this.containerConfig, 4, 40);
             this.rebuildWidgets();
         }).bounds(this.width / 2 - BUTTON_WIDTH - GAP / 2, y, BUTTON_WIDTH, ROW_HEIGHT).build());
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
@@ -64,7 +71,7 @@ public final class SelfStatsLayoutScreen extends Screen {
         List<Component> lines = SelfStats.lines();
         boolean demo = lines.isEmpty();
         if (demo) lines = SelfStatsPanel.demoLines();
-        EnemyHudConfig.Panel panel = EnemyHudConfig.panel();
+        EnemyHudConfig.Panel panel = currentPanel();
         SelfStatsPanel.draw(graphics, this.font, lines, panel, true);
         int[] bounds = SelfStatsPanel.bounds(this.font, lines, panel);
         outline(graphics, bounds, dragging ? 0xC0FFD060 : 0x80FFFFFF);
@@ -102,7 +109,7 @@ public final class SelfStatsLayoutScreen extends Screen {
             // 用**增量**而不是绝对坐标：和原版滑块一致，也对不同输入后端更稳
             // （有的后端在拖动过程中只给相对位移）。
             int[] bounds = currentBounds();
-            EnemyHudConfig.Panel panel = EnemyHudConfig.panel();
+            EnemyHudConfig.Panel panel = currentPanel();
             EnemyHudConfig.movePanel(
                     SelfStatsPanel.clampX(panel.x + (int) Math.round(dragX), bounds[2], this.width),
                     SelfStatsPanel.clampY(panel.y + (int) Math.round(dragY), bounds[3], this.height));
@@ -152,7 +159,7 @@ public final class SelfStatsLayoutScreen extends Screen {
     private int[] currentBounds() {
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) lines = SelfStatsPanel.demoLines();
-        return SelfStatsPanel.bounds(this.font, lines, EnemyHudConfig.panel());
+        return SelfStatsPanel.bounds(this.font, lines, currentPanel());
     }
 
     private static boolean inside(int[] bounds, double x, double y) {

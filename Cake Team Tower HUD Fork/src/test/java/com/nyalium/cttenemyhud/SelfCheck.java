@@ -318,9 +318,16 @@ public final class SelfCheck {
             EnemyHudConfig.Panel both = EnemyHudConfig.panel();
             check(both.x == 55 && both.columns == 1 && both.scale == 1.2 && both.opacity == 0.5,
                     "模式 2 应取 both* 那一套");
-            EnemyHudConfig.movePanel(66, 77);
-            check(c.bothX == 66 && c.bothY == 77, "模式 2 移动应写 both*");
+            EnemyHudConfig.movePanel(2, false, 66, 77);
+            check(c.bothX == 66 && c.bothY == 77, "模式 2（HUD）移动应写 both*");
             check(c.selfStatsX == 11 && c.containerX == 33, "模式 2 移动不该改另外两套");
+            // 模式 2 的容器那一套独立
+            c.bothContainerX = 88;
+            c.bothContainerColumns = 3;
+            EnemyHudConfig.Panel bothBox = EnemyHudConfig.panel(2, true);
+            check(bothBox.x == 88 && bothBox.columns == 3, "模式 2 容器应取 bothContainer*");
+            EnemyHudConfig.movePanel(2, true, 99, 111);
+            check(c.bothContainerX == 99 && c.bothX == 66, "模式 2 容器移动应只改 bothContainer*");
         } finally {
             c.selfStatsMode = oldMode;
         }
@@ -1347,7 +1354,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(EnemyHudConfig.CURRENT_VERSION == 8, "配置版本应为 8");
+        check(EnemyHudConfig.CURRENT_VERSION == 9, "配置版本应为 9");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1356,7 +1363,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 8, "v3 → v8 应升版本号");
+        check(v3.configVersion == 9, "v3 → v9 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1492,7 +1499,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
-        check(EnemyHudConfig.CURRENT_VERSION == 8, "配置版本应为 8");
+        check(EnemyHudConfig.CURRENT_VERSION == 9, "配置版本应为 9");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1515,7 +1522,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 8, "v4 → v8 应升版本号");
+        check(v4.configVersion == 9, "v4 → v9 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板
