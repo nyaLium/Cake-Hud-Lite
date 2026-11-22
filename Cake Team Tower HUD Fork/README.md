@@ -233,20 +233,42 @@ CTT敌人血条设置
 
 ## 血条纹理（敌人 / 队友同一条路径）
 
-**不打包任何材质**，直接调用原版 GUI 图集里的
-`minecraft:boss_bar/{red,yellow,purple,blue,green}_{background,progress}`：
+**不打包任何材质**，直接调用原版
+`textures/gui/sprites/boss_bar/{red,yellow,purple,blue,green}_{background,progress}.png`（182×5）：
+敌人按当前心类取红/黄/紫/蓝，队友固定绿，两边只有 tint 不同。
 
 ```java
-BossBarTexture.Tint tint = p.player ? Tint.GREEN : tintFor(p.heartKind);
-BossBarTexture.drawBackground(g, bx, 0, W, H, white, tint);
-BossBarTexture.drawProgress(g, bx, 0, fill, H, white, tint);
+// 1.20.2 起：世界空间 billboard 里自己提交几何（见 HudWorldRenderer#submitBar）
+submitBarSpan(collector, pose, background, x0, x0 + width, 0, 182, ...);   // 整条背景
+submitBarSpan(collector, pose, progress,   x0, x0 + fill,  0, uFill, ...); // 左侧裁切进度
 ```
 
-走的是 `GuiGraphicsExtractor.blitSprite(pipeline, id, x, y, w, h, color)` ——
-sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数带 alpha。
-早期版本手工拼 UV（`getX()/getY()` + 自算图集尺寸）推导有偏差时会采样到图集别处，
-表现就是「血条不再是原版纹理」；现在这条路径与 `BossHealthOverlay` 画 Boss 条一致。
-1.13.4 起队友条也走这同一条调用（只是 tint 固定绿），不再有单独的绿色分支。
+### 1.20.2：两端端盖按纹素原尺寸画（圆头）
+
+原版那条条在 GUI 里是 **182 px 宽、1 纹素 = 1 像素**，端盖才看得见：实测
+`*_progress.png` 的 0～3 列 / 178～181 列与中间平直段不同 —— 第 0、181 列把**上下两个角的
+像素透明度挖成 0**，第 1、180 列整列压暗，2、3 / 178、179 列上下两行略暗。这几列就是「圆头」。
+
+本 Mod 的条只有 50～150 个名牌像素宽，1.20.1 及以前把整张 182 纹素横向压到几十像素，
+端盖连带圆角一起被压成 1 px 以下 —— 看起来就是**纯长方形**，与顶部原版 Boss 条的观感对不上。
+
+所以 1.20.2 把纹理切成「左端盖 / 中段 / 右端盖」三个相邻四边形（`BossBarTexture.slices`）：
+
+| 段 | 宽度 | UV | 说明 |
+| --- | --- | --- | --- |
+| 左端盖 | 固定 `CAP_TEXELS = 4` 纹素 = 4 个布局像素 | 0 → 4 | 只在这段 u 从纹理最左开始时画 |
+| 中段 | 剩余长度（拉伸） | 4 → 178 | 中间全是同一列颜色，拉伸看不出来 |
+| 右端盖 | 同样 4 纹素 | 178 → 182 | 只在 u 到达纹理最右时画（进度满格时） |
+
+- 端盖 1 纹素 : 1 布局像素，与条高（5 纹素 = 5 布局像素）同比例，所以**不会再被压扁**；
+- 进度没满时右边界就应该是**直切**的（原版 `blitSprite` 也是直切），只有满格才露出右端盖；
+- 竖向 UV 同时改回 0～1（以前往里收了半个纹素，某些距离下最上/最下一行深色描边会被吃掉）；
+- 三个四边形共用完全相同的边界点，不会出缝（1.20.1 修掉的接缝不会再回来）。
+
+A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 直切）。
+
+> 早期版本（1.13.x）曾手工拼图集 UV（`getX()/getY()` + 自算图集尺寸），推导偏差会采样到
+> 图集别处，表现就是「血条不再是原版纹理」；现在直接指向原版 PNG 文件，资源包替换同样生效。
 
 ## 配置
 
@@ -264,16 +286,16 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
   "showTeammates": true,
   "autoPartyBossbar": true,
   "hideTeamBossBar": true,
-  "teamBarWidth": 100.0,
-  "teamScale": 1.0,
+  "teamBarWidth": 75.0,
+  "teamScale": 0.9,
   "teamVerticalOffset": 0,
   "teamMaxDistance": 48.0,
   "maxDistance": 48.0,
-  "barWidth": 100.0,
-  "wrapWidth": 200.0,
-  "scale": 1.0,
+  "barWidth": 75.0,
+  "scale": 0.9,
   "verticalOffset": 0,
   "hideBehindWalls": true,
+  "hideBehindEntities": true,
   "debug": false
 }
 ```
@@ -290,12 +312,11 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 | `hideTeamBossBar` | 隐藏上方 Boss 栏里「队伍血量」（数据照常读取） | — |
 | `showTeammates` | 显示队友血量（绿色条，自己永不显示） | — |
 | `autoPartyBossbar` | 自动 `/trigger TogglePartyBossbar` 打开「队伍血量」条（队友血量的纯客户端数据源） | — |
-| `teamBarWidth` / `teamScale` / `teamVerticalOffset` | 玩家血条的长度 / 缩放 / 垂直微调 | 50~150 / 0.75~1.50 / -30~0 |
+| `teamBarWidth` / `teamScale` / `teamVerticalOffset` | 玩家血条的长度 / 缩放 / 垂直微调 | 50~150 / 0.75~1.50 / -30~0（默认 75 / 0.9 / 0） |
 | `teamMaxDistance` | 玩家血条显示距离（格） | 4 ~ 256 |
-| `wrapWidth` | 换行阈值（原版名牌像素）。`200` = **自动**，即不超过血条长度；整行超过它就折两行 | 40 ~ 200 |
 | `maxDistance` | 敌人血条显示距离（格） | 4 ~ 256 |
-| `barWidth` | 敌人血条长度（原版名牌像素） | 50 ~ 150（默认 100） |
-| `scale` | 敌人整体缩放 | 0.75 ~ 1.50 |
+| `barWidth` | 敌人血条长度（原版名牌像素） | 50 ~ 150（默认 75） |
+| `scale` | 敌人整体缩放 | 0.75 ~ 1.50（默认 0.9） |
 | `verticalOffset` | 敌人垂直微调，负值更高 | -30 ~ 0 |
 | `hideBehindEntities` | 被更近的实体挡住（屏幕矩形覆盖 ≥70%）时不绘制；解决「后方血条压住前面名字/模型」 | — |
 | `hideBehindWalls` | 被方块挡住视线时不画 | — |
@@ -304,6 +325,9 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 > 1.13.3 起 `showNumbers` / `showHeartCounts` / `showArmor` 已删除（永久开启），
 > 老配置文件里的这几个键会被忽略，下次「完成」时自动消失。
 > `autoPartyBossbar` 在 1.13.3 一度移除，1.13.4 恢复（默认开）。
+> 1.14.4 加的 `wrapWidth` 已在 1.19.0 删除（布局改固定三段，自动折行），旧配置里的键会被忽略。
+> `configVersion` 现在是 **3**：v1→v2 把血条默认长度 100 改成 75，v2→v3 把默认缩放 1.0 改成 0.9，
+> 只在「值仍等于旧默认值」时才迁移，手工调过的值不动。
 
 ## 未知诅咒
 
@@ -317,9 +341,10 @@ sprite 由图集自己解析（含 `GuiSpriteScaling` 处理），颜色参数�
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**1476 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**4746 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
-配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定。
+配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
+护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）。
 
 ## 构建
 
@@ -327,7 +352,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.16.0.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.20.2.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 
@@ -348,6 +373,15 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 1.13.4 | 定位「客户端必装、服务端选装」；队友条与敌人条共用同一条原版 bossbar 纹理绘制；恢复自动开队伍条；聊天回显与报错过滤 |
 | 1.13.5 | 修聊天栏被全拦（`ALLOW_GAME` 返回值反了）；设置页「返回」按实际行数定位；同名敌人按 `HealthPercent` + 绑定粘性唯一认领 |
 | **1.14.0** | 新增服务端选装组件（按 UUID 推权威血量/护甲/各类心，5 Hz 差量）；客户端优先使用并自动回落；新增 `useServerData` |
+| 1.15.0 | 渲染改为**世界空间**：与实体名字同一条 `submitNameDisplay` 提交路径，深度测试 / 距离缩放 / 遮挡全部交给原版 |
+| 1.15.1 | 修血条边缘竖条闪烁（两段不再共面重叠 + UV 内收半纹素） |
+| 1.16.x | 队友四色心 payload；队友进度=红心÷MaxHP；行距 9→10；排除旁观者；队友不画护甲 |
+| 1.17.0 | 护甲 2 项一页循环（2 s）、大数值 k/m/b、着火时 HUD 沿视线前推 |
+| 1.18.0 | 固定三段布局（护甲 / 心数 / 血条 / 名字）；缩放与不透明度对文字真正生效；默认条长 75 |
+| 1.19.0 | 恢复文字透视副本（SEE_THROUGH 第二遍）；默认缩放 0.9；碎心·粉心·蓝心置顶 |
+| 1.20.0 | 敌人心类每次一种 / 玩家魂↔黑轮换；玩家特殊心固定最上；护甲段之间两个空格 |
+| 1.20.1 | 血条改回原版画法（整条背景 + 左侧裁切进度），修掉未满时中间 1 px 接缝 |
+| **1.20.2** | 血条**两端端盖按纹素原尺寸**分段绘制（圆头，不再是长方形）；竖向 UV 回 0~1 保留上下深色描边 |
 
 ## 已知限制
 

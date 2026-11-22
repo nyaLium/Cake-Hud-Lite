@@ -13,6 +13,7 @@ public final class SelfCheck {
     public static void main(String[] args) {
         layoutCombinations();
         barWidthSweep();
+        barSlicing();
         configNormalization();
         armorEdgeCases();
         heartCountsAndRows();
@@ -913,6 +914,94 @@ public final class SelfCheck {
             i += Character.charCount(cp);
         }
         return w;
+    }
+
+    // ── 血条分段（端盖原尺寸 + 中段拉伸） ──
+
+    private static void barSlicing() {
+        final float nw = BossBarTexture.NATIVE_WIDTH;
+        final float cap = BossBarTexture.CAP_TEXELS;
+
+        check(nw == 182 && BossBarTexture.NATIVE_HEIGHT == 5, "原版 boss_bar 纹理应为 182x5");
+        check(cap * 2 < EnemyHudLayout.BAR_WIDTH_MIN,
+                "两个端盖加起来必须短于最短的条: cap=" + cap);
+        check(BossBarTexture.NATIVE_HEIGHT == EnemyHudLayout.BAR_HEIGHT,
+                "纹理高 5 纹素应正好等于条的布局高度，否则端盖会被压扁");
+
+        // ① 整条背景：左右端盖都是 4 纹素宽、UV 贴住纹理两端，中段吃长度差
+        for (int bw = EnemyHudLayout.BAR_WIDTH_MIN; bw <= EnemyHudLayout.BAR_WIDTH_MAX; bw++) {
+            float xa = -bw / 2.0f;
+            float xb = xa + bw;
+            String tag = "背景 bw=" + bw;
+            float[][] seg = BossBarTexture.slices(xa, xb, 0.0f, nw);
+            check(seg.length == 3, tag + " 应切成 3 段，实际 " + seg.length);
+            if (seg.length != 3) continue;
+            check(seg[0][0] == xa && seg[0][1] == xa + cap, tag + " 左端盖位置/宽度不对");
+            check(seg[0][2] == 0.0f && seg[0][3] == cap, tag + " 左端盖 UV 不对");
+            check(seg[2][0] == xb - cap && seg[2][1] == xb, tag + " 右端盖位置/宽度不对");
+            check(seg[2][2] == nw - cap && seg[2][3] == nw, tag + " 右端盖 UV 不对");
+            check(seg[0][1] == seg[1][0], tag + " 左端盖与中段之间有空隙或重叠");
+            check(seg[1][1] == seg[2][0], tag + " 中段与右端盖之间有空隙或重叠");
+            check(seg[1][2] == cap && seg[1][3] == nw - cap, tag + " 中段 UV 不对");
+            check(seg[2][1] - seg[2][0] == seg[0][1] - seg[0][0], tag + " 两端端盖宽度应相同");
+        }
+
+        // ② 进度满格时 ub = 182 → 露出右端盖（和原版 blitSprite 满格时一样是圆的）
+        for (int bw = EnemyHudLayout.BAR_WIDTH_MIN; bw <= EnemyHudLayout.BAR_WIDTH_MAX; bw++) {
+            float xa = -bw / 2.0f;
+            float xb = xa + bw;
+            float[][] seg = BossBarTexture.slices(xa, xb, 0.0f, nw);
+            check(seg.length == 3 && seg[2][3] == nw && seg[2][1] == xb,
+                    "满格进度 bw=" + bw + " 应露出右端盖");
+        }
+
+        // ③ 进度没满 → 左端盖 + 中段，右边界直切在 fill 上、不采纹理最右端
+        for (int bw = EnemyHudLayout.BAR_WIDTH_MIN; bw <= EnemyHudLayout.BAR_WIDTH_MAX; bw++) {
+            for (float ratio : new float[]{0.02f, 0.1f, 0.5f, 0.75f, 0.95f}) {
+                float fill = Math.round(bw * ratio);
+                if (fill <= 0.0f) continue;
+                float xa = -bw / 2.0f;
+                float ub = nw * Math.min(1.0f, fill / bw);
+                String tag = "进度 bw=" + bw + " ratio=" + ratio;
+                float[][] seg = BossBarTexture.slices(xa, xa + fill, 0.0f, ub);
+                if (ub >= nw) {
+                    // 四舍五入后已经满格：这时应该露右端盖，和满格一致
+                    check(seg.length == 3, tag + " 已满格应切 3 段");
+                    continue;
+                }
+                if (fill >= cap * 2) {
+                    check(seg.length == 2, tag + " 应只有 左端盖 + 中段，实际 " + seg.length);
+                    if (seg.length != 2) continue;
+                    check(seg[0][3] == cap, tag + " 左端盖 UV 不对");
+                    check(seg[1][0] == xa + cap && seg[1][1] == xa + fill,
+                            tag + " 进度右边界应正好落在 fill 上");
+                    check(seg[1][3] == ub, tag + " 中段 UV 右端应为 ub");
+                    check(seg[1][3] < nw, tag + " 没满时不该采到纹理最右端");
+                } else {
+                    check(seg.length == 1, tag + " 过窄的进度应整段拉伸，实际 " + seg.length + " 段");
+                    if (seg.length != 1) continue;
+                    check(seg[0][0] == xa && seg[0][1] == xa + fill, tag + " 窄进度范围不对");
+                }
+            }
+        }
+
+        // ④ 边界：条短到放不下两个端盖时整段拉伸；u 不在两端时绝不分段
+        float[][] tiny = BossBarTexture.slices(0.0f, cap * 2 - 1.0f, 0.0f, nw);
+        check(tiny.length == 1 && tiny[0][0] == 0.0f && tiny[0][1] == cap * 2 - 1.0f,
+                "条短于 2×CAP 时应整段拉伸");
+        float[][] inner = BossBarTexture.slices(0.0f, 60.0f, 10.0f, 100.0f);
+        check(inner.length == 1, "u 不贴纹理两端时不该分段，实际 " + inner.length + " 段");
+        check(inner[0][2] == 10.0f && inner[0][3] == 100.0f, "内段 UV 应原样保留");
+
+        // ⑤ 段必须按 x 从左到右排列，否则绘制顺序会乱
+        float[][] ordered = BossBarTexture.slices(-50.0f, 50.0f, 0.0f, nw);
+        check(ordered.length == 3, "满格背景应切 3 段");
+        if (ordered.length == 3) {
+            check(ordered[0][0] <= ordered[1][0] && ordered[1][0] <= ordered[2][0],
+                    "分段必须按 x 递增排列");
+            check(ordered[0][2] <= ordered[1][2] && ordered[1][2] <= ordered[2][2],
+                    "分段必须按 u 递增排列");
+        }
     }
 
     private static void check(boolean condition, String message) {

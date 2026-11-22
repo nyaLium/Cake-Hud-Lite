@@ -26,6 +26,16 @@ final class BossBarTexture {
     static final int NATIVE_WIDTH = 182;
     static final int NATIVE_HEIGHT = 5;
 
+    /**
+     * 两端「端盖」的宽度（纹素）。
+     *
+     * <p>实测 {@code boss_bar/*_progress.png}（182×5）：左端 0~3 列、右端 178~181 列
+     * 与中间平直段不同 —— 第 0 / 181 列把上下两个角的像素<b>透明度挖成 0</b>，
+     * 第 1 / 180 列整列压暗，第 2、3 / 178、179 列上下两行略暗。原版在 GUI 里
+     * 1 纹素 = 1 像素地画，这几列就是那条「圆头」。横着压缩就没了，所以要按原尺寸画。</p>
+     */
+    static final int CAP_TEXELS = 4;
+
     /** 条颜色（名字就是原版 sprite 的前缀）。 */
     enum Tint {
         RED, YELLOW, PURPLE, BLUE, GREEN;
@@ -76,6 +86,42 @@ final class BossBarTexture {
         if (w <= 0 || h <= 0) return;
         g.blitSprite(RenderPipelines.GUI_TEXTURED, (tint == null ? DEFAULT : tint).progress(),
                 x, y, w, h, color);
+    }
+
+    /**
+     * 把一段纹理横跨 {@code [xa, xb]} 切成若干个相邻四边形。
+     *
+     * <p>返回每段 {@code {x0, x1, u0, u1}}（x 是布局像素，u 是<b>纹素</b> 0~182）。</p>
+     *
+     * <ul>
+     *   <li>左端盖：仅当 u 从纹理最左（{@code ua == 0}）开始时才画，宽度固定
+     *       {@link #CAP_TEXELS} 纹素 = 同样多的布局像素 —— 1 纹素 : 1 单位，与条高
+     *       （5 纹素 = 5 单位）同比例，端盖因此不会被压扁；</li>
+     *   <li>右端盖：仅当 u 到纹理最右（{@code ub == 182}）时才画；进度条没满时它的
+     *       右边界就应该是直切的（原版 {@code blitSprite} 同样直切），所以这时不画；</li>
+     *   <li>中段：整段拉伸。182 纹素里中间那些列是同一个颜色，拉伸看不出来。</li>
+     * </ul>
+     *
+     * <p>条太短（{@code xb - xa < 2 × CAP_TEXELS}）时端盖会撞车，退回整段拉伸。</p>
+     */
+    static float[][] slices(float xa, float xb, float ua, float ub) {
+        final float nw = NATIVE_WIDTH;
+        final float cap = CAP_TEXELS;
+        final boolean caps = xb - xa >= cap * 2.0f;
+        final boolean left = caps && ua <= 0.0f;
+        final boolean right = caps && ub >= nw;
+
+        // 中段的范围：把两端端盖让出来
+        final float xl = left ? xa + cap : xa;
+        final float xr = right ? xb - cap : xb;
+        final float ul = left ? cap : ua;
+        final float ur = right ? nw - cap : ub;
+
+        java.util.List<float[]> out = new java.util.ArrayList<>(3);
+        if (left) out.add(new float[]{xa, xa + cap, 0.0f, cap});
+        if (xr > xl) out.add(new float[]{xl, xr, ul, ur});
+        if (right) out.add(new float[]{xb - cap, xb, nw - cap, nw});
+        return out.toArray(new float[0][]);
     }
 
     // ── 世界空间路径（原版 nameTag 那条路）用 ──

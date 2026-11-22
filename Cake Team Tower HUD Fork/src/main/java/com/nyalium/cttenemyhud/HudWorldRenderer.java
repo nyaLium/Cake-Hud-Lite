@@ -286,37 +286,66 @@ public final class HudWorldRenderer {
         pose.scale(0.025f * scale, -0.025f * scale, 0.025f * scale);
 
         // 原版 BossBar 的画法：**整条背景** + 把进度纹理**从左裁到 fill 宽度**叠在上面。
-        // 以前是「进度段 + 空槽段」两段adjacent 拼接，接缝处会露出一条 1 px 的缝
+        // 以前是「进度段 + 空槽段」两段 adjacent 拼接，接缝处会露出一条 1 px 的缝
         // （两张纹理各裁一半，端盖都对不上）；改成整条背景打底就没有接缝了。
         //
         // 两张四边形共面，所以背景往远处挪 0.02 个名牌像素（原版文字背景也是 -0.01，
         // 负 z = 更远），这样无论深度写不写、先画谁，进度永远压在背景上面。
         //
-        // UV 往里收半个纹素：182×5 的纹理被拉伸到几十个屏幕像素时，采样正好落在
-        // 纹理边缘会采到相邻纹素（端盖那两列深色），表现为细竖条。
-        final float u0 = 0.5f / BossBarTexture.NATIVE_WIDTH;
-        final float u1 = 1.0f - 0.5f / BossBarTexture.NATIVE_WIDTH;
-        final float v0 = 0.5f / BossBarTexture.NATIVE_HEIGHT;
-        final float v1 = 1.0f - 0.5f / BossBarTexture.NATIVE_HEIGHT;
+        // 细节见 {@link #submitBarSpan}：182 纹素不能再整条拉伸 —— 两端 4 纹素的
+        // 渐晕 + 圆角会被压成不到 1 px，条就成了长方形。
         final float BACKGROUND_Z = -0.02f;
+        final float nativeWidth = BossBarTexture.NATIVE_WIDTH;
 
         RenderType background = RenderTypes.text(BossBarTexture.backgroundTexture(tint));
         RenderType progress = RenderTypes.text(BossBarTexture.progressTexture(tint));
 
-        // ① 整条背景（含空槽）
-        collector.submitCustomGeometry(pose, background, (p, vc) ->
-                quad(vc, p, x0, y0, x0 + width, y1, u0, u1, v0, v1, color, light, BACKGROUND_Z));
+        // ① 整条背景（含空槽）：两端圆角按原尺寸，中段拉伸
+        submitBarSpan(collector, pose, background, x0, x0 + width, 0.0f, nativeWidth,
+                y0, y1, color, light, BACKGROUND_Z);
 
-        // ② 填充段：从左裁到 fill（和原版 blitSprite 的 width 参数一样）
+        // ② 填充段：从左裁到 fill（和原版 blitSprite 的 width 参数一样）。
+        //    裁到满格时 ub 正好是纹理右端，右端盖才会画出来 —— 与原版一致。
         if (fill > 0.0f) {
-            float uFill = u0 + (u1 - u0) * Math.min(1.0f, fill / width);
-            collector.submitCustomGeometry(pose, progress, (p, vc) ->
-                    quad(vc, p, x0, y0, x0 + fill, y1, u0, uFill, v0, v1, color, light, 0.0f));
+            float uFill = nativeWidth * Math.min(1.0f, fill / width);
+            submitBarSpan(collector, pose, progress, x0, x0 + fill, 0.0f, uFill,
+                    y0, y1, color, light, 0.0f);
         }
         pose.popPose();
     }
 
-    /** 一个带 UV 的矩形；UV 用纹素中心收进去，避免拉伸时采到相邻纹素。 */
+    /**
+     * 画一条原版 {@code boss_bar} 纹理（182×5），分段规则见 {@link BossBarTexture#slices}：
+     * <b>两端端盖按纹素原尺寸、中段拉伸</b>。
+     *
+     * @param ua / ub 这段对应的纹理横坐标（纹素，0 ~ 182）
+     */
+    private static void submitBarSpan(SubmitNodeCollector collector, PoseStack pose, RenderType rt,
+                                      float xa, float xb, float ua, float ub,
+                                      float y0, float y1, int color, int light, float z) {
+        final float nw = BossBarTexture.NATIVE_WIDTH;
+        for (float[] s : BossBarTexture.slices(xa, xb, ua, ub)) {
+            final float ax = s[0];
+            final float bx = s[1];
+            final float au = s[2] / nw;
+            final float bu = s[3] / nw;
+            collector.submitCustomGeometry(pose, rt, (p, vc) ->
+                    quad(vc, p, ax, y0, bx, y1, au, bu, V_TOP, V_BOTTOM, color, light, z));
+        }
+    }
+
+    /**
+     * 竖向 UV：<b>整张 5 行全要</b>。
+     *
+     * <p>以前往里收了半个纹素（0.5/5 ~ 4.5/5），本意是防拉伸时采到相邻纹素，
+     * 代价是最上面那行深色和下边那行深色在不同距离下会有一行被吃掉 ——
+     * 而条「有没有立体感/圆头」全靠这两行深色描边。纹理只有 5 纹素高、
+     * 条的布局高度也正好 5 单位，直接用 0~1 才是 1:1。</p>
+     */
+    private static final float V_TOP = 0.0f;
+    private static final float V_BOTTOM = 1.0f;
+
+    /** 一个带 UV 的矩形；UV 已经换算成 0~1，边界落在纹素边界上（不内收，否则端盖会缺纹素）。 */
     private static void quad(VertexConsumer vc, PoseStack.Pose pose,
                              float x0, float y0, float x1, float y1,
                              float u0, float u1, float v0, float v1,
