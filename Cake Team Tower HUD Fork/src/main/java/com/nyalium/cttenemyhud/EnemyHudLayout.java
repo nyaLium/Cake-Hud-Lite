@@ -246,7 +246,11 @@ public final class EnemyHudLayout {
                     }
                     heartRow.add(kindLine(opt.cycleKind, hearts.get(opt.cycleKind)));
                 }
-            } else if (!percentOnly) {
+            } else if (percentOnly) {
+                // 纯客户端只有 below_name 的 HealthPercent：拆不出各类心，但**至少把百分比数字画出来**
+                // —— 血条本来就是按这个百分比填的，带上数字才读得懂（队友无队伍条时同一条路径）。
+                heartRow.add(new Line(percentText(hp, maxHp), 0xFFFFFF));
+            } else {
                 // 拆不出各类心（例如队友只有 AllHearts/MaxHP）：退回原来的「当前/最大」。
                 heartRow.add(new Line(num(Math.max(0, hp)) + "/" + num(Math.max(0, maxHp)), 0xFFFFFF));
             }
@@ -312,6 +316,22 @@ public final class EnemyHudLayout {
     /** 某一类心的一段：图标 + 数量。 */
     private static Line kindLine(int kind, int value) {
         return new Line(HeartCounts.ICONS[kind] + num(value), HeartCounts.COLORS[kind]);
+    }
+
+    /**
+     * 「73%」：纯客户端只有 {@code HealthPercent} 时的数字行。
+     *
+     * <p>口径与数据包 {@code health.mcfunction:102-104} 一致：{@code hp*100/maxHp} 四舍五入后夹到 0~100；
+     * 上限非法（≤ 0）时按 100% 处理，与「没有血量信息」时的默认填充率一致。</p>
+     */
+    static String percentText(int hp, int maxHp) {
+        int percent;
+        if (maxHp <= 0) {
+            percent = 100;
+        } else {
+            percent = Math.round(Math.max(0, hp) * 100.0f / maxHp);
+        }
+        return Math.max(0, Math.min(100, percent)) + "%";
     }
 
     private static int width(List<Line> lines, WidthMeasurer w) {

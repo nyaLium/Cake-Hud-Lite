@@ -28,6 +28,7 @@ public final class SelfCheck {
         teamBarTitles();
         selfStatsAndPanel();
         selfStatsFineKinds();
+        percentOnlyText();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -62,7 +63,7 @@ public final class SelfCheck {
                 EnemyHudLayout.Result r = run(tag, d, o);
 
                 boolean hasArmorData = EnemyHudLayout.hasArmor(d.defence, d.armor);
-                boolean expectText = (o.showNumbers && !d.percentOnly) || (o.showArmor && hasArmorData);
+                boolean expectText = o.showNumbers || (o.showArmor && hasArmorData);
                 boolean expectEmpty = !expectText && !o.showBar;
 
                 if (expectEmpty) {
@@ -107,6 +108,65 @@ public final class SelfCheck {
                 }
             }
         }
+    }
+
+    // ── 1b. 纯客户端（只有百分比）至少要有数字 ──
+
+    /**
+     * 纯客户端只有 {@code below_name = HealthPercent} 时：血条 + 「73%」数字。
+     *
+     * <p>1.20.7 起 percentOnly 不再只画条：数字行写百分比（口径 = hp*100/maxHp 四舍五入夹 0~100）。</p>
+     */
+    private static void percentOnlyText() {
+        int[][] cases = {
+                {73, 100, 73},
+                {41, 100, 41},
+                {0, 100, 0},
+                {100, 100, 100},
+                {5, 0, 100},      // 上限非法 → 100%
+                {50, 100, 50},
+        };
+        for (int[] c : cases) {
+            Data d = new Data("仅百分比", c[0], c[1], true, 0, new int[7]);
+            EnemyHudLayout.Options o = new EnemyHudLayout.Options();
+            o.showNumbers = true;
+            o.showBar = true;
+            var r = run("percentOnly " + c[0] + "/" + c[1], d, o);
+            if (r == null) continue;
+            check(r.hasText, "percentOnly " + c[0] + "/" + c[1] + " 应有文字");
+            check(flatten(r).equals(c[2] + "%"),
+                    "percentOnly " + c[0] + "/" + c[1] + " 应显示 " + c[2] + "%，实际 " + flatten(r));
+            check(r.barWidth > 0, "percentOnly 仍应有血条宽度");
+
+            o.showNumbers = false;
+            var r2 = run("percentOnly 无数字 " + c[0] + "/" + c[1], d, o);
+            if (r2 != null) {
+                check(!r2.hasText, "关掉数字后 percentOnly 不该有文字");
+            }
+        }
+
+        // 队友没有队伍条条目：同样只有 HealthPercent → 也要有百分比数字
+        HeartCounts unknown = HeartCounts.unknown();
+        EnemyHudLayout.Options team = new EnemyHudLayout.Options();
+        team.showNumbers = true;
+        team.showArmor = false;
+        team.playerStyle = true;
+        team.showBar = true;
+        var tr = EnemyHudLayout.compute(63, 100, true, 0, new int[7], unknown, team, SelfCheck::width);
+        check(tr != null && flatten(tr).equals("63%"), "队友百分比回退应显示 63%，实际 " + flatten(tr));
+
+        // 「拆不出心数但已知当前/上限」（队伍条那一份）仍然写 当前/最大
+        var exact = EnemyHudLayout.compute(63, 120, false, 0, new int[7], unknown, team, SelfCheck::width);
+        check(exact != null && flatten(exact).equals("63/120"),
+                "未知心数的绝对值应退回 63/120，实际 " + flatten(exact));
+    }
+
+    /** 把布局里的所有文字段拼起来（测试断言用）。 */
+    private static String flatten(EnemyHudLayout.Result r) {
+        if (r == null) return "";
+        StringBuilder sb = new StringBuilder();
+        for (EnemyHudLayout.Line line : r.lines) sb.append(line.text);
+        return sb.toString();
     }
 
     // ── 2. 血条长度 ──
@@ -344,10 +404,10 @@ public final class SelfCheck {
         check(rowText(noBlue, 0).equals("❤50/50"), "不存在的类型不该显示: " + rowText(noBlue, 0));
         o.cycleKind = HeartCounts.SOUL;
 
-        // 拆不出心数（percentOnly / 未知）→ 退回「当前/最大」。
+        // 拆不出心数（percentOnly）→ 1.20.7 起显示百分比数字；已知当前/上限但拆不出心数 → 当前/最大。
         EnemyHudLayout.Result fallback = run("回退", new Data("只有百分比", 73, 100, true, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
-        check(!fallback.hasText, "只有百分比且无心数时不该有文字: " + join(fallback));
+        check(join(fallback).equals("73%"), "只有百分比时应显示 73%: " + join(fallback));
 
         EnemyHudLayout.Options noHearts = new EnemyHudLayout.Options();
         noHearts.showHearts = false;
