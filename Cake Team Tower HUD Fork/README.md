@@ -2,18 +2,18 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.20.7**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.20.8**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/字号/透明度，
 > 60 个属性逐项开关（**双列按钮 + 滚动**），快捷键 `F8` 打开设置。
 
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.20.7` |
+| 版本 | `1.20.8` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.20.7.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.20.8.jar` |
 
 ## 绘制方式（1.15.0 起）
 
@@ -307,6 +307,8 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | 刷新间隔的单位 | `System.currentTimeMillis()` → **现实时间**；界面文案写明「秒（现实时间）」，不走游戏刻 |
 | 不同职业想看的东西不同 | ~~职业过滤~~：1.20.5 已按你的要求删除 |
 
+> **大厅里不发**（1.20.8）：地图开局才 `enable` ViewStats，提前触发只会收到「无法触发该计分项」；现在用「自己身上有 `below_name` 的 `HealthPercent` 分数，或本人 `player_100N` bossbar 已出现」作为开局判据，大厅里每 5 s 复查一次，并且这句回显会被聊天过滤器吞掉。
+>
 > **拿不到别人**：地图那 147 条 `tellraw` 全是 `@s`，没有一条发给 `@a`，所以这个通道**只能问到自己**。
 > 队友的**心数拆分**只能靠本 Mod 的服务端组件 payload（1.16.0 起）；没有 payload 时，
 > 1.20.4 起会用 `below_name = HealthPercent`（= 红心 ÷ MaxHP）补一条百分比绿条。
@@ -398,7 +400,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**5063 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**5076 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
 护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）、
@@ -410,7 +412,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.20.7.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.20.8.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 
@@ -444,7 +446,8 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 1.20.4 | 面板去提示行（`Misc_View_Stats_1/2`、未解析键行）、双缓冲不再闪；字号/透明度可调；「移动面板」拖拽；内容过滤 15 类；按职业过滤（1.20.5 删除）；`F8` 打开设置；队友 `HealthPercent` 百分比回退 |
 | 1.20.5 | 刷新单位写明「现实时间」；删除职业过滤；过滤界面改成可滚动列表并按属性细分到 60 项；配置 v6（粗类自动展开） |
 | 1.20.6 | 过滤界面换成双列带边框按钮 + 滚轮翻行；Mod 改名 **CTT HUD - Fork**，配置文件改为 `ctt-hud-fork.json`（旧文件自动复制迁移）；钓鱼/业力/塔内回血/蜂蚁点按码位精确区分 |
-| **1.20.7** | 纯客户端（只有 `HealthPercent`）时敌人也显示**百分比数字**（`40%` + 血条），不再只有条没有字 |
+| 1.20.7 | 纯客户端（只有 `HealthPercent`）时敌人也显示**百分比数字**（`40%` + 血条），不再只有条没有字 |
+| **1.20.8** | 大厅里不再发 `/trigger ViewStats`（用「自己有没有 `HealthPercent` 分数 / 本人 bossbar」判断是否已开局）；「无法触发该计分项」回显被吞并冷却 60 s；回到大厅清空上一局面板 |
 
 ## 已知限制
 

@@ -29,6 +29,7 @@ public final class SelfCheck {
         selfStatsAndPanel();
         selfStatsFineKinds();
         percentOnlyText();
+        lobbyTriggerGuard();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -167,6 +168,47 @@ public final class SelfCheck {
         StringBuilder sb = new StringBuilder();
         for (EnemyHudLayout.Line line : r.lines) sb.append(line.text);
         return sb.toString();
+    }
+
+    // ── 1c. 大厅里不该发 ViewStats / 失败提示要吞掉 ──
+
+    /**
+     * 1.20.8：大厅里不发 {@code /trigger ViewStats}，并且「无法触发该计分项」这类回显要被过滤。
+     */
+    private static void lobbyTriggerGuard() {
+        check(SelfStats.isTriggerDenied("You cannot trigger this objective yet"),
+                "英文「无法触发该计分项」应被识别");
+        check(SelfStats.isTriggerDenied("Cannot trigger this objective"), "无 yet 的英文也应识别");
+        check(SelfStats.isTriggerDenied("无法触发该计分项"), "中文应识别");
+        check(SelfStats.isTriggerDenied("无法触发此计分项"), "「此计分项」也应识别");
+        check(!SelfStats.isTriggerDenied("50\u2764"), "属性行不该被当成拒绝提示");
+        check(!SelfStats.isTriggerDenied("Game not started"), "「游戏没开始」是另一条，不该混");
+        check(!SelfStats.isTriggerDenied(""), "空串不该识别");
+
+        // ChatTriggerFilter：只有「刚发过 trigger」的时间窗内才拦
+        ChatTriggerFilter.noteTriggerSent(0L);          // 过期
+        check(!ChatTriggerFilter.shouldHide(
+                        net.minecraft.network.chat.Component.literal("Triggered [ViewStats]"), false),
+                "窗口外不该拦回显");
+        long now = System.currentTimeMillis();
+        ChatTriggerFilter.noteTriggerSent(now);
+        check(ChatTriggerFilter.shouldHide(
+                        net.minecraft.network.chat.Component.literal("Triggered [ViewStats]"), false),
+                "刚发过 trigger 时 ViewStats 的成功回显应被吞掉");
+        check(ChatTriggerFilter.shouldHide(
+                        net.minecraft.network.chat.Component.translatable("commands.trigger.failed.unprimed"),
+                        false),
+                "commands.trigger.failed.* 应被吞掉（不论语言）");
+        check(!ChatTriggerFilter.shouldHide(
+                        net.minecraft.network.chat.Component.literal("Triggered [FooBar]"), false),
+                "别的 trigger 回显不该被误吞");
+        check(!ChatTriggerFilter.shouldHide(
+                        net.minecraft.network.chat.Component.literal("200\u2764"), false),
+                "属性行不该被聊天过滤器吞掉");
+        check(!ChatTriggerFilter.shouldHide(
+                        net.minecraft.network.chat.Component.literal("Triggered [ViewStats]"), true),
+                "overlay（动作栏）不做处理");
+        ChatTriggerFilter.noteTriggerSent(0L);          // 收尾：别影响别的用例
     }
 
     // ── 2. 血条长度 ──

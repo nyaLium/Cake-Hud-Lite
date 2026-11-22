@@ -112,14 +112,63 @@ public final class SelfStats {
         int seconds = cfg.selfStatsSeconds;
         if (seconds <= 0) return;                       // 0 = 关闭自动刷新
         if (now < nextTriggerMs) return;
+        // 1.20.8：大厅/菜单里**不发命令**。地图只在开局后 setdisplay below_name HealthPercent
+        // 并 enable ViewStats；没开局时触发只会收到一行「无法触发该计分项」。
+        if (!inGame(mc)) {
+            // 回到大厅：上一局的数字不该继续挂着。
+            if (!SHOWN.isEmpty() || capturing) {
+                SHOWN.clear();
+                PENDING.clear();
+                java.util.Arrays.fill(HEARTS, 0);
+                capturing = false;
+            }
+            nextTriggerMs = now + GATE_RECHECK_MS;
+            return;
+        }
         nextTriggerMs = now + seconds * 1000L;
         begin(now);
+        ChatTriggerFilter.noteTriggerSent(now);
         try {
             mc.getConnection().sendCommand("trigger ViewStats");
         } catch (Exception ignored) {
             // 断线瞬间发包失败：下一轮再来
         }
     }
+
+    /** 没对上局时的重查间隔（大厅里不会每 tick 查计分板）。 */
+    private static final long GATE_RECHECK_MS = 5_000L;
+
+    /**
+     * 客户端能看到的「这局已经开始了」信号（纯客户端，无需服务端组件）：
+     *
+     * <ul>
+     *   <li>地图在 {@code gamestart.mcfunction} 里 {@code setdisplay below_name HealthPercent}，
+     *       开局后自己身上就有这条分数；大厅里没有（objective 甚至还不存在）；</li>
+     *   <li>或者本人那条 {@code player_100N} bossbar 已经出现（{@link BossBarTracker#hasPersonalBar}，
+     *       自动开队伍条用的也是这个判据）。</li>
+     * </ul>
+     *
+     * <p>两者取或：加入一局时两条信号可能差一两个 tick 到达。</p>
+     */
+    static boolean inGame(net.minecraft.client.Minecraft mc) {
+        if (mc == null || mc.level == null || mc.player == null) return false;
+        if (EnemyData.healthPercentOf(mc.level.getScoreboard(), mc.player) >= 0) return true;
+        return BossBarTracker.hasPersonalBar(mc);
+    }
+
+    /** 地图回「无法触发该计分项 / Cannot trigger this objective」——触发项还没 enable。 */
+    static boolean isTriggerDenied(String flat) {
+        if (flat == null) return false;
+        String s = flat.toLowerCase(Locale.ROOT);
+        return s.contains("cannot trigger this objective")
+                || s.contains("can't trigger this objective")
+                || flat.contains("无法触发该计分项")
+                || flat.contains("无法触发此计分项")
+                || flat.contains("尚未启用");
+    }
+
+    /** 被拒绝后安静一会儿，避免 30 s 一次继续往聊天栏丢提示。 */
+    private static final long DENIED_BACKOFF_MS = 60_000L;
 
     /** 开始一趟采集：只清 PENDING，屏上的旧内容继续显示（避免闪一下空白）。 */
     private static void begin(long now) {
@@ -172,6 +221,13 @@ public final class SelfStats {
             capturing = false;
             SHOWN.clear();                 // 地图明确说「没开局」：清空，别留上一局的数字
             java.util.Arrays.fill(HEARTS, 0);
+            return true;
+        }
+        if (isTriggerDenied(flat)) {
+            // 触发项还没 enable（例如刚开局、或这条命令对当前状态无效）：
+            // 吞掉提示、停止这一趟采集，并且 60 s 内不再发，避免聊天栏每 30 s 冒一句。
+            capturing = false;
+            nextTriggerMs = nowMs + DENIED_BACKOFF_MS;
             return true;
         }
 

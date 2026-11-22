@@ -31,6 +31,7 @@ final class ChatTriggerFilter {
     /** 本 Mod 会自发发送的 trigger 名称（将来新增自动触发命令时在这里追加）。 */
     private static final String[] MUTED_TRIGGERS = {
             "TogglePartyBossbar",
+            "ViewStats",
     };
 
     private static final String FAILED_KEY_PREFIX = "commands.trigger.failed";

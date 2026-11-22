@@ -9,7 +9,8 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
-| **1.20.7** | 纯客户端（只有 `HealthPercent`）时敌人也显示**百分比数字**（条 + `40%`），不再只有条没有字；队友百分比回退同理 | `versions/v1.20.7/` |
+| **1.20.8** | 修大厅里那句「无法触发该计分项」：开局前不再发 `/trigger ViewStats`（用 `HealthPercent` / 本人 bossbar 判开局），失败回显被吞并冷却 60 s，回大厅清空面板 | `versions/v1.20.8/` |
+| 1.20.7 | 纯客户端（只有 `HealthPercent`）时敌人也显示**百分比数字**（条 + `40%`），不再只有条没有字；队友百分比回退同理 | `versions/v1.20.7/` |
 | 1.20.6 | 过滤界面换成双列带边框按钮 + 滚轮翻行；Mod 改名 **CTT HUD - Fork**，配置文件改为 `ctt-hud-fork.json`（旧文件自动复制迁移）；钓鱼/业力/塔内回血/蜂蚁点按**码位**精确区分 | `versions/v1.20.6/` |
 | 1.20.5 | 刷新单位写明「现实时间」；删除职业过滤；过滤界面改成可滚动列表、按属性细分到 60 项；配置 v6（旧粗类自动展开） | `versions/v1.20.5/` |
 | 1.20.4 | 属性面板去提示行（`Misc_View_Stats_1/2` 与未解析键行不再上屏）、双缓冲不再闪；字号/透明度可调；「移动面板」拖拽 + 水平/垂直滑块；内容过滤 15 类；按职业过滤（1.20.5 已删除）；`F8` 打开设置；队友 `below_name = HealthPercent` 百分比回退；配置解析失败不再静默重置 | `versions/v1.20.4/` |
@@ -51,7 +52,23 @@
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
 
-## 1.20.7（当前）
+## 1.20.8（当前）
+
+- **修大厅里的「无法触发该计分项 / You cannot trigger this objective yet」**：
+  - 原因①：属性面板以前**在大厅也每 30 s 发** `/trigger ViewStats`，地图开局才 `enable`；
+  - 原因②：这句回显没被 `ChatTriggerFilter` 覆盖（只登记了 `TogglePartyBossbar`）。
+- 改法：
+  - `SelfStats.tick` 用 `inGame()` 判开局：自己身上有 `below_name = HealthPercent` 分数，
+    或本人 `player_100N` bossbar 已出现（`BossBarTracker.hasPersonalBar`，与自动开队伍条同一判据）；
+    大厅里每 5 s 复查一次，不发命令；
+  - 发命令前 `ChatTriggerFilter.noteTriggerSent`，并把 `ViewStats` 加进 `MUTED_TRIGGERS`（成功回显也吞）；
+  - 新增 `isTriggerDenied()`：真收到拒绝提示时吞掉、终止本趟采集、60 s 冷却；
+  - 回到大厅（`inGame()` 变假）时清空面板与心数缓存，不再挂着上一局数字。
+- 实测（真 CTT 服，`selfStatsSeconds=5` 加速）：大厅 30 s **0 条**拒绝提示；QuickStart 开局后面板正常出数、仍 **0 条**。
+- 自检：`checks=5076 failures=0`（+13：拒绝提示中英文识别、聊天过滤器对 ViewStats 回显/`commands.trigger.failed.*` 的处理）。
+- 证据：`versions/v1.20.8/run-panel.png`。
+
+## 1.20.7
 
 - **纯客户端也显示百分比数字**：`EnemyHudLayout` 的 `percentOnly` 分支以前不产出文字
   （只有血条），现在写 `40%`（`round(hp*100/maxHp)` 夹 0~100，`maxHp<=0` 按 100%）。
