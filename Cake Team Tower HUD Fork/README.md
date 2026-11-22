@@ -2,7 +2,7 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.15.0**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.15.1**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 设置界面一纵排布（通用 / 敌人 / 玩家 / 恢复默认 + 底部完成）。
 
 | 项目 | 内容 |
@@ -12,7 +12,7 @@
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.15.0.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.15.1.jar` |
 
 ## 绘制方式（1.15.0 起）
 
@@ -319,7 +319,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.15.0.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.15.1.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 

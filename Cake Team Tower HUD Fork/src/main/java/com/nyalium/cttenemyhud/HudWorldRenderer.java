@@ -191,29 +191,50 @@ public final class HudWorldRenderer {
         // 与原版 submitNameTag 完全一致的缩放：1 单位 = 1 个名牌像素，y 向下为正。
         pose.scale(0.025f, -0.025f, 0.025f);
 
-        RenderType background = RenderTypes.text(BossBarTexture.backgroundTexture(tint));
-        collector.submitCustomGeometry(pose, background,
-                (p, vc) -> quad(vc, p, x0, y0, x0 + width, y1, color, light));
+        // 两段**不重叠**：填充段用 progress 纹理，空槽段用 background 纹理。
+        // 早先是「整条 background + 压在它上面的 progress」，两张共面四边形在深度
+        // 测试下会互相抢像素，移动视角时表现为血条边缘的竖条纹闪烁。
+        //
+        // UV 再往里收半个纹素：182×5 的纹理被拉伸到几十个屏幕像素时，采样正好落在
+        // 纹理边缘会采到相邻纹素（端盖那两列深色），同样表现为细竖条。
+        final float u0 = 0.5f / BossBarTexture.NATIVE_WIDTH;
+        final float u1 = 1.0f - 0.5f / BossBarTexture.NATIVE_WIDTH;
+        final float v0 = 0.5f / BossBarTexture.NATIVE_HEIGHT;
+        final float v1 = 1.0f - 0.5f / BossBarTexture.NATIVE_HEIGHT;
 
-        if (fill > 0.0f) {
-            RenderType progress = RenderTypes.text(BossBarTexture.progressTexture(tint));
-            collector.submitCustomGeometry(pose, progress,
-                    (p, vc) -> quad(vc, p, x0, y0, x0 + fill, y1, color, light));
+        RenderType background = RenderTypes.text(BossBarTexture.backgroundTexture(tint));
+        RenderType progress = RenderTypes.text(BossBarTexture.progressTexture(tint));
+
+        if (fill <= 0.0f) {
+            collector.submitCustomGeometry(pose, background, (p, vc) ->
+                    quad(vc, p, x0, y0, x0 + width, y1, u0, u1, v0, v1, color, light));
+        } else if (fill >= width - 0.5f) {
+            collector.submitCustomGeometry(pose, progress, (p, vc) ->
+                    quad(vc, p, x0, y0, x0 + width, y1, u0, u1, v0, v1, color, light));
+        } else {
+            float split = x0 + fill;
+            collector.submitCustomGeometry(pose, progress, (p, vc) ->
+                    quad(vc, p, x0, y0, split, y1, u0, u1, v0, v1, color, light));
+            float uSplit = u0 + (u1 - u0) * (fill / width);
+            collector.submitCustomGeometry(pose, background, (p, vc) ->
+                    quad(vc, p, split, y0, x0 + width, y1, uSplit, u1, v0, v1, color, light));
         }
         pose.popPose();
     }
 
-    /** 一个带 UV 的矩形（UV 铺满 0~1，纹理本身就是 182×5 的原版 boss 条）。 */
+    /** 一个带 UV 的矩形；UV 用纹素中心收进去，避免拉伸时采到相邻纹素。 */
     private static void quad(VertexConsumer vc, PoseStack.Pose pose,
-                             float x0, float y0, float x1, float y1, int argb, int light) {
+                             float x0, float y0, float x1, float y1,
+                             float u0, float u1, float v0, float v1,
+                             int argb, int light) {
         int a = (argb >>> 24) & 0xFF;
         int r = (argb >>> 16) & 0xFF;
         int g = (argb >>> 8) & 0xFF;
         int b = argb & 0xFF;
-        vc.addVertex(pose, x0, y0, 0.0f).setColor(r, g, b, a).setUv(0.0f, 0.0f).setLight(light);
-        vc.addVertex(pose, x0, y1, 0.0f).setColor(r, g, b, a).setUv(0.0f, 1.0f).setLight(light);
-        vc.addVertex(pose, x1, y1, 0.0f).setColor(r, g, b, a).setUv(1.0f, 1.0f).setLight(light);
-        vc.addVertex(pose, x1, y0, 0.0f).setColor(r, g, b, a).setUv(1.0f, 0.0f).setLight(light);
+        vc.addVertex(pose, x0, y0, 0.0f).setColor(r, g, b, a).setUv(u0, v0).setLight(light);
+        vc.addVertex(pose, x0, y1, 0.0f).setColor(r, g, b, a).setUv(u0, v1).setLight(light);
+        vc.addVertex(pose, x1, y1, 0.0f).setColor(r, g, b, a).setUv(u1, v1).setLight(light);
+        vc.addVertex(pose, x1, y0, 0.0f).setColor(r, g, b, a).setUv(u1, v0).setLight(light);
     }
 
     // ── 布局选项 ──
