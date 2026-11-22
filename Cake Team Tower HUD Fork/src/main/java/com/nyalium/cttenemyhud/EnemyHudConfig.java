@@ -50,7 +50,7 @@ public final class EnemyHudConfig {
         /** 玩家血条长度（原版名牌像素），默认 75。 */
         public double teamBarWidth = 75.0;
         /** 玩家血条整体缩放。 */
-        public double teamScale = 1.0;
+        public double teamScale = 0.9;
         /** 玩家血条垂直微调。 */
         public int teamVerticalOffset = 0;
         /** 玩家血条显示距离（格）。 */
@@ -59,8 +59,8 @@ public final class EnemyHudConfig {
         public double maxDistance = 48.0;
         /** 血条长度（原版名牌像素），50 ~ 150，默认 75。 */
         public double barWidth = 75.0;
-        /** 整组 UI 的额外缩放，0.75 ~ 1.50，1.0 = 与原版名牌同字号。 */
-        public double scale = 1.0;
+        /** 整组 UI 的额外缩放，0.75 ~ 1.50，0.9 = 默认（1.19.0 起）。 */
+        public double scale = 0.9;
         /** 整组 UI 的垂直微调（原版名牌像素），-30 ~ 0，负数=更高。 */
         public int verticalOffset = 0;
         /** 被方块挡住视线时不绘制（防止隔墙看到血条）。 */
@@ -75,9 +75,13 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 2;
+    public static final int CURRENT_VERSION = 3;
     /** 旧版默认血条长度（1.18.0 起默认改成 75）。 */
     private static final double LEGACY_BAR_WIDTH = 100.0;
+    /** 旧版默认缩放（1.19.0 起默认改成 0.9）。 */
+    private static final double LEGACY_SCALE = 1.0;
+    /** 1.19.0 起的默认缩放。 */
+    private static final double DEFAULT_SCALE = 0.9;
 
     private static Cfg cfg = new Cfg();
     private static Path file;
@@ -168,17 +172,25 @@ public final class EnemyHudConfig {
     /**
      * 老配置文件升级到 {@link #CURRENT_VERSION}。
      *
-     * <p>v1（没有 {@code configVersion} 键）的血条长度还是旧默认值 100，而 1.18.0 起默认 75。
-     * 只有在用户还是旧默认值（100）时才跟着改；自己调过（!= 100）的保留原值 ——
-     * 既不覆盖玩家的选择，也不会让老配置看起来「默认值没生效」。</p>
+     * <ul>
+     *   <li>v1（没有 {@code configVersion} 键）：血条长度还是旧默认 100 → 改成 75；</li>
+     *   <li>v2（1.18.0）：缩放还是旧默认 1.0 → 改成 0.9。</li>
+     * </ul>
+     * <p>只在**仍等于旧默认值**时才跟着改；自己调过的（比如 120、1.25）保留原值 ——
+     * 既不覆盖玩家的选择，也不会让老配置看起来「新默认值没生效」。</p>
      */
     static void migrate(String json, Cfg cfg) {
         if (cfg == null) return;
-        boolean legacy = json == null || !json.contains("\"configVersion\"");
-        if (!legacy && cfg.configVersion >= CURRENT_VERSION) return;
-        if (legacy) {
+        boolean hasVersion = json != null && json.contains("\"configVersion\"");
+        int version = hasVersion ? cfg.configVersion : 1;
+        if (version >= CURRENT_VERSION) return;
+        if (version < 2) {
             if (cfg.barWidth == LEGACY_BAR_WIDTH) cfg.barWidth = EnemyHudLayout.BAR_WIDTH_DEFAULT;
             if (cfg.teamBarWidth == LEGACY_BAR_WIDTH) cfg.teamBarWidth = EnemyHudLayout.BAR_WIDTH_DEFAULT;
+        }
+        if (version < 3) {
+            if (cfg.scale == LEGACY_SCALE) cfg.scale = DEFAULT_SCALE;
+            if (cfg.teamScale == LEGACY_SCALE) cfg.teamScale = DEFAULT_SCALE;
         }
         cfg.configVersion = CURRENT_VERSION;
     }

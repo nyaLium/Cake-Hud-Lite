@@ -127,11 +127,16 @@ public final class HudWorldRenderer {
     }
 
     /**
-     * 提交所有文字行。
+     * 提交所有文字行（两遍，与原版名牌同款）。
      *
-     * <p>与 {@code SubmitNodeCollection.submitNameTag} 的差别只有三点：颜色带 alpha
-     * （不透明度生效）、缩放可调（缩放设置生效）、阴影开关是<b>字形投影</b>而不是原版那层
-     * 「透视副本」。背景框仍由原版 {@code PreparedTextBuilder} 画成 {@code y-1 ~ y+9}。</p>
+     * <ol>
+     *   <li><b>NORMAL</b>：不透明文字、不带背景、深度测试 —— 正常可见、被墙/模型正常挡住；</li>
+     *   <li><b>SEE_THROUGH</b>：约 50% 的文字 + 25% 黑的背景框，**不做深度测试** ——
+     *       这就是原版名牌那层「透视副本」：隔墙也能隐约看到，挡住时也不会整块消失。</li>
+     * </ol>
+     *
+     * <p>与原版 {@code submitNameTag} 的差别只有：颜色带 {@code opacity} 的 alpha（不透明度生效）、
+     * 缩放可调。字形阴影（{@code textShadow}）两遍都跟着走。</p>
      */
     private static void submitRows(SubmitNodeCollector collector, PoseStack pose,
                                    CameraRenderState camera, Vec3 attachment,
@@ -139,6 +144,8 @@ public final class HudWorldRenderer {
                                    EnemyHudConfig.Cfg cfg, int light, int alpha, int bgAlpha) {
         float s = (float) scale;
         int color = (alpha << 24) | 0xFFFFFF;
+        // 原版透视副本的文字 alpha ≈ 128（0.5），背景 ≈ 64（0.25）。
+        int seeColor = (Math.max(0, alpha * 128 / 255) << 24) | 0xFFFFFF;
         int background = bgAlpha << 24;
         pose.pushPose();
         pose.translate(attachment.x, attachment.y + 0.5, attachment.z);
@@ -146,9 +153,12 @@ public final class HudWorldRenderer {
         // 与原版 submitNameTag 同样的映射：1 单位 = 1 个名牌像素，y 向下为正；再乘缩放。
         pose.scale(0.025f * s, -0.025f * s, 0.025f * s);
         for (EnemyHudLayout.Row row : layout.rows) {
-            collector.submitText(pose, -row.width / 2.0f, row.top,
-                    toComponent(row).getVisualOrderText(),
-                    cfg.textShadow, Font.DisplayMode.NORMAL, light, color, background, 0);
+            float x = -row.width / 2.0f;
+            var text = toComponent(row).getVisualOrderText();
+            collector.submitText(pose, x, row.top, text, cfg.textShadow,
+                    Font.DisplayMode.NORMAL, light, color, 0, 0);
+            collector.submitText(pose, x, row.top, text, cfg.textShadow,
+                    Font.DisplayMode.SEE_THROUGH, light, seeColor, background, 0);
         }
         pose.popPose();
     }
@@ -337,6 +347,8 @@ public final class HudWorldRenderer {
         o.showArmor = false;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.teamBarWidth;
+        // 玩家的心数允许自动换行（阈值写死 = 血条长度）。
+        o.wrapHearts = true;
         o.verticalOffset = cfg.teamVerticalOffset;
         o.textShadow = cfg.textShadow;
         o.scale = cfg.teamScale;

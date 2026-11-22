@@ -178,7 +178,8 @@ public final class SelfCheck {
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.barWidth == 75.0, "默认血条长度应为 75");
         check(defaults.teamBarWidth == 75.0, "队友血条默认长度也应为 75");
-        check(defaults.scale == 1.0, "默认缩放应为 1.0");
+        check(defaults.scale == 0.9, "默认缩放应为 0.9: " + defaults.scale);
+        check(defaults.teamScale == 0.9, "队友默认缩放也应为 0.9: " + defaults.teamScale);
         check(defaults.verticalOffset == 0, "默认垂直偏移应为 0");
         check(defaults.opacity == 0.75, "默认透明度应为 0.75");
         check(defaults.showBar, "默认应画血条");
@@ -211,9 +212,31 @@ public final class SelfCheck {
                 "自己调过的长度不该被迁移覆盖: " + custom.barWidth + "/" + custom.teamBarWidth);
 
         EnemyHudConfig.Cfg current = new EnemyHudConfig.Cfg();
+        current.configVersion = 2;
         current.barWidth = 100.0;
         EnemyHudConfig.migrate("{\"configVersion\":2,\"barWidth\":100.0}", current);
         check(current.barWidth == 100.0, "新配置里显式写 100 不该被改: " + current.barWidth);
+
+        // v2 的旧默认缩放 1.0 → 0.9（1.19.0 起），自己调过的保留。
+        EnemyHudConfig.Cfg v2 = new EnemyHudConfig.Cfg();
+        v2.configVersion = 2;
+        v2.scale = 1.0;
+        v2.teamScale = 1.0;
+        EnemyHudConfig.migrate("{\"configVersion\":2,\"scale\":1.0}", v2);
+        check(v2.scale == 0.9 && v2.teamScale == 0.9,
+                "v2 的旧默认缩放应迁移到 0.9: " + v2.scale + "/" + v2.teamScale);
+
+        EnemyHudConfig.Cfg customScale = new EnemyHudConfig.Cfg();
+        customScale.configVersion = 2;
+        customScale.scale = 1.25;
+        EnemyHudConfig.migrate("{\"configVersion\":2,\"scale\":1.25}", customScale);
+        check(customScale.scale == 1.25, "自己调过的缩放不该被迁移覆盖: " + customScale.scale);
+
+        EnemyHudConfig.Cfg v3 = new EnemyHudConfig.Cfg();
+        v3.configVersion = 3;
+        v3.scale = 1.0;
+        EnemyHudConfig.migrate("{\"configVersion\":3,\"scale\":1.0}", v3);
+        check(v3.scale == 1.0, "已经是 v3 的配置不该再迁移: " + v3.scale);
 
         for (double op = 0.4; op <= 1.2; op += 0.05) {
             EnemyHudConfig.Cfg t = new EnemyHudConfig.Cfg();
@@ -290,14 +313,24 @@ public final class SelfCheck {
         check(join(noCap).equals("❤70"), "上限未知时不该写 /0: " + join(noCap));
 
         // 碎心 / 粉心是同一 objective 的两面，画出来互斥、各用各的颜色。
+        // 1.19.0 起碎心/粉心被挪到**最上面那一行**，红心留在心数行。
         EnemyHudLayout.Result crackedLine = EnemyHudLayout.compute(50, 50, false, 0,
                 new int[7], HeartCounts.of(50, 0, 0, 0, 5), o, SelfCheck::width);
-        check(join(crackedLine).equals("❤50/50 💔5"), "碎心行=" + join(crackedLine));
+        check(crackedLine.rowCount() == 2, "有碎心时应分成两行: " + crackedLine.rowCount());
+        check(rowText(crackedLine, 0).equals("💔5"), "碎心应在最上面一行: " + rowText(crackedLine, 0));
+        check(rowText(crackedLine, 1).equals("❤50/50"), "红心应在下面一行: " + rowText(crackedLine, 1));
         EnemyHudLayout.Result pinkLine = EnemyHudLayout.compute(50, 50, false, 0,
                 new int[7], HeartCounts.of(50, 0, 0, 0, -5), o, SelfCheck::width);
-        check(join(pinkLine).equals("❤50/50 💗5"), "粉心行=" + join(pinkLine));
+        check(rowText(pinkLine, 0).equals("💗5"), "粉心应在最上面一行: " + rowText(pinkLine, 0));
+        check(rowText(pinkLine, 1).equals("❤50/50"), "红心应在下面一行: " + rowText(pinkLine, 1));
         check(HeartCounts.COLORS[HeartCounts.CRACKED] == 0xAA0000, "碎心配色应为 dark_red");
         check(HeartCounts.COLORS[HeartCounts.PINK] == 0xFF55FF, "粉心配色应为 light_purple");
+
+        // 蓝心也归到最上面那一行。
+        EnemyHudLayout.Result blueLine = EnemyHudLayout.compute(50, 50, false, 0,
+                new int[7], HeartCounts.of(30, 0, 0, 20, 0), o, SelfCheck::width);
+        check(rowText(blueLine, 0).equals("💙20"), "蓝心应在最上面一行: " + rowText(blueLine, 0));
+        check(rowText(blueLine, 1).equals("❤30/50"), "红心应在下面一行: " + rowText(blueLine, 1));
 
         // 拆不出心数（percentOnly / 未知）→ 退回「当前/最大」。
         EnemyHudLayout.Result fallback = run("回退", new Data("只有百分比", 73, 100, true, 0,
@@ -340,11 +373,14 @@ public final class SelfCheck {
         check(armored.rows.get(0).top + EnemyHudLayout.TEXT_BOX_HEIGHT == armored.rows.get(1).top,
                 "两行背景框应正好相邻，不留缝也不重叠");
 
-        // 心数再长也只有一行（不折行 → 行数稳定）。五色心 + 4 位数，以前会折两行。
+        // 心数行不折行（敌人的 wrapHearts=false）：红/魂/黑永远一行，碎心/蓝心在最上面一行。
         EnemyHudLayout.Result wideHearts = EnemyHudLayout.compute(9999, 9999, false, 0, new int[7],
                 HeartCounts.of(9999, 9999, 9999, 9999, 9999), o, SelfCheck::width);
-        check(wideHearts.rowCount() == 1, "心数再长也不折行: " + wideHearts.rowCount());
-        check(!join(wideHearts).contains("|"), "心数行不该有分隔符: " + join(wideHearts));
+        check(wideHearts.rowCount() == 2, "敌人：特殊心一行 + 心数一行: " + wideHearts.rowCount());
+        check(rowText(wideHearts, 0).contains("💔9999") && rowText(wideHearts, 0).contains("💙9999"),
+                "碎心/蓝心应在最上面一行: " + rowText(wideHearts, 0));
+        check(!rowText(wideHearts, 1).contains("💔") && !rowText(wideHearts, 1).contains("💙"),
+                "心数行不该再有碎心/蓝心: " + rowText(wideHearts, 1));
 
         // 队友（玩家）也能有心数：有 payload 时和敌人一样画心，没 payload 时退回「当前/最大」。
         EnemyHudLayout.Options teamLike = new EnemyHudLayout.Options();
@@ -359,9 +395,42 @@ public final class SelfCheck {
 
         EnemyHudLayout.Result teamHearts = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
                 HeartCounts.of(60, 40, 30, 20, 2), teamLike, SelfCheck::width);
-        check(teamHearts.rowCount() == 1, "队友五色心也是一行: " + teamHearts.rowCount());
-        check(rowText(teamHearts, 0).equals("❤60/150 💛40 🖤30 💙20 💔2"),
-                "队友心数行=" + rowText(teamHearts, 0));
+        check(teamHearts.rowCount() == 2, "队友：特殊心一行 + 心数一行: " + teamHearts.rowCount());
+        check(rowText(teamHearts, 0).equals("💔2 💙20"), "队友最上面一行=" + rowText(teamHearts, 0));
+        check(rowText(teamHearts, 1).equals("❤60/150 💛40 🖤30"),
+                "队友心数行=" + rowText(teamHearts, 1));
+
+        // 玩家心数允许自动换行：阈值写死为血条长度（这里用 10 px/字符的假测量器）。
+        EnemyHudLayout.WidthMeasurer wideMeasure = s -> s.length() * 10;
+        EnemyHudLayout.Options teamWrap = new EnemyHudLayout.Options();
+        teamWrap.showHearts = true;
+        teamWrap.showArmor = false;
+        teamWrap.showBar = true;
+        teamWrap.barWidth = 100;
+        teamWrap.wrapHearts = true;
+        EnemyHudLayout.Result teamWrapped = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
+                HeartCounts.of(60, 40, 30, 0, 0), teamWrap, wideMeasure);
+        check(teamWrapped.rowCount() == 2, "玩家心数应换取行（条宽 100）: " + teamWrapped.rowCount());
+        check(rowText(teamWrapped, 0).equals("❤60/150"), "换行第一行=" + rowText(teamWrapped, 0));
+        check(rowText(teamWrapped, 1).equals("💛40 🖤30"), "换行第二行=" + rowText(teamWrapped, 1));
+
+        // 条更短（50）→ 每段各占一行。
+        teamWrap.barWidth = 50;
+        EnemyHudLayout.Result teamNarrow = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
+                HeartCounts.of(60, 40, 30, 0, 0), teamWrap, wideMeasure);
+        check(teamNarrow.rowCount() == 3, "条宽 50 时三段各一行: " + teamNarrow.rowCount());
+        check(rowText(teamNarrow, 2).equals("🖤30"), "最后一行应是黑心: " + rowText(teamNarrow, 2));
+
+        // 同一份数据给敌人（wrapHearts=false）→ 心数不换行。
+        EnemyHudLayout.Options enemyNoWrap = new EnemyHudLayout.Options();
+        enemyNoWrap.showHearts = true;
+        enemyNoWrap.showArmor = false;
+        enemyNoWrap.showBar = true;
+        enemyNoWrap.barWidth = 50;
+        EnemyHudLayout.Result enemyWide = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
+                HeartCounts.of(60, 40, 30, 0, 0), enemyNoWrap, wideMeasure);
+        check(enemyWide.rowCount() == 1, "敌人心数不换行: " + enemyWide.rowCount());
+        check(rowText(enemyWide, 0).equals("❤60/150 💛40 🖤30"), "敌人心数行=" + rowText(enemyWide, 0));
 
         // 1.16.3 起：队友**只画心与血条**，护甲段一律不画 —— 即使 payload 带了 defence / 元素护甲。
         EnemyHudLayout.Options teamNoArmor = new EnemyHudLayout.Options();
@@ -377,9 +446,9 @@ public final class SelfCheck {
         check(!teamFlat.contains("\uD83D\uDEE1"), "队友不该出现 🛡 护甲段: " + teamFlat);
         check(!teamFlat.contains(EnemyData.ARMOR_ICONS[1]), "队友不该出现 🔥 元素护甲段: " + teamFlat);
         check(!teamFlat.contains("|"), "队友不该出现护甲分隔符: " + teamFlat);
-        // 折成两行时 join() 会把两行首尾相接，所以去掉空格再比。
-        check(teamFlat.replace(" ", "").equals("\u276460/150\uD83D\uDC9B40\uD83D\uDDA430\uD83D\uDC9920\uD83D\uDC942"),
-                "队友这一行只应有心: " + teamFlat);
+        // 折成两行时 join() 会把两行首尾相接，所以去掉空格再比（特殊心在最上面一行）。
+        check(teamFlat.replace(" ", "").equals("💔2💙20❤60/150💛40🖤30"),
+                "队友这几行只应有心: " + teamFlat);
         check(teamArmored.barWidth == 100, "队友的血条仍要画: " + teamArmored.barWidth);
 
         // 同样的数据给敌人，护甲段照旧要在（确认只改了队友那一套选项）。

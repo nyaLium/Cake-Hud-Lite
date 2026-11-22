@@ -93,6 +93,13 @@ public final class EnemyHudLayout {
          * 只会取 {@code [0, 页数)}，越界时夹回范围内（见 {@link #armourPageCount(int[])}）。
          */
         public int armourPage = 0;
+        /**
+         * 心数行是否允许自动换行（玩家 true、敌人 false）。
+         *
+         * <p>阈值<b>写死</b>为血条长度（血条关掉时用 {@link #BAR_WIDTH_DEFAULT}），没有配置项 ——
+         * 这样行数只由数据决定，不会被设置改来改去。</p>
+         */
+        public boolean wrapHearts = false;
     }
 
     /** 一段带颜色的文字。 */
@@ -188,25 +195,14 @@ public final class EnemyHudLayout {
         Options opt = options != null ? options : new Options();
         WidthMeasurer w = measurer != null ? measurer : String::length;
 
-        // ① 心数行：紧贴血条上面，**永远只有一行**（不折行，行数变化会让玩家看漏）。
-        List<Line> heartRow = new ArrayList<>(8);
-        if (opt.showNumbers) {
-            if (opt.showHearts && hearts != null && hearts.any()) {
-                if (hearts.has(HeartCounts.RED)) {
-                    heartRow.add(redLine(hearts.get(HeartCounts.RED), maxHp));
-                }
-                appendHeartSegments(heartRow, hearts);
-            } else if (!percentOnly) {
-                // 拆不出各类心（例如队友只有 AllHearts/MaxHP）：退回原来的「当前/最大」。
-                heartRow.add(new Line(num(Math.max(0, hp)) + "/" + num(Math.max(0, maxHp)), 0xFFFFFF));
-            }
-        }
-
-        // ② 护甲行：放在最上面，同样只有一行（🛡 常驻 + 元素护甲按页取 2 项）。
-        List<Line> armourRow = new ArrayList<>(6);
+        // ① 最上面那一行：护甲（🛡 + 元素护甲按页取 2 项），
+        //    再接「碎心 / 粉心」和「蓝心」—— 1.19.0 起把这两种心从心数行挪到最上面，
+        //    让紧贴血条的那一行只剩红 / 魂 / 黑。
+        //    这里只收集「段」，空格由 joinWithGaps / wrapSegments 统一加，避免重复空格。
+        List<Line> topSegs = new ArrayList<>(8);
         if (opt.showArmor && hasArmor(defence, armor)) {
             if (defence != 0) {
-                armourRow.add(new Line("\uD83D\uDEE1" + num(defence), EnemyData.DEFENCE_COLOR));
+                topSegs.add(new Line("\uD83D\uDEE1" + num(defence), EnemyData.DEFENCE_COLOR));
             }
             int page = clampArmourPage(opt.armourPage, armourPageCount(armor));
             int seen = 0;
@@ -218,11 +214,23 @@ public final class EnemyHudLayout {
                     int itemPage = seen / ARMOUR_PAGE_SIZE;
                     seen++;
                     if (itemPage != page) continue;
-                    if (!armourRow.isEmpty()) {
-                        armourRow.add(new Line(HEART_GAP, 0xFFFFFF));
-                    }
-                    armourRow.add(new Line(EnemyData.ARMOR_ICONS[i] + num(v), EnemyData.ARMOR_COLORS[i]));
+                    topSegs.add(new Line(EnemyData.ARMOR_ICONS[i] + num(v), EnemyData.ARMOR_COLORS[i]));
                 }
+            }
+        }
+
+        // ② 心数段：红 / 魂 / 黑留在下面一行（或几行）；碎心/粉心与蓝心进最上面那一行。
+        List<Line> heartSegs = new ArrayList<>(6);
+        if (opt.showNumbers) {
+            if (opt.showHearts && hearts != null && hearts.any()) {
+                if (hearts.has(HeartCounts.RED)) {
+                    heartSegs.add(redLine(hearts.get(HeartCounts.RED), maxHp));
+                }
+                addKinds(heartSegs, hearts, HeartCounts.SOUL, HeartCounts.BLACK);
+                addKinds(topSegs, hearts, HeartCounts.CRACKED, HeartCounts.PINK, HeartCounts.BLUE);
+            } else if (!percentOnly) {
+                // 拆不出各类心（例如队友只有 AllHearts/MaxHP）：退回原来的「当前/最大」。
+                heartSegs.add(new Line(num(Math.max(0, hp)) + "/" + num(Math.max(0, maxHp)), 0xFFFFFF));
             }
         }
 
@@ -231,10 +239,21 @@ public final class EnemyHudLayout {
             barWidth = resolveBarWidth(opt.barWidth);
         }
 
-        // 从上到下：护甲 → 心数。最下面那行贴 TEXT_TOP。
-        List<List<Line>> groups = new ArrayList<>(2);
-        if (!armourRow.isEmpty()) groups.add(armourRow);
-        if (!heartRow.isEmpty()) groups.add(heartRow);
+        // ③ 心数换行：只有玩家（wrapHearts）允许，阈值**写死**为血条长度（不能调）。
+        int wrapLimit = barWidth > 0 ? barWidth : BAR_WIDTH_DEFAULT;
+        List<List<Line>> heartRows = new ArrayList<>(2);
+        if (!heartSegs.isEmpty()) {
+            if (opt.wrapHearts) {
+                heartRows.addAll(wrapSegments(heartSegs, w, wrapLimit));
+            } else {
+                heartRows.add(joinWithGaps(heartSegs));
+            }
+        }
+
+        // 从上到下：护甲/特殊心 → 心数行（可能多行）。最下面那行贴 TEXT_TOP。
+        List<List<Line>> groups = new ArrayList<>(3);
+        if (!topSegs.isEmpty()) groups.add(joinWithGaps(topSegs));
+        groups.addAll(heartRows);
 
         int bottomTop = TEXT_TOP + opt.verticalOffset;
         int count = groups.size();
@@ -274,19 +293,54 @@ public final class EnemyHudLayout {
     }
 
     /**
-     * 除红心以外的各类心：「魂心 X 黑心 X 蓝心 X 碎心 X 粉心 X」，<b>只写存在的类型</b>。
-     *
-     * <p>顺序固定为魂 / 黑 / 蓝 / 碎 / 粉，不随数值大小变化，眼睛每次落在同一位置。
-     * 碎心与粉心互斥（数据包 {@code CrackedHearts} 的符号决定是哪一个），所以最多只出现一个。</p>
+     * 把指定几类心各写成一段，追加到 {@code lines}，<b>只写存在的类型</b>。
+     * 段之间不加空格 —— 空格统一由 {@link #joinWithGaps} / {@link #wrapSegments} 处理。
+     * 碎心与粉心互斥（{@code CrackedHearts} 的符号决定是哪一个）。
      */
-    private static void appendHeartSegments(List<Line> lines, HeartCounts hearts) {
-        for (int kind = HeartCounts.SOUL; kind < HeartCounts.COUNT; kind++) {
+    private static void addKinds(List<Line> lines, HeartCounts hearts, int... kinds) {
+        for (int kind : kinds) {
             if (!hearts.has(kind)) continue;
-            if (!lines.isEmpty()) {
-                lines.add(new Line(HEART_GAP, 0xFFFFFF));
-            }
             lines.add(new Line(HeartCounts.ICONS[kind] + num(hearts.get(kind)), HeartCounts.COLORS[kind]));
         }
+    }
+
+    /** 把若干段用空格拼成一行（不换行）。 */
+    private static List<Line> joinWithGaps(List<Line> segs) {
+        List<Line> row = new ArrayList<>(segs.size() * 2);
+        for (Line seg : segs) {
+            if (!row.isEmpty()) row.add(new Line(HEART_GAP, 0xFFFFFF));
+            row.add(seg);
+        }
+        return row;
+    }
+
+    /**
+     * 按像素宽度贪心换行：每行尽量塞满 {@code limit} 像素，但每行至少一段。
+     *
+     * <p>只在「玩家心数」上开（{@code Options.wrapHearts}），阈值写死为血条长度
+     * —— 没有配置项，避免又出现「行数随设置漂移」。</p>
+     */
+    private static List<List<Line>> wrapSegments(List<Line> segs, WidthMeasurer w, int limit) {
+        List<List<Line>> rows = new ArrayList<>(2);
+        List<Line> cur = new ArrayList<>(4);
+        int gap = Math.max(0, w.width(HEART_GAP));
+        int curWidth = 0;
+        for (Line seg : segs) {
+            int segWidth = Math.max(0, w.width(seg.text));
+            if (!cur.isEmpty() && curWidth + gap + segWidth > limit) {
+                rows.add(cur);
+                cur = new ArrayList<>(4);
+                curWidth = 0;
+            }
+            if (!cur.isEmpty()) {
+                cur.add(new Line(HEART_GAP, 0xFFFFFF));
+                curWidth += gap;
+            }
+            cur.add(seg);
+            curWidth += segWidth;
+        }
+        if (!cur.isEmpty()) rows.add(cur);
+        return rows;
     }
 
     // ── 大数值缩写 ──
