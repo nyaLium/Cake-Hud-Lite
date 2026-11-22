@@ -27,7 +27,7 @@ public final class SelfCheck {
         curseKeys();
         teamBarTitles();
         selfStatsAndPanel();
-        selfStatsV4();
+        selfStatsFineKinds();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -1093,7 +1093,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(EnemyHudConfig.CURRENT_VERSION == 5, "配置版本应为 5");
+        check(EnemyHudConfig.CURRENT_VERSION == 6, "配置版本应为 6");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 30, "自身属性面板默认 30 s 刷新");
@@ -1102,156 +1102,163 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 5, "v3 → v5 应升版本号");
+        check(v3.configVersion == 6, "v3 → v6 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
-    /** 1.20.4：内容分类 / 提示行过滤 / 双缓冲 / 过滤 / 缩放透明度 / 职业识别。 */
-    private static void selfStatsV4() {
-        net.minecraft.network.chat.MutableComponent hint =
-                net.minecraft.network.chat.Component.translatable("Misc_View_Stats_1");
+    /** 1.20.5：按单个属性分类 / 提示行过滤 / 可滚动过滤列表 / 缩放透明度。 */
+    private static void selfStatsFineKinds() {
+        var hint = net.minecraft.network.chat.Component.translatable("Misc_View_Stats_1");
         check(SelfStats.classify(SelfStats.analyze(hint)) == SelfStatsKind.HINT,
                 "标题行（Misc_View_Stats_1）应归为 HINT");
         check(SelfStats.analyze(hint).unresolvedKey,
                 "没有地图语言文件时，标题行应被标成「未解析翻译键」");
 
-        check(kindOfKey(4) == SelfStatsKind.HEALTH, "键 4 应归为生命");
-        check(kindOfKey(5) == SelfStatsKind.HEALTH, "键 5 应归为生命");
-        check(kindOfKey(10) == SelfStatsKind.ATTACK, "键 10 应归为攻击");
-        check(kindOfKey(16) == SelfStatsKind.DEFENCE, "键 16 应归为防御");
-        check(kindOfKey(25) == SelfStatsKind.ELEMENT, "键 25 应归为元素护甲");
-        check(kindOfKey(33) == SelfStatsKind.SPEED, "键 33 应归为速度");
-        check(kindOfKey(40) == SelfStatsKind.MANA, "键 40 应归为法力");
+        // 带翻译键的倍率行：键 → 具体属性
+        check(kindOfKey(4) == SelfStatsKind.HP_AMP, "键 4 应归为最大生命倍率");
+        check(kindOfKey(5) == SelfStatsKind.HP_RAW, "键 5 应归为最大生命基础值");
+        check(kindOfKey(8) == SelfStatsKind.CLASS_STAT_AMP, "键 8 应归为职业属性倍率");
+        check(kindOfKey(10) == SelfStatsKind.STRENGTH_AMP, "键 10 应归为力量倍率");
+        check(kindOfKey(12) == SelfStatsKind.ATTACK_SPEED_AMP, "键 12 应归为攻速倍率");
+        check(kindOfKey(16) == SelfStatsKind.DEFENCE_AMP, "键 16 应归为防御倍率");
+        check(kindOfKey(18) == SelfStatsKind.TRUE_ARMOR_AMP, "键 18 应归为真伤护甲倍率");
+        check(kindOfKey(20) == SelfStatsKind.HEAL_AMP, "键 20 应归为治疗倍率");
+        check(kindOfKey(25) == SelfStatsKind.FIRE_ARMOR_AMP, "键 25 应归为火焰护甲倍率");
+        check(kindOfKey(33) == SelfStatsKind.SPEED_AMP, "键 33 应归为速度倍率");
+        check(kindOfKey(40) == SelfStatsKind.MANA_AMP, "键 40 应归为法力倍率");
         check(kindOfKey(56) == SelfStatsKind.STATUS, "键 56 应归为状态效果");
-        check(kindOfKey(78) == SelfStatsKind.TIME, "键 78 应归为计时");
+        check(kindOfKey(78) == SelfStatsKind.TIMER, "键 78 应归为计时");
 
+        // 只有图标的数值行：图标 + 颜色 → 具体属性
         check(glyphKind("120\u2764", SelfStats.RED) == SelfStatsKind.HEART_RED, "红心行应归为红心");
         check(glyphKind("40\u2764", SelfStats.YELLOW) == SelfStatsKind.HEART_SOUL, "黄心行应归为魂心");
         check(glyphKind("0\u2764", SelfStats.BLACK) == SelfStatsKind.HEART_BLACK, "黑心行应归为黑心");
         check(glyphKind("5\u2764", SelfStats.BLUE) == SelfStatsKind.HEART_BLUE, "蓝心行应归为蓝心");
-        check(glyphKind("10\u2764%", SelfStats.RED) == SelfStatsKind.HEALTH,
+        check(glyphKind("5\u2764", SelfStats.GRAY) == SelfStatsKind.HP_NEG, "灰心应归为负生命");
+        check(glyphKind("5\u2764", SelfStats.LIGHT_PURPLE) == SelfStatsKind.HEAL_RAW,
+                "亮紫心应归为治疗（地图用同一个 ❤ 图标）");
+        check(glyphKind("5\u2764", SelfStats.DARK_RED) == SelfStatsKind.BITCHES, "暗红心应归为特殊红心");
+        check(glyphKind("10\u2764%", SelfStats.RED) == SelfStatsKind.HEAL_PERCENT,
                 "「10❤%」是治疗百分比，不该当成红心");
-        check(glyphKind("0\u2764", SelfStats.GRAY) == SelfStatsKind.HEALTH,
-                "灰色的 ❤（负生命）应归为生命");
-        check(glyphKind("1\uD83D\uDDE1", SelfStats.RED) == SelfStatsKind.ATTACK, "🗡 应归为攻击");
-        check(glyphKind("0\uD83D\uDEE1", 0x5555FF) == SelfStatsKind.DEFENCE, "🛡 应归为防御");
-        check(glyphKind("15\uD83D\uDEE1\uD83D\uDD25", 0xFFAA00) == SelfStatsKind.ELEMENT,
-                "🛡🔥 应归为元素护甲");
-        check(glyphKind("15\u270F", 0xFFAA00) == SelfStatsKind.MANA, "✏ 应归为法力");
-        check(glyphKind("5\u2708", 0x55FFFF) == SelfStatsKind.SPEED, "✈ 应归为速度");
-        check(glyphKind("0\u2620", SelfStats.RED) == SelfStatsKind.MISC, "☠ 应归为杂项");
+        check(glyphKind("10\u2764%", SelfStats.LIGHT_PURPLE) == SelfStatsKind.HEAL_EXTRA,
+                "亮紫「❤%」应归为额外治疗百分比");
+        check(glyphKind("5\u2764", 0x5500AA) == SelfStatsKind.HP_NEG, "颜色不认识的 ❤ 应归为负生命");
 
-        // 过滤：隐藏类只认可过滤的 id
-        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("heart_red")).size() == 1,
-                "合法隐藏类应保留");
-        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("hint")).isEmpty(),
-                "提示类（hint）不该能进过滤表");
-        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("nope")).isEmpty(),
-                "未知类应被丢掉");
+        check(glyphKind("15\uD83D\uDDE1", 0xFFAA00) == SelfStatsKind.CLASS_STAT, "金 🗡 应归为职业属性");
+        check(glyphKind("1\uD83D\uDDE1", SelfStats.RED) == SelfStatsKind.STRENGTH, "红 🗡 应归为力量");
+        check(glyphKind("1\uD83D\uDDE1", 0x5555FF) == SelfStatsKind.ATTACK_SPEED, "蓝 🗡 应归为攻速");
+        check(glyphKind("1\uD83D\uDDE1", 0x00AA00) == SelfStatsKind.ATTACK_RANGE, "深绿 🗡 应归为攻击距离");
+        check(glyphKind("1\uD83D\uDDE1", 0x55FF55) == SelfStatsKind.STAMINA, "绿 🗡 应归为耐力");
+        check(glyphKind("1\uD83C\uDFF9", 0x55FF55) == SelfStatsKind.ARCHERY, "🏹 应归为弓术");
+
+        check(glyphKind("0\uD83D\uDEE1", 0x5555FF) == SelfStatsKind.DEFENCE, "蓝 🛡 应归为防御");
+        check(glyphKind("0\uD83D\uDEE1", 0xFFFFFF) == SelfStatsKind.TRUE_ARMOR, "白 🛡 应归为真伤护甲");
+        check(glyphKind("15\uD83D\uDEE1\uD83D\uDD25", 0xFFAA00) == SelfStatsKind.FIRE_ARMOR,
+                "金 🛡🔥 应归为火焰护甲");
+        check(glyphKind("15\uD83D\uDEE1\uD83D\uDD25", 0xFFFFFF) == SelfStatsKind.TRUE_FIRE_ARMOR,
+                "白 🛡🔥 应归为真伤火焰护甲");
+        check(glyphKind("5\uD83D\uDEE1\u2693", 0x5555FF) == SelfStatsKind.WATER_ARMOR, "🛡⚓ 应归为水生护甲");
+        check(glyphKind("5\uD83D\uDEE1\u26A1", 0xFFFF55) == SelfStatsKind.ELECTRIC_ARMOR, "🛡⚡ 应归为电护甲");
+        check(glyphKind("5\uD83D\uDEE1\u2603", 0x55FFFF) == SelfStatsKind.ICE_ARMOR, "🛡☃ 应归为冰护甲");
+        check(glyphKind("5\uD83D\uDEE1\u2620", 0xAA00AA) == SelfStatsKind.DARK_ARMOR, "🛡☠ 应归为暗护甲");
+        check(glyphKind("5\uD83D\uDEE1\u2600", 0xFFFFFF) == SelfStatsKind.LIGHT_ARMOR, "🛡☀ 应归为光护甲");
+
+        check(glyphKind("5\u2708", 0x55FFFF) == SelfStatsKind.MAX_SPEED, "青 ✈ 应归为最高速度");
+        check(glyphKind("5\u2708", 0x55FF55) == SelfStatsKind.JUMP, "绿 ✈ 应归为跳跃");
+        check(glyphKind("5\u2708", 0xFF87FF) == SelfStatsKind.DOUBLE_JUMP, "粉 ✈ 应归为二段跳");
+        check(glyphKind("15\u270F", 0xFFAA00) == SelfStatsKind.MANA_POWER, "金 ✏ 应归为法力强度");
+        check(glyphKind("15\u270F", 0x55FFFF) == SelfStatsKind.MANA_RECHARGE, "青 ✏ 应归为回蓝速度");
+        check(glyphKind("15\u26A1", 0xFFFF55) == SelfStatsKind.ACTIVE_CHARGE, "黄 ⚡ 应归为主动充能");
+        check(glyphKind("15\u26A1", 0xFFAA00) == SelfStatsKind.MAX_CHARGE, "金 ⚡ 应归为充能上限");
+        check(glyphKind("1\u26A1", 0xFFFFFF) == SelfStatsKind.ACTIVE_SPEED, "白 ⚡ 应归为主动速度");
+        check(glyphKind("0\u2620", 0xAA00AA) == SelfStatsKind.SUMMONING, "暗紫 ☠ 应归为召唤");
+        check(glyphKind("3\u2620", SelfStats.RED) == SelfStatsKind.SKULLS, "红 ☠ 应归为骷髅数");
+        check(glyphKind("1\u2B07", 0x5469FF) == SelfStatsKind.SIZE, "⬇ 应归为体型");
+        check(glyphKind("1\u21D1", 0xE854FF) == SelfStatsKind.GRAVITY, "⇑ 应归为重力");
+        check(glyphKind("\uE026", SelfStats.DARK_RED) == SelfStatsKind.HEART_CRACKED,
+                "私有区字形 + 暗红应归为碎心");
+        check(glyphKind("\uE026", SelfStats.LIGHT_PURPLE) == SelfStatsKind.HEART_PINK,
+                "私有区字形 + 亮紫应归为粉心");
+
+        // 过滤表：细类、粗类展开、非法值
+        check(SelfStatsKind.FILTERABLE.length >= 50, "可过滤项应有 50 项以上，实际 " + SelfStatsKind.FILTERABLE.length);
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("heart_red")).size() == 1, "合法隐藏类应保留");
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("hint")).isEmpty(), "提示类不该能进过滤表");
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("nope")).isEmpty(), "未知类应被丢掉");
         check(EnemyHudConfig.sanitizeKinds(java.util.List.of("heart_red", "heart_red")).size() == 1,
                 "重复的隐藏类应去重");
         check(EnemyHudConfig.sanitizeKinds(null).isEmpty(), "null 隐藏表应变成空表");
+        java.util.List<String> expandedHealth = EnemyHudConfig.sanitizeKinds(java.util.List.of("health"));
+        check(expandedHealth.size() == 7, "旧粗类 health 应展开成 7 个细类，实际 " + expandedHealth.size());
+        check(expandedHealth.contains("hp_neg") && expandedHealth.contains("heal_percent"),
+                "health 展开应包含负生命与治疗百分比");
+        java.util.List<String> expandedAttack = EnemyHudConfig.sanitizeKinds(java.util.List.of("attack"));
+        check(expandedAttack.size() == 9, "旧粗类 attack 应展开成 9 个细类，实际 " + expandedAttack.size());
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("misc")).contains("skulls"),
+                "misc 展开应包含骷髅数");
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (SelfStatsKind kind : SelfStatsKind.FILTERABLE) {
+            check(ids.add(kind.id), "过滤项 id 不能重复: " + kind.id);
+            check(kind != SelfStatsKind.HINT, "HINT 不该出现在过滤列表");
+        }
 
-        java.util.Map<String, java.util.List<String>> rawProfiles = new java.util.LinkedHashMap<>();
-        rawProfiles.put("class_select_12", java.util.List.of("heart_red"));
-        rawProfiles.put("not_a_class", java.util.List.of("heart_blue"));
-        rawProfiles.put("class_select_13", java.util.List.of("hint"));
-        java.util.Map<String, java.util.List<String>> profiles =
-                EnemyHudConfig.sanitizeProfiles(rawProfiles);
-        check(profiles.size() == 2 && profiles.containsKey("class_select_12"),
-                "职业表只保留已知职业（未知职业被丢掉）");
-        check(profiles.containsKey("class_select_13") && profiles.get("class_select_13").isEmpty(),
-                "空列表要保留（= 该职业什么都不隐藏），不能当成「没这条」");
+        // 可滚动列表的纯函数
+        check(SelfStatsFilterScreen.visibleRows(180, 18) == 10, "180 px 列表应能放 10 行");
+        check(SelfStatsFilterScreen.visibleRows(0, 18) == 0, "列表高度 0 应放 0 行");
+        check(SelfStatsFilterScreen.maxScroll(62, 10) == 52, "62 项 / 10 行可见 → 最大滚动 52");
+        check(SelfStatsFilterScreen.maxScroll(5, 10) == 0, "内容比列表短时不该能滚");
+        check(SelfStatsFilterScreen.clampScroll(-3, 52) == 0, "滚动量不该小于 0");
+        check(SelfStatsFilterScreen.clampScroll(999, 52) == 52, "滚动量不该超过上限");
+        check(SelfStatsFilterScreen.scrollByWheel(2, -1.0, 10) == 3, "向下滚一格 → +1 行");
+        check(SelfStatsFilterScreen.scrollByWheel(0, 1.0, 10) == 0, "已在顶部再往上滚应保持 0");
+        check(SelfStatsFilterScreen.scrollByWheel(9, 1.0, 10) == 8, "向上滚一格 → -1 行");
+        check(SelfStatsFilterScreen.scrollByWheel(0, -0.5, 10) == 1, "半格滚动应至少动一行");
+        check(SelfStatsFilterScreen.rowAt(58, 58, 18, 10) == 0, "列表上边应命中第 0 行");
+        check(SelfStatsFilterScreen.rowAt(76, 58, 18, 10) == 1, "隔一行应命中第 1 行");
+        check(SelfStatsFilterScreen.rowAt(57, 58, 18, 10) == -1, "列表上方不该命中");
+        check(SelfStatsFilterScreen.rowAt(58 + 18 * 10, 58, 18, 10) == -1, "列表下方不该命中");
 
-        // 职业识别
-        var announcement = net.minecraft.network.chat.Component.empty()
-                .append(net.minecraft.network.chat.Component.literal("Player785"))
-                .append(net.minecraft.network.chat.Component.literal(" has become "))
-                .append(net.minecraft.network.chat.Component.translatable("class_select_12"));
-        check("class_select_12".equals(ClassTracker.detect(announcement, "Player785")),
-                "「我」选职业的公告应被识别");
-        check(ClassTracker.detect(announcement, "SomeoneElse") == null,
-                "别人选职业的公告不该认成自己的");
-        check(ClassTracker.detect(announcement, null) != null,
-                "不给名字时（自检路径）应能认出职业");
-        check(ClassTracker.detect(net.minecraft.network.chat.Component.literal("hello"), "Player785") == null,
-                "普通聊天不该被当成职业公告");
-        check(ClassTracker.displayName("class_select_12").equals("Swan"), "职业键应能显示成英文名");
-        check(ClassTracker.displayName("class_select_999").equals("class_select_999"),
-                "未知职业键退化成键本身");
-        check(ClassTracker.options().get(0).equals(ClassTracker.MODE_OFF), "职业下拉第一项应为「关」");
-
+        // 配置：版本、默认值、粗类展开
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
-        check(ClassTracker.MODE_AUTO.equals(cfg.selfStatsClass), "职业过滤默认「自动」");
-        check(ClassTracker.resolvedClass(cfg, "class_select_12") != null, "自动模式应使用识别到的职业");
-        cfg.selfStatsClass = ClassTracker.MODE_OFF;
-        check(ClassTracker.resolvedClass(cfg, "class_select_12") == null, "关闭模式应无视职业");
-        cfg.selfStatsClass = "class_select_13";
-        check("class_select_13".equals(ClassTracker.resolvedClass(cfg, null)),
-                "手动指定职业时不依赖识别结果");
+        check(EnemyHudConfig.CURRENT_VERSION == 6, "配置版本应为 6");
+        EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
+        check(defaults.showSelfStats, "自身属性面板默认开启");
+        check(defaults.selfStatsSeconds == 30, "自身属性面板默认 30 s 刷新");
+        check(defaults.selfStatsColumns == 2, "自身属性面板默认两列");
+        check(defaults.selfStatsScale == 1.0 && defaults.selfStatsOpacity == 1.0, "默认字号/不透明度应为 1.0");
+        check(defaults.selfStatsHidden.isEmpty(), "默认不隐藏任何属性");
 
-        // 面板布局：缩放会按比例改外框，位置夹在屏幕内
-        var panel1 = new EnemyHudConfig.Panel(10, 20, 2, 1.0, 1.0);
-        var panel2 = new EnemyHudConfig.Panel(10, 20, 2, 2.0, 1.0);
-        int[] widths = {60, 40};
-        int[] b1 = SelfStatsPanel.boundsOf(widths, 3, panel1);
-        int[] b2 = SelfStatsPanel.boundsOf(widths, 3, panel2);
-        check(b1[0] == 10 && b1[1] == 20, "外框原点应等于面板坐标");
-        check(b1[2] == 60 + SelfStatsPanel.COLUMN_GAP + 40, "外框宽度应为各列宽 + 间距");
-        check(b1[3] == 3 * SelfStatsPanel.ROW_HEIGHT, "外框高度应为行数 × 行高");
-        check(b2[2] == b1[2] * 2 && b2[3] == b1[3] * 2, "2 倍缩放外框应翻倍");
-        check(SelfStatsPanel.boundsOf(new int[0], 0, panel1)[2] == 0, "空面板外框宽度应为 0");
-        check(SelfStatsPanel.clampX(-50, 100, 800) == 0, "x 不该小于 0");
-        check(SelfStatsPanel.clampX(9999, 100, 800) <= 800, "x 不该把面板推出屏幕");
-        check(SelfStatsPanel.clampY(-5, 50, 400) == 0, "y 不该小于 0");
-        check(SelfStatsPanel.clampX(0, 100, 800) == 0, "x=0 应保持 0");
-
-        // 配置：缩放 / 透明度 / 职业表的夹取
         EnemyHudConfig.Cfg wild = new EnemyHudConfig.Cfg();
         wild.selfStatsScale = 99.0;
         wild.selfStatsOpacity = -3.0;
-        wild.selfStatsClass = "bogus";
-        wild.selfStatsHidden = new java.util.ArrayList<>(java.util.List.of("heart_red", "hint", "heart_red"));
+        wild.selfStatsHidden = new java.util.ArrayList<>(java.util.List.of("heart_red", "hint", "heart_red", "health"));
         EnemyHudConfig.normalize(wild);
         check(wild.selfStatsScale == 2.0, "selfStatsScale 99 应夹到 2.0");
         check(wild.selfStatsOpacity == 0.2, "selfStatsOpacity -3 应夹到 0.2");
-        check(ClassTracker.MODE_AUTO.equals(wild.selfStatsClass), "非法职业模式应回落「自动」");
-        check(wild.selfStatsHidden.size() == 1 && wild.selfStatsHidden.get(0).equals("heart_red"),
-                "隐藏表应去掉 hint 与重复项");
+        check(wild.selfStatsHidden.contains("heart_red") && !wild.selfStatsHidden.contains("hint"),
+                "隐藏表应去掉 hint 且保留 heart_red");
+        check(wild.selfStatsHidden.contains("hp_amp"), "隐藏表里的旧粗类 health 应被展开");
 
-        // 过滤真的会作用到 lines()：先塞一篇 SHOWN，再隐藏红心
+        EnemyHudConfig.Cfg v4 = new EnemyHudConfig.Cfg();
+        v4.configVersion = 4;
+        v4.barWidth = 90;
+        EnemyHudConfig.migrate("{\"configVersion\":4}", v4);
+        check(v4.configVersion == 6, "v4 → v6 应升版本号");
+        check(v4.barWidth == 90, "迁移不该动已调过的值");
+
+        // hiddenKinds() 与过滤真的作用到面板
         EnemyHudConfig.Cfg live = EnemyHudConfig.get();
-        live.selfStatsClass = ClassTracker.MODE_OFF;
         live.selfStatsHidden = new java.util.ArrayList<>();
-        ClassTracker.setForTest(null);
         SelfStats.reset();
         check(SelfStats.lines().isEmpty(), "没有数据时 lines() 应为空");
-        // 直接喂两条：红心 + 魂心（不走聊天，走解析器）
         check(SelfStats.heartsOf(redHeartLine("120")).length == 7, "心数数组长度应为 7");
         live.selfStatsHidden.add(SelfStatsKind.HEART_RED.id);
         check(EnemyHudConfig.hiddenKinds().contains(SelfStatsKind.HEART_RED.id),
                 "隐藏表应被 hiddenKinds() 读到");
         live.selfStatsHidden.clear();
         check(EnemyHudConfig.hiddenKinds().isEmpty(), "清空后 hiddenKinds() 应为空");
-
-        // 职业用得到「按职业分开的过滤表」
-        ClassTracker.setForTest("class_select_12");
-        live.selfStatsClass = ClassTracker.MODE_AUTO;
-        java.util.List<String> classHidden = EnemyHudConfig.hiddenList();
-        check(classHidden != null, "识别到职业时应能拿到该职业的过滤表");
-        classHidden.add(SelfStatsKind.HEART_SOUL.id);
-        check(live.selfStatsClassHidden.containsKey("class_select_12"),
-                "编辑职业过滤时应落进 selfStatsClassHidden");
-        check(EnemyHudConfig.hiddenKinds().contains(SelfStatsKind.HEART_SOUL.id),
-                "职业过滤表应生效");
-        ClassTracker.setForTest(null);
-        check(EnemyHudConfig.hiddenKinds().isEmpty(), "职业未知时应回落到默认过滤表");
         EnemyHudConfig.reset();
-        live = EnemyHudConfig.get();
-        live.selfStatsClass = ClassTracker.MODE_AUTO;
-        live.selfStatsHidden = new java.util.ArrayList<>();
-        live.selfStatsClassHidden.clear();
-        ClassTracker.setForTest(null);
+        EnemyHudConfig.get().selfStatsHidden = new java.util.ArrayList<>();
         SelfStats.reset();
     }
 

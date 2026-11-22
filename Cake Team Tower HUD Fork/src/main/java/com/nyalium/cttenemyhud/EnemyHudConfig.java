@@ -86,23 +86,13 @@ public final class EnemyHudConfig {
         /** 属性面板文字不透明度，0.20 ~ 1.00（1.20.4）。 */
         public double selfStatsOpacity = 1.0;
         /**
-         * 默认（不分职业）时要隐藏的内容类，取值见 {@link SelfStatsKind#id}。
+         * 默认（全部职业共用）时要隐藏的内容类，取值见 {@link SelfStatsKind#id}。
          *
-         * <p>例如 {@code ["heart_red"]} = 红心那几行不上面板。</p>
+         * <p>例如 {@code ["heart_red", "hp_neg"]} = 红心与负生命那几行不上面板。
+         * 1.20.5 起过滤粒度是<b>单个属性</b>；旧版本写的粗类（{@code health}/{@code attack}…）
+         * 会在读取时自动展开成对应的一串细类。</p>
          */
         public java.util.List<String> selfStatsHidden = new java.util.ArrayList<>();
-        /**
-         * 职业过滤模式（1.20.4）：{@link ClassTracker#MODE_OFF} 关闭 /
-         * {@link ClassTracker#MODE_AUTO} 按聊天里识别到的职业自动切 / 某个职业键（手动指定）。
-         */
-        public String selfStatsClass = ClassTracker.MODE_AUTO;
-        /**
-         * 按职业分开的「隐藏类」表：职业键 → 隐藏类列表。
-         *
-         * <p>职业识别不到、或这个职业没有条目时，用 {@link #selfStatsHidden}。</p>
-         */
-        public java.util.Map<String, java.util.List<String>> selfStatsClassHidden =
-                new java.util.LinkedHashMap<>();
     }
 
     /**
@@ -132,7 +122,7 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 5;
+    public static final int CURRENT_VERSION = 6;
     /** 旧版默认血条长度（1.18.0 起默认改成 75）。 */
     private static final double LEGACY_BAR_WIDTH = 100.0;
     /** 旧版默认缩放（1.19.0 起默认改成 0.9）。 */
@@ -199,33 +189,15 @@ public final class EnemyHudConfig {
                 c.selfStatsScale, c.selfStatsOpacity);
     }
 
-    /** 当前生效的「隐藏类」集合（按职业解析后）。 */
+    /** 当前生效的「隐藏类」集合。 */
     public static java.util.Set<String> hiddenKinds() {
         Cfg c = get();
-        return new java.util.LinkedHashSet<>(hiddenListOf(c));
+        return new java.util.LinkedHashSet<>(c.selfStatsHidden);
     }
 
-    /**
-     * 过滤界面正在编辑的那一份列表（可直接增删）。
-     *
-     * <p>认到了职业 → 编辑该职业的条目（第一次编辑时从默认复制一份）；
-     * 否则编辑默认那份。</p>
-     */
+    /** 过滤界面正在编辑的那一份列表（可直接增删）。 */
     public static java.util.List<String> hiddenList() {
-        Cfg c = get();
-        String cls = ClassTracker.resolvedClass(c, ClassTracker.current());
-        if (cls == null) return c.selfStatsHidden;
-        return c.selfStatsClassHidden.computeIfAbsent(cls,
-                key -> new java.util.ArrayList<>(c.selfStatsHidden));
-    }
-
-    private static java.util.List<String> hiddenListOf(Cfg c) {
-        String cls = ClassTracker.resolvedClass(c, ClassTracker.current());
-        if (cls != null) {
-            java.util.List<String> list = c.selfStatsClassHidden.get(cls);
-            if (list != null) return list;
-        }
-        return c.selfStatsHidden;
+        return get().selfStatsHidden;
     }
 
     /** 当前配置的深拷贝，用作设置界面「取消」的回滚点（不落盘）。 */
@@ -316,44 +288,52 @@ public final class EnemyHudConfig {
         read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);
         read.selfStatsX = (int) clamp(read.selfStatsX, 0.0, 4000.0);
         read.selfStatsY = (int) clamp(read.selfStatsY, 0.0, 4000.0);
-        // 1.20.4：文字缩放 0.5~2.0、不透明度 0.2~1.0、内容过滤、职业过滤
+        // 1.20.4：文字缩放 0.5~2.0、不透明度 0.2~1.0、内容过滤
         read.selfStatsScale = clamp(read.selfStatsScale, 0.5, 2.0);
         read.selfStatsOpacity = clamp(read.selfStatsOpacity, 0.2, 1.0);
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
-        read.selfStatsClassHidden = sanitizeProfiles(read.selfStatsClassHidden);
-        if (read.selfStatsClass == null || !ClassTracker.options().contains(read.selfStatsClass)) {
-            // 手写错的 / 地图改了键名的 → 回到「自动」，而不是把不存在的职业当过滤目标
-            read.selfStatsClass = ClassTracker.MODE_AUTO;
-        }
         return read;
     }
 
-    /** 只留下真正可过滤的类 id，去掉 null / 未知 / 重复。 */
+    /**
+     * 1.20.4 的粗类 → 1.20.5 的细类。旧配置里的粗类在读取时展开，不需要手改。
+     */
+    private static final java.util.Map<String, String[]> COARSE_KINDS = buildCoarseKinds();
+
+    private static java.util.Map<String, String[]> buildCoarseKinds() {
+        java.util.Map<String, String[]> m = new java.util.HashMap<>();
+        m.put("health", new String[]{"hp_amp", "hp_raw", "hp_neg", "heal_amp", "heal_raw",
+                "heal_percent", "heal_extra"});
+        m.put("attack", new String[]{"class_stat", "strength", "attack_speed", "attack_range",
+                "stamina", "archery", "class_stat_amp", "strength_amp", "attack_speed_amp"});
+        m.put("defence", new String[]{"defence", "true_armor", "defence_amp", "true_armor_amp"});
+        m.put("element", new String[]{"fire_armor", "true_fire_armor", "water_armor",
+                "electric_armor", "ice_armor", "dark_armor", "light_armor", "fire_armor_amp"});
+        m.put("speed", new String[]{"max_speed", "speed_amp", "jump", "double_jump"});
+        m.put("mana", new String[]{"mana_power", "mana_recharge", "mana_amp"});
+        m.put("time", new String[]{"timer"});
+        m.put("misc", new String[]{"active_charge", "max_charge", "active_speed", "summoning",
+                "size", "gravity", "towers_regen", "skulls", "bitches", "fishing", "bee", "ant",
+                "karma_light", "karma_neutral", "karma_dark", "karma_celestial", "misc"});
+        return java.util.Map.copyOf(m);
+    }
+
+    /** 只留下真正可过滤的类 id，去掉 null / 未知 / 重复；粗类先展开成细类。 */
     static java.util.List<String> sanitizeKinds(java.util.List<String> raw) {
         java.util.List<String> out = new java.util.ArrayList<>();
         if (raw == null) return out;
         for (String id : raw) {
+            if (id == null) continue;
+            String[] expanded = COARSE_KINDS.get(id);
+            if (expanded != null) {
+                for (String fine : expanded) {
+                    if (!out.contains(fine)) out.add(fine);
+                }
+                continue;
+            }
             SelfStatsKind kind = SelfStatsKind.byId(id);
             if (kind == null || !kind.filterable) continue;
             if (!out.contains(kind.id)) out.add(kind.id);
-        }
-        return out;
-    }
-
-    /**
-     * 职业表：键必须是已知职业，值走 {@link #sanitizeKinds}。
-     *
-     * <p><b>空列表要保留</b>：它的语义是「这个职业什么都不隐藏」，和「这个职业没有条目 →
-     * 跟随默认表」是两回事。</p>
-     */
-    static java.util.Map<String, java.util.List<String>> sanitizeProfiles(
-            java.util.Map<String, java.util.List<String>> raw) {
-        java.util.Map<String, java.util.List<String>> out = new java.util.LinkedHashMap<>();
-        if (raw == null) return out;
-        for (java.util.Map.Entry<String, java.util.List<String>> entry : raw.entrySet()) {
-            String key = entry.getKey();
-            if (key == null || !ClassTracker.isKnownClass(key)) continue;
-            out.put(key, sanitizeKinds(entry.getValue()));
         }
         return out;
     }

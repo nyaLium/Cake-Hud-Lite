@@ -229,19 +229,7 @@ public final class EnemyHudSettingsScreen extends Screen {
         addRenderableWidget(Button.builder(key("selfStatsFilter"),
                         b -> this.minecraft.gui.setScreen(new SelfStatsFilterScreen(this)))
                 .bounds(rightX, y, w, ROW_HEIGHT).build());
-        y += ROW_GAP;
-        addRenderableWidget(CycleButton.builder(EnemyHudSettingsScreen::classLabel, cfg.selfStatsClass)
-                .withValues(ClassTracker.options())
-                .create(rightX, y, w, ROW_HEIGHT, key("selfStatsClass"),
-                        (b, v) -> EnemyHudConfig.get().selfStatsClass = v));
         return 6;
-    }
-
-    /** 职业过滤下拉框的取值文本：关 / 自动 / 职业名。 */
-    private static Component classLabel(String value) {
-        if (ClassTracker.MODE_OFF.equals(value)) return Component.translatable("ctt_enemy_hud.config.class.off");
-        if (ClassTracker.MODE_AUTO.equals(value)) return Component.translatable("ctt_enemy_hud.config.class.auto");
-        return Component.literal(ClassTracker.displayName(value));
     }
 
     @Override

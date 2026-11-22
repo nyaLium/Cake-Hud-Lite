@@ -54,8 +54,6 @@ public final class CttEnemyHudClient implements ClientModInitializer {
         // ② 本次 ViewStats 的属性行 → 吞掉（不进聊天栏，只进面板）。
         // 注意 ALLOW_GAME 的返回值语义：true = 允许显示，false = 拦掉。
         ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
-            // 选职业的公告顺带认一下（不影响显示，只是记下「我这局是什么职业」）
-            if (!overlay) ClassTracker.onGameMessage(message, ownName());
             if (SelfStats.onGameMessage(message, overlay, System.currentTimeMillis())) return false;
             return !ChatTriggerFilter.shouldHide(message, overlay);
         });
@@ -65,18 +63,7 @@ public final class CttEnemyHudClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ClientMobHealthCache.reset();
             SelfStats.reset();
-            ClassTracker.reset();
         });
-    }
-
-    /** 自己的玩家名（选职业公告靠它区分「我」和「别人」）。 */
-    private static String ownName() {
-        try {
-            Minecraft mc = Minecraft.getInstance();
-            return mc != null && mc.player != null ? mc.player.getGameProfile().name() : null;
-        } catch (Throwable ignored) {
-            return null;
-        }
     }
 
     private static void tickKeys(Minecraft mc) {

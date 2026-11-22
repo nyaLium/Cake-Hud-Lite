@@ -370,7 +370,7 @@ public final class SelfStats {
             if (HINT_KEYS.contains(key)) return SelfStatsKind.HINT;
         }
         for (String key : a.keys) {
-            if (TIME_KEY.equals(key)) return SelfStatsKind.TIME;
+            if (TIME_KEY.equals(key)) return SelfStatsKind.TIMER;
         }
         for (String key : a.keys) {
             SelfStatsKind kind = KEY_KINDS.get(key);
@@ -379,44 +379,110 @@ public final class SelfStats {
         return glyphKind(a.text(), a.colors);
     }
 
-    /** 没有翻译键时的兜底：先看「❤%」，再按心形颜色，再按 🗡🛡✈✏ 这些图标。 */
+    /**
+     * 没有翻译键时的兜底：按「图标 + 颜色」认到具体属性。
+     *
+     * <p>地图给每个属性配了固定的图标和颜色（🗡 金 = 职业属性、🗡 红 = 力量、🗡 蓝 = 攻速…），
+     * 所以数值行即使没有键也能分开。灰色（负值）的颜色丢了身份，落到组内默认项。</p>
+     */
     static SelfStatsKind glyphKind(String flat, List<Integer> colors) {
         if (flat == null || flat.isEmpty()) return SelfStatsKind.MISC;
-        if (flat.contains("\u2764%")) return SelfStatsKind.HEALTH;
+
+        // 「数字❤%」：地图里只有治疗百分比用这个组合（红 = HealPercent，亮紫 = ExtraHealing）
+        int percent = flat.indexOf("\u2764%");
+        if (percent >= 0) {
+            return colorAt(colors, percent) == LIGHT_PURPLE
+                    ? SelfStatsKind.HEAL_EXTRA : SelfStatsKind.HEAL_PERCENT;
+        }
+
+        // 元素护甲：🛡 + 元素图标（颜色再分「真伤护甲」和普通护甲）
+        int shield = flat.indexOf("\uD83D\uDEE1");
+        if (shield >= 0) {
+            int after = shield + 2;
+            int rgb = colorAt(colors, shield);
+            if (flat.startsWith("\uD83D\uDD25", after)) {          // 🔥 火
+                return rgb == 0xFFFFFF ? SelfStatsKind.TRUE_FIRE_ARMOR : SelfStatsKind.FIRE_ARMOR;
+            }
+            if (flat.startsWith("\u2693", after)) return SelfStatsKind.WATER_ARMOR;      // ⚓
+            if (flat.startsWith("\u26A1", after)) return SelfStatsKind.ELECTRIC_ARMOR;   // ⚡
+            if (flat.startsWith("\u2603", after)) return SelfStatsKind.ICE_ARMOR;        // ☃
+            if (flat.startsWith("\u2620", after)) return SelfStatsKind.DARK_ARMOR;       // ☠
+            if (flat.startsWith("\u2600", after)) return SelfStatsKind.LIGHT_ARMOR;      // ☀
+            return rgb == 0xFFFFFF ? SelfStatsKind.TRUE_ARMOR : SelfStatsKind.DEFENCE;
+        }
+
+        // 🗡 五档（颜色区分），🏹 弓术
+        int sword = flat.indexOf("\uD83D\uDDE1");
+        if (sword >= 0) {
+            int rgb = colorAt(colors, sword);
+            if (rgb == 0xFF5555) return SelfStatsKind.STRENGTH;          // 红
+            if (rgb == 0x5555FF) return SelfStatsKind.ATTACK_SPEED;      // 蓝
+            if (rgb == 0x00AA00) return SelfStatsKind.ATTACK_RANGE;      // 深绿
+            if (rgb == 0x55FF55) return SelfStatsKind.STAMINA;           // 绿
+            return SelfStatsKind.CLASS_STAT;                             // 金 / 灰
+        }
+        if (flat.indexOf("\uD83C\uDFF9") >= 0) return SelfStatsKind.ARCHERY;   // 🏹
+
+        // ✈：最高速度 / 跳跃 / 二段跳
+        int plane = flat.indexOf("\u2708");
+        if (plane >= 0) {
+            int rgb = colorAt(colors, plane);
+            if (rgb == 0x55FF55) return SelfStatsKind.JUMP;              // 绿
+            if (rgb == 0xFF87FF) return SelfStatsKind.DOUBLE_JUMP;       // 粉
+            return SelfStatsKind.MAX_SPEED;                              // 青 / 灰
+        }
+        // ✏：法力强度 / 回蓝速度
+        int pencil = flat.indexOf("\u270F");
+        if (pencil >= 0) {
+            return colorAt(colors, pencil) == 0x55FFFF
+                    ? SelfStatsKind.MANA_RECHARGE : SelfStatsKind.MANA_POWER;
+        }
+        // ⚡：主动充能 / 上限 / 速度
+        int bolt = flat.indexOf("\u26A1");
+        if (bolt >= 0) {
+            int rgb = colorAt(colors, bolt);
+            if (rgb == 0xFFAA00) return SelfStatsKind.MAX_CHARGE;        // 金
+            if (rgb == 0xFFFFFF) return SelfStatsKind.ACTIVE_SPEED;      // 白
+            return SelfStatsKind.ACTIVE_CHARGE;                          // 黄 / 灰
+        }
+        // ☠：召唤 / 骷髅数
+        int skull = flat.indexOf("\u2620");
+        if (skull >= 0) {
+            return colorAt(colors, skull) == 0xFF5555 ? SelfStatsKind.SKULLS : SelfStatsKind.SUMMONING;
+        }
+        if (flat.indexOf("\u2B07") >= 0 || flat.indexOf("\u2B06") >= 0) return SelfStatsKind.SIZE;      // ⬇⬆
+        if (flat.indexOf("\u21D1") >= 0 || flat.indexOf("\u21D3") >= 0) return SelfStatsKind.GRAVITY;   // ⇑⇓
+
+        // 心形（含碎心/粉心用的私有区字形）
         for (int i = 0; i < flat.length(); i++) {
             char ch = flat.charAt(i);
             if (!isHeartGlyph(ch)) continue;
-            int rgb = colors != null && i < colors.size() ? colors.get(i) : 0xFFFFFF;
-            int kind = heartKindOf(String.valueOf(ch), rgb);
-            switch (kind) {
-                case 1: return SelfStatsKind.HEART_RED;
-                case 2: return SelfStatsKind.HEART_SOUL;
-                case 3: return SelfStatsKind.HEART_BLACK;
-                case 4: return SelfStatsKind.HEART_BLUE;
-                case 5: return SelfStatsKind.HEART_CRACKED;
-                case 6: return SelfStatsKind.HEART_PINK;
-                default:
-                    // ❤ 但颜色不认识（比如「负生命」的灰心）→ 归到生命
-                    if (ch == '\u2764') return SelfStatsKind.HEALTH;
+            int rgb = colorAt(colors, i);
+            if (ch == '\u2764') {
+                if (rgb == RED) return SelfStatsKind.HEART_RED;
+                if (rgb == YELLOW) return SelfStatsKind.HEART_SOUL;
+                if (rgb == BLACK) return SelfStatsKind.HEART_BLACK;
+                if (rgb == BLUE) return SelfStatsKind.HEART_BLUE;
+                if (rgb == LIGHT_PURPLE) return SelfStatsKind.HEAL_RAW;   // 治疗图标也是 ❤
+                if (rgb == DARK_RED) return SelfStatsKind.BITCHES;
+                return SelfStatsKind.HP_NEG;                              // 灰 = 负生命
             }
+            if (rgb == DARK_RED) return SelfStatsKind.HEART_CRACKED;
+            if (rgb == LIGHT_PURPLE) return SelfStatsKind.HEART_PINK;
+            if (rgb == 0x55FF55) return SelfStatsKind.TOWERS_REGEN;
+            if (rgb == 0xFFFF55) return SelfStatsKind.BEE;
+            if (rgb == 0x000000) return SelfStatsKind.ANT;
+            if (rgb == 0xAA00AA) return SelfStatsKind.KARMA_NEUTRAL;
+            if (rgb == 0x892EFF) return SelfStatsKind.KARMA_CELESTIAL;
+            return SelfStatsKind.MISC;
         }
-        if (flat.contains("\uD83D\uDEE1")) {                 // 🛡
-            if (flat.contains("\uD83D\uDD25")                // 🔥 火
-                    || flat.contains("\u2693")               // ⚓ 水
-                    || flat.contains("\u26A1")               // ⚡ 电
-                    || flat.contains("\u2603")               // ☃ 冰
-                    || flat.contains("\u2620")               // ☠ 暗
-                    || flat.contains("\u2600")) {            // ☀ 光
-                return SelfStatsKind.ELEMENT;
-            }
-            return SelfStatsKind.DEFENCE;
-        }
-        if (flat.contains("\uD83D\uDDE1") || flat.contains("\uD83C\uDFF9")) {   // 🗡 / 🏹
-            return SelfStatsKind.ATTACK;
-        }
-        if (flat.contains("\u2708")) return SelfStatsKind.SPEED;                // ✈
-        if (flat.contains("\u270F")) return SelfStatsKind.MANA;                 // ✏
         return SelfStatsKind.MISC;
+    }
+
+    /** 第 {@code index} 个字符的颜色（越界/没有颜色时按白色）。 */
+    private static int colorAt(List<Integer> colors, int index) {
+        if (colors == null || index < 0 || index >= colors.size()) return 0xFFFFFF;
+        return colors.get(index);
     }
 
     /** 把一行的所有样式段摊平后扫心数，写进给定数组（索引同 {@link #heartCounts()}）。 */
@@ -449,30 +515,27 @@ public final class SelfStats {
         for (int i = 49; i <= 76; i++) {
             m.put(KEY_PREFIX + i, SelfStatsKind.STATUS);
         }
-        // 生命：MaxHP 倍率 / 基础 MaxHP、治疗倍率 / 基础治疗
-        for (int i : new int[]{4, 5, 20, 21}) {
-            m.put(KEY_PREFIX + i, SelfStatsKind.HEALTH);
-        }
-        // 攻击：职业属性、力量、攻速
-        for (int i : new int[]{8, 9, 10, 11, 12, 13}) {
-            m.put(KEY_PREFIX + i, SelfStatsKind.ATTACK);
-        }
-        // 防御：Defence、TrueArmor
-        for (int i : new int[]{16, 17, 18, 19}) {
-            m.put(KEY_PREFIX + i, SelfStatsKind.DEFENCE);
-        }
-        // 元素护甲：火
-        for (int i : new int[]{25, 26}) {
-            m.put(KEY_PREFIX + i, SelfStatsKind.ELEMENT);
-        }
-        // 速度
-        for (int i : new int[]{33, 34}) {
-            m.put(KEY_PREFIX + i, SelfStatsKind.SPEED);
-        }
-        // 法力
-        for (int i : new int[]{40, 41}) {
-            m.put(KEY_PREFIX + i, SelfStatsKind.MANA);
-        }
+        // 倍率 / 基础值那一行都带地图翻译键，键和属性一一对应
+        m.put(KEY_PREFIX + "4", SelfStatsKind.HP_AMP);
+        m.put(KEY_PREFIX + "5", SelfStatsKind.HP_RAW);
+        m.put(KEY_PREFIX + "8", SelfStatsKind.CLASS_STAT_AMP);
+        m.put(KEY_PREFIX + "9", SelfStatsKind.CLASS_STAT_AMP);
+        m.put(KEY_PREFIX + "10", SelfStatsKind.STRENGTH_AMP);
+        m.put(KEY_PREFIX + "11", SelfStatsKind.STRENGTH_AMP);
+        m.put(KEY_PREFIX + "12", SelfStatsKind.ATTACK_SPEED_AMP);
+        m.put(KEY_PREFIX + "13", SelfStatsKind.ATTACK_SPEED_AMP);
+        m.put(KEY_PREFIX + "16", SelfStatsKind.DEFENCE_AMP);
+        m.put(KEY_PREFIX + "17", SelfStatsKind.DEFENCE_AMP);
+        m.put(KEY_PREFIX + "18", SelfStatsKind.TRUE_ARMOR_AMP);
+        m.put(KEY_PREFIX + "19", SelfStatsKind.TRUE_ARMOR_AMP);
+        m.put(KEY_PREFIX + "20", SelfStatsKind.HEAL_AMP);
+        m.put(KEY_PREFIX + "21", SelfStatsKind.HEAL_AMP);
+        m.put(KEY_PREFIX + "25", SelfStatsKind.FIRE_ARMOR_AMP);
+        m.put(KEY_PREFIX + "26", SelfStatsKind.FIRE_ARMOR_AMP);
+        m.put(KEY_PREFIX + "33", SelfStatsKind.SPEED_AMP);
+        m.put(KEY_PREFIX + "34", SelfStatsKind.SPEED_AMP);
+        m.put(KEY_PREFIX + "40", SelfStatsKind.MANA_AMP);
+        m.put(KEY_PREFIX + "41", SelfStatsKind.MANA_AMP);
         return java.util.Map.copyOf(m);
     }
 }
