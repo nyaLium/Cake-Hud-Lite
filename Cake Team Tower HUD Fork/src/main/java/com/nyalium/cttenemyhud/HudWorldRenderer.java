@@ -96,7 +96,9 @@ public final class HudWorldRenderer {
 
         Vec3 attachment = state.nameTagAttachment;
         if (attachment == null) attachment = new Vec3(0.0, state.boundingBoxHeight, 0.0);
-        int light = state.lightCoords;
+        // 1.20.13：HUD 用**全亮**光照，不再取实体所在方块的光照 ——
+        // 以前在暗处/阴影里文字和血条会跟着变暗（甚至全黑），读不清。原版名牌也是全亮。
+        final int light = 0xF000F0;   // LightTexture.FULL_BRIGHT：方块光 15 + 天空光 15
 
         // ① 着火：把整组 HUD 沿视线往相机方向推出去，推到火焰盒子前面。
         float push = firePush(state);

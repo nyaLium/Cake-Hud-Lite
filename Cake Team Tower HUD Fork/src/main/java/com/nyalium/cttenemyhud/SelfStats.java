@@ -109,8 +109,8 @@ public final class SelfStats {
         if (mc.player == null || mc.getConnection() == null) return;
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         if (!cfg.enabled || !cfg.showSelfStats) return;
-        int seconds = cfg.selfStatsSeconds;
-        if (seconds <= 0) return;                       // 0 = 关闭自动刷新
+        int seconds = effectiveSeconds(mc);
+        if (seconds <= 0) return;                       // ≤0 = 关闭自动刷新
         if (now < nextTriggerMs) return;
         // 1.20.8：大厅/菜单里**不发命令**。地图只在开局后 setdisplay below_name HealthPercent
         // 并 enable ViewStats；没开局时触发只会收到一行「无法触发该计分项」。
@@ -137,6 +137,31 @@ public final class SelfStats {
 
     /** 没对上局时的重查间隔（大厅里不会每 tick 查计分板）。 */
     private static final long GATE_RECHECK_MS = 5_000L;
+
+    /** 进入他人服务器（非单人存档）时强制使用的刷新间隔（秒）。 */
+    public static final int FORCED_SERVER_SECONDS = 3;
+
+    /**
+     * 实际生效的刷新间隔（秒）。
+     *
+     * <p>1.20.13：在别人开的服务器上强制 {@value #FORCED_SERVER_SECONDS} 秒；
+     * <b>只影响运行时，不写回配置</b>（单机存档继续用你设置的值）。</p>
+     */
+    public static int effectiveSeconds(net.minecraft.client.Minecraft mc) {
+        boolean singleplayer = mc == null || mc.getSingleplayerServer() != null;
+        return effectiveSeconds(singleplayer, EnemyHudConfig.get().selfStatsSeconds);
+    }
+
+    /** 纯函数版：单机存档用配置值，服务器强制 3 s；顺带夹到 1~5。 */
+    static int effectiveSeconds(boolean singleplayer, int configured) {
+        int v = Math.max(1, Math.min(5, configured));
+        return singleplayer ? v : FORCED_SERVER_SECONDS;
+    }
+
+    /** 当前是否处于「服务器强制 3 秒」状态（设置界面的提示用）。 */
+    public static boolean forcedByServer(net.minecraft.client.Minecraft mc) {
+        return mc != null && mc.getSingleplayerServer() == null;
+    }
 
     /**
      * 客户端能看到的「这局已经开始了」信号（纯客户端，无需服务端组件）：
@@ -206,8 +231,21 @@ public final class SelfStats {
         }
         emptyCaptures = 0;
         SHOWN.clear();
-        SHOWN.addAll(PENDING);
+        // 去重：同一行文字只保留第一次出现，避免「多重显示」。
+        java.util.HashSet<String> seen = new java.util.HashSet<>();
+        for (Line line : PENDING) {
+            if (seen.add(line.text.getString())) SHOWN.add(line);
+        }
         System.arraycopy(PENDING_HEARTS, 0, HEARTS, 0, HEARTS.length);
+    }
+
+    /** 面板里是否已有文字完全相同的行。 */
+    private static boolean containsSameText(java.util.List<Line> lines, Component message) {
+        String text = message.getString();
+        for (Line line : lines) {
+            if (line.text.getString().equals(text)) return true;
+        }
+        return false;
     }
 
     /** 连续多少趟空采集就认为「现在没有数据」，清空面板。 */
@@ -270,7 +308,9 @@ public final class SelfStats {
         SelfStatsKind kind = classify(a);
         // 提示性文本（标题 / 悬停说明）不上面板；缺地图语言文件时整行原文也不上屏。
         boolean panelWorthy = kind != SelfStatsKind.HINT && !a.unresolvedKey;
-        if (panelWorthy && PENDING.size() < MAX_LINES) {
+        // 1.20.13：同一趟里出现完全相同的行只留一条 —— 手动 /trigger 与自动刷新撞在一起时，
+        // 地图会把同一批属性回两遍，面板就会出现「多重显示」。
+        if (panelWorthy && PENDING.size() < MAX_LINES && !containsSameText(PENDING, message)) {
             PENDING.add(new Line(message, kind));
         }
         addHearts(a, PENDING_HEARTS);

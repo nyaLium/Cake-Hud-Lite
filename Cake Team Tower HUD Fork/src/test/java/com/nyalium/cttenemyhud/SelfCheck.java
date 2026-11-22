@@ -751,19 +751,19 @@ public final class SelfCheck {
     private static void bigNumbers() {
         check(EnemyHudLayout.num(0).equals("0"), "num(0)");
         check(EnemyHudLayout.num(99999).equals("99999"), "num(99999)=" + EnemyHudLayout.num(99999));
-        check(EnemyHudLayout.num(100_000).equals("100k"), "num(100000)=" + EnemyHudLayout.num(100_000));
-        check(EnemyHudLayout.num(123_456).equals("123k"), "num(123456)=" + EnemyHudLayout.num(123_456));
-        check(EnemyHudLayout.num(999_999).equals("999k"), "num(999999)=" + EnemyHudLayout.num(999_999));
-        check(EnemyHudLayout.num(1_234_567).equals("1.2m"), "num(1234567)=" + EnemyHudLayout.num(1_234_567));
-        check(EnemyHudLayout.num(12_345_678).equals("12.3m"), "num(12345678)="
+        check(EnemyHudLayout.num(100_000).equals("100K"), "num(100000)=" + EnemyHudLayout.num(100_000));
+        check(EnemyHudLayout.num(123_456).equals("123K"), "num(123456)=" + EnemyHudLayout.num(123_456));
+        check(EnemyHudLayout.num(999_999).equals("999K"), "num(999999)=" + EnemyHudLayout.num(999_999));
+        check(EnemyHudLayout.num(1_234_567).equals("1.2M"), "num(1234567)=" + EnemyHudLayout.num(1_234_567));
+        check(EnemyHudLayout.num(12_345_678).equals("12.3M"), "num(12345678)="
                 + EnemyHudLayout.num(12_345_678));
-        check(EnemyHudLayout.num(999_999_999).equals("999m"), "num(999999999)="
+        check(EnemyHudLayout.num(999_999_999).equals("999M"), "num(999999999)="
                 + EnemyHudLayout.num(999_999_999));
-        check(EnemyHudLayout.num(Integer.MAX_VALUE).equals("2.1b"), "num(MAX)="
+        check(EnemyHudLayout.num(Integer.MAX_VALUE).equals("2.1B"), "num(MAX)="
                 + EnemyHudLayout.num(Integer.MAX_VALUE));
         check(EnemyHudLayout.num(Integer.MIN_VALUE).startsWith("-"), "num(MIN) 应带负号: "
                 + EnemyHudLayout.num(Integer.MIN_VALUE));
-        check(EnemyHudLayout.num(-123_456).equals("-123k"), "num(-123456)="
+        check(EnemyHudLayout.num(-123_456).equals("-123K"), "num(-123456)="
                 + EnemyHudLayout.num(-123_456));
 
         // 缩写的目的是行宽可控：五段 999999 以前约 40 个字符，现在每段 4~5 个。
@@ -775,7 +775,7 @@ public final class SelfCheck {
         String text = join(EnemyHudLayout.compute(999_999, 999_999, false, 0, new int[7],
                 HeartCounts.of(999_999, 999_999, 999_999, 999_999, 999_999), o, SelfCheck::width));
         check(!text.contains("999999"), "大数值应先缩写: " + text);
-        check(text.contains("999k/999k"), "大数值缩写格式: " + text);
+        check(text.contains("999K/999K"), "大数值缩写格式: " + text);
         check(text.length() < 60, "缩写后整行不该太长: " + text.length() + " -> " + text);
     }
 
@@ -1250,14 +1250,17 @@ public final class SelfCheck {
         c.selfStatsX = -100;
         c.selfStatsY = 99999;
         EnemyHudConfig.normalize(c);
-        check(c.selfStatsSeconds == 0, "selfStatsSeconds -5 应夹到 0");
+        check(c.selfStatsSeconds == 1, "selfStatsSeconds -5 应夹到 1");
+        EnemyHudConfig.Cfg big = new EnemyHudConfig.Cfg();
+        big.selfStatsSeconds = 999;
+        check(EnemyHudConfig.normalize(big).selfStatsSeconds == 5, "selfStatsSeconds 999 应夹到 5");
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
         check(EnemyHudConfig.CURRENT_VERSION == 6, "配置版本应为 6");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
-        check(defaults.selfStatsSeconds == 30, "自身属性面板默认 30 s 刷新");
+        check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
         check(defaults.selfStatsColumns == 2, "自身属性面板默认两列");
         EnemyHudConfig.Cfg v3 = new EnemyHudConfig.Cfg();
         v3.configVersion = 3;
@@ -1402,7 +1405,7 @@ public final class SelfCheck {
         check(EnemyHudConfig.CURRENT_VERSION == 6, "配置版本应为 6");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
-        check(defaults.selfStatsSeconds == 30, "自身属性面板默认 30 s 刷新");
+        check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
         check(defaults.selfStatsColumns == 2, "自身属性面板默认两列");
         check(defaults.selfStatsScale == 1.0 && defaults.selfStatsOpacity == 1.0, "默认字号/不透明度应为 1.0");
         check(defaults.selfStatsHidden.isEmpty(), "默认不隐藏任何属性");

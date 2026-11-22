@@ -30,6 +30,9 @@
 
   "ctt_enemy_hud.config.showSelfStats": "显示属性面板",
   "ctt_enemy_hud.config.selfStatsSeconds": "刷新间隔：%s 秒（现实时间）",
+  "ctt_enemy_hud.config.refreshNow": "立即",
+  "ctt_enemy_hud.config.selfStatsSecondsForced": "刷新间隔：%s 秒（服务器固定）",
+  "ctt_enemy_hud.config.selfStatsSeconds.tooltip": "刷新间隔：1 = 立即，最长 5 秒，默认 3 秒。\n进入他人服务器时强制 3 秒，不会改动这里的设置。",
   "ctt_enemy_hud.config.selfStatsColumns": "列数：%s",
   "ctt_enemy_hud.config.selfStatsScale": "文字大小：%s",
   "ctt_enemy_hud.config.selfStatsOpacity": "不透明度：%s",

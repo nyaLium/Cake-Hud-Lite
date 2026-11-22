@@ -193,9 +193,16 @@ public final class EnemyHudSettingsScreen extends Screen {
                         (b, v) -> EnemyHudConfig.get().showSelfStats = v));
         y += ROW_GAP;
         addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
-                0.0, 60.0, 1.0, cfg.selfStatsSeconds,
-                v -> key("selfStatsSeconds", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().selfStatsSeconds = (int) Math.round(v)));
+                1.0, 5.0, 1.0, cfg.selfStatsSeconds,
+                v -> {
+                    // 服务器强制 3 秒时直接显示生效值（配置值仍保留，切到单机就恢复）。
+                    if (SelfStats.forcedByServer(this.minecraft)) {
+                        return key("selfStatsSecondsForced", SelfStats.FORCED_SERVER_SECONDS);
+                    }
+                    return Math.round(v) <= 1 ? key("refreshNow") : key("selfStatsSeconds", (int) Math.round(v));
+                },
+                v -> EnemyHudConfig.get().selfStatsSeconds = (int) Math.round(v))
+                .tooltip(key("selfStatsSeconds.tooltip")));
         y += ROW_GAP;
         addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
                 1.0, 3.0, 1.0, cfg.selfStatsColumns,
@@ -265,6 +272,12 @@ public final class EnemyHudSettingsScreen extends Screen {
             this.label = label;
             this.onChange = onChange;
             updateMessage();
+        }
+
+        /** 鼠标悬停提示（1.20.13 起刷新间隔滑块用它解释「服务器强制 3 秒」）。 */
+        ValueSlider tooltip(Component text) {
+            if (text != null) setTooltip(net.minecraft.client.gui.components.Tooltip.create(text));
+            return this;
         }
 
         private double currentValue() {

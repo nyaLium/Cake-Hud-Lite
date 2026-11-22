@@ -74,8 +74,8 @@ public final class EnemyHudConfig {
          * 抓地图回的那些属性行画成面板，不依赖服务端组件。
          */
         public boolean showSelfStats = true;
-        /** 属性面板自动刷新间隔（秒）；0 = 不自动刷新。 */
-        public int selfStatsSeconds = 30;
+        /** 属性面板自动刷新间隔（秒），1 = 立即（每 tick 刷），1~5；进他人服务器时强制 3 s（不改这里）。 */
+        public int selfStatsSeconds = 3;
         /** 属性面板列数，1 ~ 3。 */
         public int selfStatsColumns = 2;
         /** 属性面板左上角屏幕坐标（GUI 像素）。 */
@@ -295,7 +295,7 @@ public final class EnemyHudConfig {
         read.teamVerticalOffset = (int) clamp(read.teamVerticalOffset, -30.0, 0.0);
         read.teamMaxDistance = clamp(read.teamMaxDistance, 4.0, 256.0);
         // 自身属性面板（1.20.3）：间隔 0~600 s，列 1~3，坐标夹进屏幕范围
-        read.selfStatsSeconds = (int) clamp(read.selfStatsSeconds, 0.0, 600.0);
+        read.selfStatsSeconds = (int) clamp(read.selfStatsSeconds, 1.0, 5.0);
         read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);
         read.selfStatsX = (int) clamp(read.selfStatsX, 0.0, 4000.0);
         read.selfStatsY = (int) clamp(read.selfStatsY, 0.0, 4000.0);

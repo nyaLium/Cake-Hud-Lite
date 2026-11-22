@@ -30,6 +30,9 @@
 
   "ctt_enemy_hud.config.showSelfStats": "Show stats panel",
   "ctt_enemy_hud.config.selfStatsSeconds": "Refresh every %s s (real time)",
+  "ctt_enemy_hud.config.refreshNow": "Immediate",
+  "ctt_enemy_hud.config.selfStatsSecondsForced": "Refresh every %s s (forced by server)",
+  "ctt_enemy_hud.config.selfStatsSeconds.tooltip": "Refresh interval: 1 = immediate, max 5 s, default 3 s.\nForced to 3 s on someone else's server; your setting is kept.",
   "ctt_enemy_hud.config.selfStatsColumns": "Columns: %s",
   "ctt_enemy_hud.config.selfStatsScale": "Text size: %s",
   "ctt_enemy_hud.config.selfStatsOpacity": "Opacity: %s",

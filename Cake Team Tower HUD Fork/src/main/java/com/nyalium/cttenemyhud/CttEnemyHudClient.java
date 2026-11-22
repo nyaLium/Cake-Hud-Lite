@@ -34,18 +34,6 @@ public final class CttEnemyHudClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         EnemyHudConfig.load();
-        // 1.20.12：上游 Cake Tower HUD Plus（ctt-health-display）也有同一套属性面板，
-        // 两个一起装会各画一份（看起来像「双重属性」）。进服时提示一次，不替玩家做选择。
-        boolean upstreamPresent = net.fabricmc.loader.api.FabricLoader.getInstance()
-                .isModLoaded("ctt-health-display");
-        if (upstreamPresent) {
-            ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-                if (client.player != null) {
-                    client.player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                            "[CTT HUD] 检测到上游 ctt-health-display 同时安装：属性面板会重复绘制，建议只保留一个。"));
-                }
-            });
-        }
         // 血条：在「实体名字的提交点」世界空间绘制（mixin NameTagHudMixin → HudWorldRenderer），
         // 天然带深度测试，被挡住就看不见。
         // 自身属性面板：唯一一个 GUI 元素，挂在聊天栏之前，免得压住聊天。

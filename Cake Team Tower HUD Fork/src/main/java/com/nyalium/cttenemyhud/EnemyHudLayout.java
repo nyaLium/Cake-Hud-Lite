@@ -358,23 +358,23 @@ public final class EnemyHudLayout {
 
     // ── 大数值缩写 ──
 
-    /** 超过这个值开始用 k / m / b 缩写。 */
+    /** 超过这个值开始用 K / M / B 缩写。 */
     public static final int NUM_EXACT_LIMIT = 100_000;
 
     /**
-     * 数字的显示文本：{@code < 100000} 原样，再大改写成 {@code 123.4k / 12.3m / 2.1b}。
+     * 数字的显示文本：{@code < 100000} 原样，再大改写成 {@code 123.4K / 12.3M / 2.1B}。
      *
      * <p>实测过：把心数写成 {@code 999999} 这种 6 位数时，一行五段会把文字拉出屏幕两侧
      * （centered 后被裁掉）。缩写把每段压到 5~6 个字符；小数**截断**而不是四舍五入，
-     * 所以宁可少报一点也不虚报。</p>
+     * 所以宁可少报一点也不虚报。1.20.13 起后缀用大写（K/M/B），和常见游戏一致。</p>
      */
     public static String num(int value) {
         long n = Math.abs((long) value);
         String sign = value < 0 ? "-" : "";
         if (n < NUM_EXACT_LIMIT) return sign + n;
-        if (n < 1_000_000L) return sign + scaled(n, 1_000L) + "k";
-        if (n < 1_000_000_000L) return sign + scaled(n, 1_000_000L) + "m";
-        return sign + scaled(n, 1_000_000_000L) + "b";
+        if (n < 1_000_000L) return sign + scaled(n, 1_000L) + "K";
+        if (n < 1_000_000_000L) return sign + scaled(n, 1_000_000L) + "M";
+        return sign + scaled(n, 1_000_000_000L) + "B";
     }
 
     /** 截断到 1 位小数；整数部分 ≥ 100 时只留整数，保证不会太长。 */
