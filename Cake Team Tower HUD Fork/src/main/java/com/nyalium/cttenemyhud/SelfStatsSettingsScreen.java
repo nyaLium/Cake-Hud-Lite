@@ -27,6 +27,8 @@ public final class SelfStatsSettingsScreen extends Screen {
     private final EnemyHudConfigScreen menu;
     private ScrollPane pane = new ScrollPane(TOP, 1000);
     private final List<Row> rows = new ArrayList<>();
+    /** 滚动区里的控件：只登记输入（{@code addWidget}），绘制由 {@link #paintContent} 裁剪。 */
+    private final List<AbstractWidget> contentRows = new ArrayList<>();
     private int contentHeight;
     private boolean editContainer;
 
@@ -111,6 +113,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         this.pane.contentHeight(contentHeight);
         this.pane.scrollBy(keep);
         clearWidgets();
+        this.contentRows.clear();
 
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         int mode = cfg.selfStatsMode;
@@ -123,7 +126,8 @@ public final class SelfStatsSettingsScreen extends Screen {
         List<AbstractWidget> dependent = new ArrayList<>();
 
         for (Row row : rows) {
-            
+            // 整行都在可视区外的行不建控件
+            if (!this.pane.intersects(row.y, row.h)) continue;
             int y = this.pane.screenY(row.y);
             AbstractWidget widget = null;
             switch (row.kind) {
@@ -202,7 +206,8 @@ public final class SelfStatsSettingsScreen extends Screen {
                 }
             }
             if (widget == null) continue;
-            addRenderableWidget(widget);
+            addWidget(widget);
+            this.contentRows.add(widget);
             if (!row.kind.equals(Kind.TOGGLE)) dependent.add(widget);
         }
         if (!enabled) for (AbstractWidget w : dependent) w.active = false;
@@ -214,6 +219,11 @@ public final class SelfStatsSettingsScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        this.pane.beginClip(graphics, this.width);
+        for (AbstractWidget widget : this.contentRows) {
+            widget.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        }
+        this.pane.endClip(graphics);
         graphics.centeredText(this.font, this.title, this.width / 2, 22, 0xFFFFFFFF);
         this.pane.drawScrollbar(graphics, this.width / 2 + Math.min(WIDTH_MAX, this.width - 60) / 2 + 10);
         if (this.pane.maxScroll() > 0) {

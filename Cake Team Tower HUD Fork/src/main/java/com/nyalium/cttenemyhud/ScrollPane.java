@@ -56,6 +56,22 @@ final class ScrollPane {
         return y + height > top - 2 && y < bottom;
     }
 
+    /**
+     * 进入可视区裁剪（1.20.22）。
+     *
+     * <p>内容控件不再交给 {@code Screen} 自动绘制，而是由界面自己在
+     * {@code beginClip} / {@code endClip} 之间画 —— 这样滚到边界时最后一行被
+     * <b>截断</b>，而不是盖到提示文本和「返回」按钮上（1.20.21 之前只是不创建
+     * 完全越界的行，部分露出的行仍会画到屏幕外）。</p>
+     */
+    void beginClip(GuiGraphicsExtractor g, int width) {
+        g.enableScissor(0, top, Math.max(0, width), bottom);
+    }
+
+    void endClip(GuiGraphicsExtractor g) {
+        g.disableScissor();
+    }
+
     void scrollBy(int deltaPixels) {
         scroll = clamp(scroll + deltaPixels);
     }

@@ -33,6 +33,7 @@ public final class SelfCheck {
         bossBarBinding();
         filterGridWidth();
         panelModes();
+        scrollBand();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -362,9 +363,26 @@ public final class SelfCheck {
         shield.shieldOpacity = 0.0;
         shield.shieldX = 99999;
         EnemyHudConfig.normalize(shield);
-        check(shield.shieldScale == 3.0, "shieldScale 应夹到 3.0");
+        check(shield.shieldScale == EnemyHudConfig.SHIELD_SCALE_MAX, "shieldScale 应夹到 1.5");
         check(shield.shieldOpacity == 0.1, "shieldOpacity 应夹到 0.1");
         check(shield.shieldX == 4000, "shieldX 应夹到 4000");
+        EnemyHudConfig.Cfg tiny = new EnemyHudConfig.Cfg();
+        tiny.shieldScale = 0.01;
+        EnemyHudConfig.normalize(tiny);
+        check(tiny.shieldScale == EnemyHudConfig.SHIELD_SCALE_MIN, "shieldScale 应兜到 0.5");
+
+        // 1.20.22：缩放是「整张纹理等比缩放」，倍率取 0.5~1.5 的小数
+        check(ShieldIndicatorHud.clampScale(Double.NaN) == 1.0, "NaN 倍率应回落 1.0");
+        check(ShieldIndicatorHud.clampScale(9.0) == 1.5, "9 倍应夹到 1.5");
+        check(ShieldIndicatorHud.clampScale(0.1) == 0.5, "0.1 倍应夹到 0.5");
+        check(ShieldIndicatorHud.scaledWidth(1.0) == ShieldIndicatorHud.TEX_W, "1.0 倍宽 = 原纹理宽");
+        check(ShieldIndicatorHud.scaledHeight(1.0) == ShieldIndicatorHud.TEX_H, "1.0 倍高 = 原纹理高");
+        check(ShieldIndicatorHud.scaledWidth(0.5) == 18, "0.5 倍宽应为 18");
+        check(ShieldIndicatorHud.scaledHeight(0.5) == 53, "0.5 倍高应为 53");
+        check(ShieldIndicatorHud.scaledWidth(1.5) == 54, "1.5 倍宽应为 54");
+        check(ShieldIndicatorHud.scaledHeight(1.5) == 159, "1.5 倍高应为 159");
+        check(ShieldIndicatorHud.scaledWidth(1.2) == 43, "1.2 倍宽应为 43");
+        check(ShieldIndicatorHud.scaledWidth(99.0) == 54, "越界倍率应按 1.5 算宽");
     }
 
     // ── 2. 血条长度 ──
@@ -1362,7 +1380,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(EnemyHudConfig.CURRENT_VERSION == 10, "配置版本应为 10");
+        check(EnemyHudConfig.CURRENT_VERSION == 11, "配置版本应为 11");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1371,7 +1389,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 10, "v3 → v10 应升版本号");
+        check(v3.configVersion == 11, "v3 → v11 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1507,7 +1525,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
-        check(EnemyHudConfig.CURRENT_VERSION == 10, "配置版本应为 10");
+        check(EnemyHudConfig.CURRENT_VERSION == 11, "配置版本应为 11");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1530,7 +1548,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 10, "v4 → v10 应升版本号");
+        check(v4.configVersion == 11, "v4 → v11 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板
@@ -1573,6 +1591,37 @@ public final class SelfCheck {
     private static void check(boolean condition, String message) {
         checks++;
         if (!condition) fail(message);
+    }
+
+    /**
+     * 1.20.22：滚动区的上下限与裁剪。
+     *
+     * <p>「下限超出屏幕」的根因是内容控件由 {@code Screen} 自动绘制、没有裁剪；
+     * 现在内容只在 {@code [top, bottom)} 里画。这里锁住可视区数学：
+     * 下沿 = 高度 - 56，至少留一行，滚动量夹在 [0, content - viewport]。</p>
+     */
+    private static void scrollBand() {
+        ScrollPane pane = new ScrollPane(52, 200);
+        check(pane.top() == 52 && pane.bottom() == 200, "可视区应为 [52,200)");
+        check(pane.viewportHeight() == 148, "可视高应为 148");
+        pane.contentHeight(500);
+        check(pane.maxScroll() == 352, "最大滚动 = 内容高 - 可视高: " + pane.maxScroll());
+        check(pane.screenY(0) == 52, "内容 0 应贴在 top");
+        check(pane.intersects(0, 20), "第一行应相交");
+        check(pane.intersects(140, 20), "部分露出的行也应相交（由裁剪切掉下半截）");
+        check(!pane.intersects(148, 20), "完全在可视区下方的行不该相交");
+        check(!pane.intersects(-30, 20), "完全在可视区上方的行不该相交");
+        pane.scrollBy(9999);
+        check(pane.scroll() == 352, "滚动量应夹到上限");
+        check(pane.screenY(0) == 52 - 352, "滚到底后首行应移出可视区");
+        pane.scrollBy(-9999);
+        check(pane.scroll() == 0, "滚动量不该小于 0");
+
+        // 可视区至少一行；正常窗口的下沿 = 高度 - 56（提示文本 / 返回按钮之上）
+        check(new ScrollPane(52, 60).bottom() == 72, "可视区至少留 20px");
+        check(new ScrollPane(52, 300 - 56).bottom() == 244, "可视区下沿应为 高度 - 56");
+        check(new ScrollPane(52, 200).viewportHeight() == 148
+                && new ScrollPane(52, 200).maxScroll() == 0, "内容为空时不该能滚");
     }
 
     private static void fail(String message) {

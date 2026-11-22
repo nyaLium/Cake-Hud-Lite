@@ -45,9 +45,11 @@ public final class ShieldIndicatorSettingsScreen extends Screen {
         y += ROW_GAP;
 
         AbstractSliderButton scale = new ValueSlider(x, y, width, ROW_HEIGHT,
-                1.0, 4.0, 1.0, Math.max(1.0, Math.min(4.0, cfg.shieldScale)),
-                v -> Component.translatable("ctt_enemy_hud.config.shieldScale", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().shieldScale = Math.round(v));
+                EnemyHudConfig.SHIELD_SCALE_MIN, EnemyHudConfig.SHIELD_SCALE_MAX, 0.1,
+                ShieldIndicatorHud.clampScale(cfg.shieldScale),
+                v -> Component.translatable("ctt_enemy_hud.config.shieldScale",
+                        String.format(Locale.ROOT, "%.1f", v)),
+                v -> EnemyHudConfig.get().shieldScale = ShieldIndicatorHud.clampScale(v));
         scale.active = on;
         addRenderableWidget(scale);
         y += ROW_GAP;

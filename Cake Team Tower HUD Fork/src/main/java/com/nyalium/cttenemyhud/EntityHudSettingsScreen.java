@@ -32,6 +32,8 @@ public final class EntityHudSettingsScreen extends Screen {
     private final EnemyHudConfigScreen menu;
     private ScrollPane pane = new ScrollPane(TOP, 1000);
     private final List<Row> rows = new ArrayList<>();
+    /** 滚动区里的控件：只登记输入（{@code addWidget}），绘制由 {@link #paintContent} 裁剪。 */
+    private final List<AbstractWidget> contentRows = new ArrayList<>();
 
     public EntityHudSettingsScreen(EnemyHudConfigScreen menu) {
         super(Component.translatable("ctt_enemy_hud.config.section.entity"));
@@ -125,6 +127,7 @@ public final class EntityHudSettingsScreen extends Screen {
         this.pane.contentHeight(lastY);
         this.pane.scrollBy(keepScroll);
         clearWidgets();
+        this.contentRows.clear();
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         boolean enemyActive = cfg.showBar;
         boolean playerActive = cfg.showTeammates;
@@ -132,7 +135,8 @@ public final class EntityHudSettingsScreen extends Screen {
         int x = this.width / 2 - width / 2;
         for (Row row : rows) {
             if (row.kind == Kind.HEADER) continue;
-            
+            // 整行都在可视区外的行不建控件（省得屏幕外还能点到）
+            if (!this.pane.intersects(row.y, row.height)) continue;
             int y = this.pane.screenY(row.y);
             AbstractWidget widget = row.kind == Kind.TOGGLE ? createToggle(row, x, y, width)
                     : createSlider(row, x, y, width);
@@ -141,7 +145,8 @@ public final class EntityHudSettingsScreen extends Screen {
                 if (group == 1 && !enemyActive) widget.active = false;
                 if (group == 2 && !playerActive) widget.active = false;
             }
-            addRenderableWidget(widget);
+            addWidget(widget);
+            this.contentRows.add(widget);
         }
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
                 .bounds(this.width / 2 - 60, this.height - ROW_HEIGHT - 8, 120, ROW_HEIGHT).build());
@@ -165,17 +170,29 @@ public final class EntityHudSettingsScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        paintContent(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(this.font, this.title, this.width / 2, 22, 0xFFFFFFFF);
-        for (Row row : rows) {
-            if (row.kind != Kind.HEADER) continue;
-            
-            graphics.centeredText(this.font, row.label, this.width / 2, this.pane.screenY(row.y) + 8, 0xFFFFD060);
-        }
         this.pane.drawScrollbar(graphics, this.width / 2 + Math.min(WIDTH_MAX, this.width - 60) / 2 + 10);
         if (this.pane.maxScroll() > 0) {
             graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.scrollHint"),
                     this.width / 2, this.height - ROW_HEIGHT - 26, 0xFFA0A0A0);
         }
+    }
+
+    /**
+     * 画滚动区内容：在 {@code [top, bottom)} 里做真裁剪，滚到边界时最后一行被切掉，
+     * 不会盖到下面的提示文本 / 「返回」按钮，更不会画到屏幕外。
+     */
+    private void paintContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        this.pane.beginClip(graphics, this.width);
+        for (Row row : rows) {
+            if (row.kind != Kind.HEADER || !this.pane.intersects(row.y, row.height)) continue;
+            graphics.centeredText(this.font, row.label, this.width / 2, this.pane.screenY(row.y) + 8, 0xFFFFD060);
+        }
+        for (AbstractWidget widget : this.contentRows) {
+            widget.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        }
+        this.pane.endClip(graphics);
     }
 
     @Override

@@ -119,7 +119,7 @@
   "ctt_enemy_hud.config.scrollHint": "Scroll for more",
   "ctt_enemy_hud.config.section.shield": "Shield indicator…",
   "ctt_enemy_hud.config.shieldEnabled": "Enable shield indicator",
-  "ctt_enemy_hud.config.shieldScale": "Size: %sx",
+  "ctt_enemy_hud.config.shieldScale": "Scale: %sx",
   "ctt_enemy_hud.config.shieldOffset": "Horizontal offset: %s px",
   "ctt_enemy_hud.config.shieldGap": "Gap above action bar: %s px",
   "ctt_enemy_hud.config.shieldPosition": "Position: %s",

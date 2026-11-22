@@ -122,7 +122,7 @@ public final class EnemyHudConfig {
         /** 屏幕 GUI 坐标（左上角）；-1 = 未设置，默认副手槽上方。 */
         public int shieldX = -1;
         public int shieldY = -1;
-        /** 纹理缩放（1.0 = 36×106 原尺寸）。 */
+        /** 缩放倍率（1.0 = 36×106 原尺寸；1.20.22 起允许 0.5~1.5 的小数倍）。 */
         public double shieldScale = 1.0;
         /** 不透明度 0.1~1.0。 */
         public double shieldOpacity = 1.0;
@@ -159,7 +159,11 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 10;
+    public static final int CURRENT_VERSION = 11;
+
+    /** 盾牌指示器的缩放范围（倍）。1.20.22 起是小数倍，纹理整张等比缩放。 */
+    public static final double SHIELD_SCALE_MIN = 0.5;
+    public static final double SHIELD_SCALE_MAX = 1.5;
     /** 旧版默认血条长度（1.18.0 起默认改成 75）。 */
     private static final double LEGACY_BAR_WIDTH = 100.0;
     /** 旧版默认缩放（1.19.0 起默认改成 0.9）。 */
@@ -450,6 +454,11 @@ public final class EnemyHudConfig {
             cfg.shieldX = -1;
             cfg.shieldY = -1;
         }
+        if (version < 11) {
+            // 1.20.22：盾牌缩放从「整数倍 1~4」改成「0.5~1.5 小数倍」。
+            // 越界值在 normalize() 里统一夹取，这里只保证版本号被写上。
+            cfg.shieldScale = Math.max(SHIELD_SCALE_MIN, Math.min(SHIELD_SCALE_MAX, cfg.shieldScale));
+        }
         if (version < 9) {
             // 模式 2 的容器那套从「模式 2 的 HUD 那套」复制。
             cfg.bothContainerX = cfg.bothX;
@@ -526,10 +535,10 @@ public final class EnemyHudConfig {
         read.bothContainerScale = clamp(read.bothContainerScale, 1.0, 2.0);
         read.bothContainerOpacity = clamp(read.bothContainerOpacity, 0.2, 1.0);
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
-        // 盾牌指示器（1.20.20：可拖动定位 + 透明度）
+        // 盾牌指示器（1.20.20：可拖动定位 + 透明度；1.20.22：缩放 0.5~1.5 小数倍）
         read.shieldX = (int) clamp(read.shieldX, -1.0, 4000.0);
         read.shieldY = (int) clamp(read.shieldY, -1.0, 4000.0);
-        read.shieldScale = clamp(read.shieldScale, 0.5, 3.0);
+        read.shieldScale = clamp(read.shieldScale, SHIELD_SCALE_MIN, SHIELD_SCALE_MAX);
         read.shieldOpacity = clamp(read.shieldOpacity, 0.1, 1.0);
         return read;
     }

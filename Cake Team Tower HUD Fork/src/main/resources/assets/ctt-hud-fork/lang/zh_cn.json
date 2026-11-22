@@ -119,7 +119,7 @@
   "ctt_enemy_hud.config.scrollHint": "滚轮滚动查看更多",
   "ctt_enemy_hud.config.section.shield": "盾牌指示器设置…",
   "ctt_enemy_hud.config.shieldEnabled": "启用盾牌指示器",
-  "ctt_enemy_hud.config.shieldScale": "尺寸：%s 倍",
+  "ctt_enemy_hud.config.shieldScale": "缩放：%s 倍",
   "ctt_enemy_hud.config.shieldOffset": "水平偏移：%s px",
   "ctt_enemy_hud.config.shieldGap": "与动作栏间距：%s px",
   "ctt_enemy_hud.config.shieldPosition": "位置：%s",
