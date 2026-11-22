@@ -7,7 +7,8 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
-| **1.16.3** | 队友只画心与血条，**护甲段不再显示**（`teamOptions.showArmor = false`）；敌人照旧 | `versions/v1.16.3/` |
+| **1.17.0** | 护甲：🛡 常驻 + 元素护甲 **2 项/页循环**（2 s）；大数值 **k/m/b 缩写**；着火时 HUD 沿视线往相机推，不再被火焰盖住 | `versions/v1.17.0/` |
+| 1.16.3 | 队友只画心与血条，护甲段不再显示（`teamOptions.showArmor = false`）；敌人照旧 | `versions/v1.16.3/` |
 | 1.16.2 | 死亡 / 观战（旁观模式）的玩家不再显示头顶 HUD：客户端 `isSpectator()` 不画、服务端不进 payload | `versions/v1.16.2/` |
 | 1.16.1 | 队友绿条进度固定为 **红心 ÷ MaxHP**（不再按当前心类分层）；文字行距 9 → **10**，修掉两行之间那条叠加暗带 | `versions/v1.16.1/` |
 | 1.16.0 | 队友（玩家）也能显示四色心 / 碎心 / 粉心：服务端把附近玩家一起推，客户端优先用 payload | `versions/v1.16.0/` |
@@ -38,7 +39,24 @@
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
 
-## 1.16.3（当前）
+## 1.17.0（当前）
+
+- **护甲分页**：`🛡 防御` 常驻，七种元素护甲每页最多 **2 项**、**2 s** 翻一页（5 种 = 2+2+1）。
+  新增纯函数 `ArmourCycle.page(armor, nowMs, salt)`，`salt` 用实体 id 错开，避免满屏同时翻。
+  `EnemyHudLayout` 新增 `ARMOUR_PAGE_SIZE / armourPageCount() / clampArmourPage()` 与 `Options.armourPage`。
+  实测逐帧：`🛡5 🔥3 ☃1` → `🛡5 ☠2 ☀4` → `🛡5 ⚓6`（`versions/v1.17.0/armour-pages.png`）。
+- **大数值缩写**：`999999` 实测会把整行拉出屏幕。新增 `EnemyHudLayout.num()`：< 100000 原样，
+  再大改 `k / m / b` 且小数截断（`999k`、`1.2m`、`123.4m`、`2.1b`）。心数 / 上限 / 防御 / 元素护甲统一走它。
+  实测 `999999 × 5` → 每段 `999k`，整行缩到约 1/3 并折两行（`versions/v1.17.0/big-numbers.png`）。
+- **着火不再盖住血条**：燃烧是不透明几何（`solid`、写深度），火焰盒子向相机一侧伸出
+  `0.7 × boundingBoxWidth`，血条平面穿过盒子中间因而被深度裁掉。现在 `displayFireAnimation`
+  为真时把**整组 HUD（文字 + 血条）**沿视线往相机推 `0.7 × 宽 + 0.05` 格（上限 1.2），
+  同一条射线屏幕位置不变。实测同一块裁切里血条/文字的红像素 15.79% → 20.81%
+  （`versions/v1.17.0/fire-before-after.png`）。
+- 自检：`checks=1540 failures=0`（+39：分页/翻页时钟/三页布局/`num()` 边界）。
+  总数比 1.16.3 的 1595 少，是因为「逐段」断言随护甲段数从 7 降到 2 而减少，**没有删断言**。
+
+## 1.16.3
 
 - **队友只画心与血条，护甲段不再显示**：`HudWorldRenderer.teamOptions()` 里 `showArmor = false`。
   `EnemyHudLayout` 的护甲段与 `|` 分隔符都写在 `if (opt.showArmor && hasArmor(...))` 内，

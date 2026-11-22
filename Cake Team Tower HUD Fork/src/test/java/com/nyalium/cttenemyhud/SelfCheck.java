@@ -16,6 +16,8 @@ public final class SelfCheck {
         configNormalization();
         armorEdgeCases();
         heartCountsAndRows();
+        armourPaging();
+        bigNumbers();
         barOwnershipScoring();
         screenOcclusion();
         payloadConversion();
@@ -398,9 +400,109 @@ public final class SelfCheck {
         check(join(armored).contains(EnemyData.ARMOR_ICONS[1] + "5"), "元素护甲段缺失: " + join(armored));
     }
 
+    // ── 4b. 元素护甲翻页（1.17.0） ──
+
+    private static void armourPaging() {
+        // 🔥3 ☃1 ☠2 ☀4 ⚓6 = 5 项 → 2 + 2 + 1 三页
+        int[] five = {3, 1, 2, 4, 0, 6, 0};
+        check(EnemyHudLayout.armourPageCount(five) == 3,
+                "5 种护甲应分 3 页: " + EnemyHudLayout.armourPageCount(five));
+        check(EnemyHudLayout.armourPageCount(new int[]{5, 0, 0, 0, 0, 0, 0}) == 1, "1 种护甲应 1 页");
+        check(EnemyHudLayout.armourPageCount(new int[7]) == 0, "没有护甲应 0 页");
+        check(EnemyHudLayout.armourPageCount(null) == 0, "护甲为 null 应 0 页");
+        check(EnemyHudLayout.clampArmourPage(-3, 3) == 0, "页号过小应夹到 0");
+        check(EnemyHudLayout.clampArmourPage(9, 3) == 2, "页号过大应夹到最后一页");
+        check(EnemyHudLayout.clampArmourPage(1, 0) == 0, "没有页时返回 0");
+
+        // 翻页时钟：2 s 一页，周而复始；salt 用来错开。
+        long ms = ArmourCycle.PAGE_MS;
+        check(ArmourCycle.page(five, 0, 0) == 0, "t=0 应在第 0 页");
+        check(ArmourCycle.page(five, ms, 0) == 1, "t=1 页应在第 1 页");
+        check(ArmourCycle.page(five, ms * 2, 0) == 2, "t=2 页应在第 2 页");
+        check(ArmourCycle.page(five, ms * 3, 0) == 0, "t=3 页应回到第 0 页");
+        check(ArmourCycle.page(five, ms, 1) == 2, "salt=1 应错开一页: " + ArmourCycle.page(five, ms, 1));
+        check(ArmourCycle.page(five, ms, 2) == 0, "salt=2 应错开两页");
+        check(ArmourCycle.page(new int[]{1, 0, 0, 0, 0, 0, 0}, ms * 5, 3) == 0,
+                "只有一页时不该翻页");
+        check(ArmourCycle.page(null, ms * 5, 3) == 0, "没有护甲时页号为 0");
+
+        // 布局：🛡 常驻，元素护甲每页最多 2 项。
+        String[] pageArmour = {
+                "\uD83D\uDD253 \u26031",              // 🔥3 ☃1
+                "\u26202 \u26004",                    // ☠2 ☀4
+                "\u26936",                            // ⚓6
+        };
+        String[] otherPages = {
+                "\u26202", "\u26004", "\u26936"       // 不该出现在第 0 页的
+        };
+        for (int page = 0; page < 3; page++) {
+            EnemyHudLayout.Options o = new EnemyHudLayout.Options();
+            o.showHearts = true;
+            o.showArmor = true;
+            o.showBar = false;
+            o.armourPage = page;
+            EnemyHudLayout.Result r = EnemyHudLayout.compute(150, 150, false, 5, five,
+                    HeartCounts.of(60, 40, 0, 0, 0), o, SelfCheck::width);
+            String text = join(r);
+            check(text.contains("\uD83D\uDEE15"), "第 " + page + " 页应始终带 🛡5: " + text);
+            check(text.contains("|"), "第 " + page + " 页应有「心 ↔ 护甲」分隔符: " + text);
+            check(text.contains(pageArmour[page]),
+                    "第 " + page + " 页应显示 " + pageArmour[page] + ": " + text);
+        }
+
+        EnemyHudLayout.Options p0 = new EnemyHudLayout.Options();
+        p0.showHearts = true;
+        p0.showArmor = true;
+        p0.showBar = false;
+        p0.armourPage = 0;
+        String zero = join(EnemyHudLayout.compute(150, 150, false, 5, five,
+                HeartCounts.of(60, 40, 0, 0, 0), p0, SelfCheck::width));
+        for (int i = 1; i < otherPages.length; i++) {
+            check(!zero.contains(otherPages[i]),
+                    "第 0 页不该出现其它页的护甲 " + otherPages[i] + ": " + zero);
+        }
+
+        // 页号越界时夹回范围内，不会画空。
+        p0.armourPage = 99;
+        String clamped = join(EnemyHudLayout.compute(150, 150, false, 5, five,
+                HeartCounts.of(60, 40, 0, 0, 0), p0, SelfCheck::width));
+        check(clamped.contains("\u26936"), "页号越界应夹到最后一页: " + clamped);
+    }
+
+    // ── 4c. 大数值缩写（1.17.0） ──
+
+    private static void bigNumbers() {
+        check(EnemyHudLayout.num(0).equals("0"), "num(0)");
+        check(EnemyHudLayout.num(99999).equals("99999"), "num(99999)=" + EnemyHudLayout.num(99999));
+        check(EnemyHudLayout.num(100_000).equals("100k"), "num(100000)=" + EnemyHudLayout.num(100_000));
+        check(EnemyHudLayout.num(123_456).equals("123k"), "num(123456)=" + EnemyHudLayout.num(123_456));
+        check(EnemyHudLayout.num(999_999).equals("999k"), "num(999999)=" + EnemyHudLayout.num(999_999));
+        check(EnemyHudLayout.num(1_234_567).equals("1.2m"), "num(1234567)=" + EnemyHudLayout.num(1_234_567));
+        check(EnemyHudLayout.num(12_345_678).equals("12.3m"), "num(12345678)="
+                + EnemyHudLayout.num(12_345_678));
+        check(EnemyHudLayout.num(999_999_999).equals("999m"), "num(999999999)="
+                + EnemyHudLayout.num(999_999_999));
+        check(EnemyHudLayout.num(Integer.MAX_VALUE).equals("2.1b"), "num(MAX)="
+                + EnemyHudLayout.num(Integer.MAX_VALUE));
+        check(EnemyHudLayout.num(Integer.MIN_VALUE).startsWith("-"), "num(MIN) 应带负号: "
+                + EnemyHudLayout.num(Integer.MIN_VALUE));
+        check(EnemyHudLayout.num(-123_456).equals("-123k"), "num(-123456)="
+                + EnemyHudLayout.num(-123_456));
+
+        // 缩写的目的是行宽可控：五段 999999 以前约 40 个字符，现在每段 4~5 个。
+        EnemyHudLayout.Options o = new EnemyHudLayout.Options();
+        o.showHearts = true;
+        o.showBar = false;
+        o.barWidth = 100;
+        String text = join(EnemyHudLayout.compute(999_999, 999_999, false, 0, new int[7],
+                HeartCounts.of(999_999, 999_999, 999_999, 999_999, 999_999), o, SelfCheck::width));
+        check(!text.contains("999999"), "大数值应先缩写: " + text);
+        check(text.contains("999k/999k"), "大数值缩写格式: " + text);
+        check(text.length() < 60, "缩写后整行不该太长: " + text.length() + " -> " + text);
+    }
+
     /** 第 index 行拼起来的文字（0 = 最上面那行）。 */
-    private static String rowText(EnemyHudLayout.Result r, int index) {
-        if (r == null || index < 0 || index >= r.rows.size()) return "";
+    private static String rowText(EnemyHudLayout.Result r, int index) {        if (r == null || index < 0 || index >= r.rows.size()) return "";
         StringBuilder sb = new StringBuilder();
         for (EnemyHudLayout.Line l : r.rows.get(index).lines) sb.append(l.text);
         return sb.toString();

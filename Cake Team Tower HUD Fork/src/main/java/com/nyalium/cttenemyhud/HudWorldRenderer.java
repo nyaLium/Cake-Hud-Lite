@@ -83,6 +83,8 @@ public final class HudWorldRenderer {
         if (data == null) return;
 
         EnemyHudLayout.Options options = teammate ? teamOptions(cfg) : options(cfg);
+        // 元素护甲每页 2 项，按时间循环（用实体 id 错开，避免同一帧全体翻页）。
+        options.armourPage = ArmourCycle.page(data.armor, System.currentTimeMillis(), entity.getId());
         EnemyHudLayout.Result layout = EnemyHudLayout.compute(
                 data.hp, data.maxHp, data.percentOnly,
                 data.defence, data.armor, data.hearts, options, mc.font::width);
@@ -92,7 +94,22 @@ public final class HudWorldRenderer {
         if (attachment == null) attachment = new Vec3(0.0, state.boundingBoxHeight, 0.0);
         int light = state.lightCoords;
 
-        // ① 文字行：直接交给原版画名字的 submitNameTag（背景框 + 深度测试都白拿）。
+        // ① 着火：把整组 HUD 沿视线往相机方向推出去，推到火焰盒子前面。
+        float push = firePush(state);
+        boolean pushed = push > 0.0f;
+        if (pushed) {
+            Vec3 dir = new Vec3(state.x, state.y, state.z).add(attachment).subtract(camera.pos);
+            double len = dir.length();
+            if (len > 1.0e-4) {
+                Vec3 step = dir.scale(push / len);
+                pose.pushPose();
+                pose.translate(-step.x, -step.y, -step.z);
+            } else {
+                pushed = false;
+            }
+        }
+
+        // ② 文字行：直接交给原版画名字的 submitNameTag（背景框 + 深度测试都白拿）。
         int index = 0;
         for (EnemyHudLayout.Row row : layout.rows) {
             // submitNameTag 的 int 参数就是「名牌像素」里的 y，正好是我们的 row.top。
@@ -101,11 +118,36 @@ public final class HudWorldRenderer {
             index++;
         }
 
-        // ② 血条：同样的 billboard 变换，用原版 boss_bar 纹理自己提交两个四边形。
+        // ③ 血条：同样的 billboard 变换，用原版 boss_bar 纹理自己提交两个四边形。
         if (layout.barWidth > 0) {
             submitBar(mc, pose, collector, camera, attachment, layout, data, teammate, cfg, light);
         }
+
+        if (pushed) pose.popPose();
     }
+
+    /**
+     * 着火时把 HUD 往相机方向推多远（格）。
+     *
+     * <h2>为什么要推</h2>
+     * <p>燃烧动画是<b>不透明</b>几何（{@code solid} 阶段，写深度），画在血条之前；
+     * 它的火焰盒子以实体为中心，向相机一侧伸出 {@code 0.7 × boundingBoxWidth}。
+     * 血条的 billboard 平面正好穿过盒子中间，于是火焰在血条<b>前面</b>的像素会把血条
+     * 深度测试掉 —— 看起来就是「着火把血条盖住了」（大/矮胖的怪尤其明显，比如蜘蛛）。</p>
+     *
+     * <p>沿着<b>视线方向</b>把 HUD 推出去，屏幕位置不变（同一条射线），只是离相机近了一点；
+     * 推出 {@code 0.7 × 宽 + 5 cm} 之后整组 HUD 就在火焰盒子前面，深度测试不再被裁。
+     * 最多推 {@value #FIRE_PUSH_MAX} 格，避免大体型怪把 HUD 推到离谱的位置。</p>
+     */
+    private static float firePush(EntityRenderState state) {
+        if (!state.displayFireAnimation) return 0.0f;
+        float width = Math.max(0.0f, state.boundingBoxWidth);
+        return Math.min(FIRE_PUSH_MAX, 0.7f * width + 0.05f);
+    }
+
+    /** 着火时最多把 HUD 往相机方向推多远（格）。 */
+    private static final float FIRE_PUSH_MAX = 1.2f;
+
 
     // ── 数据 ──
 

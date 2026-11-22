@@ -72,6 +72,14 @@ public final class EnemyHudLayout {
     /** 同一组内各段之间的间隔（各类心之间用它，不是分隔符）。 */
     public static final String HEART_GAP = " ";
 
+    /**
+     * 元素护甲一页最多显示几项（1.17.0 起）。
+     *
+     * <p>七种元素护甲同时显示会把整行拉得很长，所以护甲部分**每页 2 项、循环翻页**；
+     * {@code 🛡 防御} 不受分页影响，一直显示。翻页节奏见 {@code ArmourCycle}。</p>
+     */
+    public static final int ARMOUR_PAGE_SIZE = 2;
+
     /** 文字宽度测量器（游戏里是真 Font，测试里可以是假实现）。 */
     public interface WidthMeasurer {
         int width(String text);
@@ -96,6 +104,11 @@ public final class EnemyHudLayout {
         public boolean textShadow = true;
         /** 整组 UI 缩放，1.0 = 与原版名牌同字号。 */
         public double scale = 1.0;
+        /**
+         * 元素护甲当前翻到第几页（0 起）。{@code 🛡 防御} 不参与分页。
+         * 只会取 {@code [0, 页数)}，越界时夹回范围内（见 {@link #armourPageCount(int[])}）。
+         */
+        public int armourPage = 0;
     }
 
     /** 一段带颜色的文字。 */
@@ -190,7 +203,7 @@ public final class EnemyHudLayout {
                 appendHeartSegments(rest, hearts);
             } else if (!percentOnly) {
                 // 拆不出各类心（例如队友只有 AllHearts/MaxHP）：退回原来的「当前/最大」。
-                head.add(new Line(Math.max(0, hp) + "/" + Math.max(0, maxHp), 0xFFFFFF));
+                head.add(new Line(num(Math.max(0, hp)) + "/" + num(Math.max(0, maxHp)), 0xFFFFFF));
             }
         }
 
@@ -199,18 +212,25 @@ public final class EnemyHudLayout {
             if (!head.isEmpty() || !rest.isEmpty()) {
                 rest.add(new Line(SEPARATOR, SEPARATOR_COLOR));
             }
+            // 🛡 防御常驻，不参与翻页。
             if (defence != 0) {
-                rest.add(new Line("\uD83D\uDEE1" + defence, EnemyData.DEFENCE_COLOR));
+                rest.add(new Line("\uD83D\uDEE1" + num(defence), EnemyData.DEFENCE_COLOR));
             }
+            // 元素护甲：7 种里只取当前页的 ARMOUR_PAGE_SIZE 项，其余靠循环翻页看到。
+            int page = clampArmourPage(opt.armourPage, armourPageCount(armor));
+            int seen = 0;
             if (armor != null) {
                 int n = Math.min(armor.length, EnemyData.ARMOR_ICONS.length);
                 for (int i = 0; i < n; i++) {
                     int v = armor[i];
                     if (v == 0) continue;
+                    int itemPage = seen / ARMOUR_PAGE_SIZE;
+                    seen++;
+                    if (itemPage != page) continue;
                     if (!rest.isEmpty()) {
                         rest.add(new Line(" ", 0xFFFFFF));
                     }
-                    rest.add(new Line(EnemyData.ARMOR_ICONS[i] + v, EnemyData.ARMOR_COLORS[i]));
+                    rest.add(new Line(EnemyData.ARMOR_ICONS[i] + num(v), EnemyData.ARMOR_COLORS[i]));
                 }
             }
         }
@@ -274,7 +294,7 @@ public final class EnemyHudLayout {
      */
     private static Line redLine(int red, int maxHp) {
         String icon = HeartCounts.ICONS[HeartCounts.RED];
-        String text = maxHp > 0 ? icon + Math.max(0, red) + "/" + maxHp : icon + Math.max(0, red);
+        String text = maxHp > 0 ? icon + num(Math.max(0, red)) + "/" + num(maxHp) : icon + num(Math.max(0, red));
         return new Line(text, HeartCounts.COLORS[HeartCounts.RED]);
     }
 
@@ -302,8 +322,56 @@ public final class EnemyHudLayout {
             if (!lines.isEmpty()) {
                 lines.add(new Line(HEART_GAP, 0xFFFFFF));
             }
-            lines.add(new Line(HeartCounts.ICONS[kind] + hearts.get(kind), HeartCounts.COLORS[kind]));
+            lines.add(new Line(HeartCounts.ICONS[kind] + num(hearts.get(kind)), HeartCounts.COLORS[kind]));
         }
+    }
+
+    // ── 大数值缩写 ──
+
+    /** 超过这个值开始用 k / m / b 缩写（1.17.0 起）。 */
+    public static final int NUM_EXACT_LIMIT = 100_000;
+
+    /**
+     * 数字的显示文本：{@code < 100000} 原样，再大改写成 {@code 123.4k / 12.3m / 2.1b}。
+     *
+     * <p>实测过：把心数写成 {@code 999999} 这种 6 位数时，一行五段会把文字拉出屏幕两侧
+     * （centered 后被裁掉）。缩写把每段压到 5~6 个字符；小数**截断**而不是四舍五入，
+     * 所以宁可少报一点也不虚报。</p>
+     */
+    public static String num(int value) {
+        long n = Math.abs((long) value);
+        String sign = value < 0 ? "-" : "";
+        if (n < NUM_EXACT_LIMIT) return sign + n;
+        if (n < 1_000_000L) return sign + scaled(n, 1_000L) + "k";
+        if (n < 1_000_000_000L) return sign + scaled(n, 1_000_000L) + "m";
+        return sign + scaled(n, 1_000_000_000L) + "b";
+    }
+
+    /** 截断到 1 位小数；整数部分 ≥ 100 时只留整数，保证不会太长。 */
+    private static String scaled(long n, long unit) {
+        long whole = n / unit;
+        long tenth = (n % unit) / (unit / 10L);
+        if (whole >= 100 || tenth == 0) return Long.toString(whole);
+        return whole + "." + tenth;
+    }
+
+    // ── 元素护甲翻页 ──
+
+    /** 元素护甲一共几页；没有护甲时 0 页。{@code 🛡 防御} 不计入。 */
+    public static int armourPageCount(int[] armor) {
+        if (armor == null) return 0;
+        int items = 0;
+        int n = Math.min(armor.length, EnemyData.ARMOR_ICONS.length);
+        for (int i = 0; i < n; i++) {
+            if (armor[i] != 0) items++;
+        }
+        return (items + ARMOUR_PAGE_SIZE - 1) / ARMOUR_PAGE_SIZE;
+    }
+
+    /** 页号夹到 {@code [0, pages)}；页数为 0 时返回 0。 */
+    public static int clampArmourPage(int page, int pages) {
+        if (pages <= 0) return 0;
+        return Math.max(0, Math.min(pages - 1, page));
     }
 
     /** 血条长度：夹在 [BAR_WIDTH_MIN, BAR_WIDTH_MAX]，非法值回落默认值。 */
