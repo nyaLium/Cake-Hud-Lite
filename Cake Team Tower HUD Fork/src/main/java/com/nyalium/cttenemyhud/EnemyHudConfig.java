@@ -69,13 +69,25 @@ public final class EnemyHudConfig {
         public boolean hideBehindEntities = true;
         /** 左上角打印每帧统计（排查用）。 */
         public boolean debug = false;
+        /**
+         * 自身属性面板（1.20.3）。纯客户端：定时 {@code /trigger ViewStats}，
+         * 抓地图回的那些属性行画成面板，不依赖服务端组件。
+         */
+        public boolean showSelfStats = true;
+        /** 属性面板自动刷新间隔（秒）；0 = 不自动刷新。 */
+        public int selfStatsSeconds = 30;
+        /** 属性面板列数，1 ~ 3。 */
+        public int selfStatsColumns = 2;
+        /** 属性面板左上角屏幕坐标。 */
+        public int selfStatsX = 4;
+        public int selfStatsY = 40;
     }
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 3;
+    public static final int CURRENT_VERSION = 4;
     /** 旧版默认血条长度（1.18.0 起默认改成 75）。 */
     private static final double LEGACY_BAR_WIDTH = 100.0;
     /** 旧版默认缩放（1.19.0 起默认改成 0.9）。 */
@@ -214,6 +226,11 @@ public final class EnemyHudConfig {
         read.teamScale = clamp(read.teamScale, 0.75, 1.5);
         read.teamVerticalOffset = (int) clamp(read.teamVerticalOffset, -30.0, 0.0);
         read.teamMaxDistance = clamp(read.teamMaxDistance, 4.0, 256.0);
+        // 自身属性面板（1.20.3）：间隔 0~600 s，列 1~3，坐标夹进屏幕范围
+        read.selfStatsSeconds = (int) clamp(read.selfStatsSeconds, 0.0, 600.0);
+        read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);
+        read.selfStatsX = (int) clamp(read.selfStatsX, 0.0, 4000.0);
+        read.selfStatsY = (int) clamp(read.selfStatsY, 0.0, 4000.0);
         return read;
     }
 

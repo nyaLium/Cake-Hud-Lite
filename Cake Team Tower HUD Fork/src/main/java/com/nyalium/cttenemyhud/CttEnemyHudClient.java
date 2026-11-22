@@ -1,8 +1,12 @@
 package com.nyalium.cttenemyhud;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.minecraft.resources.Identifier;
 
 /**
  * CTT Enemy HUD · 客户端入口。
@@ -11,6 +15,9 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
  * （计分板展示槽、原版 Boss 栏标题 / 颜色 / 进度、实体、玩家列表），服务端<b>不需要</b>安装任何东西。
  * 服务端若额外装了本 Mod，会通过 {@link MobHealthPayload} 推来按 UUID 的权威数据，
  * 本端自动优先使用（{@code useServerData}）。</p>
+ *
+ * <p>1.20.3 起多了<b>自身属性面板</b>（{@link SelfStats}）：它同样纯客户端——
+ * 定时 {@code /trigger ViewStats} 问地图，再把地图回的属性行画成面板。</p>
  */
 public final class CttEnemyHudClient implements ClientModInitializer {
 
@@ -19,15 +26,29 @@ public final class CttEnemyHudClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         EnemyHudConfig.load();
-        // 不再注册 GUI 元素：血条改为在「实体名字的提交点」世界空间绘制（mixin
-        // NameTagHudMixin → HudWorldRenderer），因此天然带深度测试，被挡住就看不见。
-        // 吞掉本 Mod 自发 /trigger 的聊天回显（成功回显 + 「无法触发该计分项」）。
+        // 血条：在「实体名字的提交点」世界空间绘制（mixin NameTagHudMixin → HudWorldRenderer），
+        // 天然带深度测试，被挡住就看不见。
+        // 自身属性面板：唯一一个 GUI 元素，挂在聊天栏之前，免得压住聊天。
+        HudElementRegistry.attachElementBefore(
+                VanillaHudElements.CHAT,
+                Identifier.fromNamespaceAndPath(MOD_ID, "self_stats"),
+                new SelfStatsPanel());
+        // 每 tick 检查是否该刷新属性面板（内部自己节流）。
+        ClientTickEvents.END_CLIENT_TICK.register(SelfStats::tick);
+        // 聊天过滤：
+        // ① 本次 ViewStats 的属性行 → 吞掉（不进聊天栏，只进面板）；
+        // ② 本 Mod 自发 /trigger 的回显（成功回显 + 「无法触发该计分项」）→ 也吞掉。
         // 注意 ALLOW_GAME 的返回值语义：true = 允许显示，false = 拦掉。
-        ClientReceiveMessageEvents.ALLOW_GAME.register(
-                (message, overlay) -> !ChatTriggerFilter.shouldHide(message, overlay));
+        ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
+            if (SelfStats.onGameMessage(message, overlay, System.currentTimeMillis())) return false;
+            return !ChatTriggerFilter.shouldHide(message, overlay);
+        });
         // 服务端选装组件：接收按 UUID 的怪物权威数据。
         ClientMobHealthCache.register();
         // 断线 / 换服清缓存，避免看到上一局的残留数据。
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientMobHealthCache.reset());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            ClientMobHealthCache.reset();
+            SelfStats.reset();
+        });
     }
 }

@@ -26,6 +26,7 @@ public final class SelfCheck {
         bossBarTitles();
         curseKeys();
         teamBarTitles();
+        selfStatsAndPanel();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -1002,6 +1003,106 @@ public final class SelfCheck {
             check(ordered[0][2] <= ordered[1][2] && ordered[1][2] <= ordered[2][2],
                     "分段必须按 u 递增排列");
         }
+    }
+
+    // ── 自身属性面板（1.20.3：/trigger ViewStats 抓取 + 布局） ──
+
+    private static void selfStatsAndPanel() {
+        // ① 心形 + 颜色 → 心类
+        check(SelfStats.heartKindOf("\u2764", SelfStats.RED) == 1, "红心颜色应判为 1");
+        check(SelfStats.heartKindOf("\u2764", SelfStats.YELLOW) == 2, "魂心颜色应判为 2");
+        check(SelfStats.heartKindOf("\u2764", SelfStats.BLACK) == 3, "黑心颜色应判为 3");
+        check(SelfStats.heartKindOf("\u2764", SelfStats.BLUE) == 4, "蓝心颜色应判为 4");
+        check(SelfStats.heartKindOf("\u2764", 0xFFFFFF) == 0, "白心不该认成任何一种心");
+        check(SelfStats.heartKindOf("\uE026", SelfStats.DARK_RED) == 5, "私有区字形 + 暗红应判为碎心");
+        check(SelfStats.heartKindOf("\uE026", SelfStats.LIGHT_PURPLE) == 6, "私有区字形 + 亮紫应判为粉心");
+        check(SelfStats.heartKindOf("\uE026", 0xFFFFFF) == 0, "白色私有区字形不该认");
+
+        // ② 「数字+字形」里的数字
+        check(SelfStats.amountBefore("50\u2764", 2) == 50, "50❤ 应解析出 50");
+        check(SelfStats.amountBefore("0\u2764", 1) == 0, "0❤ 应解析出 0");
+        check(SelfStats.amountBefore(" \u2764", 1) == -1, "前面没有数字应返回 -1");
+        check(SelfStats.amountBefore("abc\u2764", 3) == -1, "非数字前缀应返回 -1");
+        check(SelfStats.amountBefore("123", 0) == -1, "下标 0 应返回 -1");
+        check(SelfStats.amountBefore("7 \u2764", 2) == 7, "中间夹空格也应解析出 7");
+
+        // ③ 属性行识别 / 「游戏没开始」
+        check(SelfStats.looksLikeStat("50\u2764"), "数字开头的行应算属性行");
+        check(SelfStats.looksLikeStat("\uD83D\uDDE13"), "带 🗡 的行应算属性行");
+        check(!SelfStats.looksLikeStat("hello world"), "普通聊天不该算属性行");
+        check(!SelfStats.looksLikeStat("   "), "空白行不该算属性行");
+        check(SelfStats.isGameNotStarted("Game not started"), "英文「游戏没开始」应识别");
+        check(SelfStats.isGameNotStarted("游戏未开始"), "中文「游戏未开始」应识别");
+        check(!SelfStats.isGameNotStarted("50\u2764"), "属性行不该被当成「游戏没开始」");
+        check(SelfStats.isViewStatsLine("Misc_View_Stats_1"), "ViewStats 标题行应被识别");
+        check(SelfStats.isViewStatsLine("Misc_View_Stats_78"), "ViewStats 计时行应被识别");
+        check(!SelfStats.isViewStatsLine("50\u2764"), "属性行不算 ViewStats 标题行");
+        check(SelfStats.CAPTURE_WINDOW_MS > 0
+                && SelfStats.CAPTURE_HARD_MS > SelfStats.CAPTURE_WINDOW_MS,
+                "采集窗口应大于 0 且硬上限大于窗口");
+
+        // ④ 端到端：把地图那种「数字 + 彩色心」的 Component 喂进解析器
+        SelfStats.reset();
+        var redLine = net.minecraft.network.chat.Component.empty()
+                .append(net.minecraft.network.chat.Component.literal("120")
+                        .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED))))
+                .append(net.minecraft.network.chat.Component.literal("\u2764")
+                        .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED))));
+        SelfStats.parseHearts(redLine);
+        var multi = net.minecraft.network.chat.Component.empty()
+                .append(net.minecraft.network.chat.Component.literal("40")
+                        .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.YELLOW))))
+                .append(net.minecraft.network.chat.Component.literal("\u2764")
+                        .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.YELLOW))));
+        SelfStats.parseHearts(multi);
+        int[] h = SelfStats.heartCounts();
+        check(h[1] == 120, "端到端：红心应解析为 120，实际 " + h[1]);
+        check(h[2] == 40, "端到端：魂心应解析为 40，实际 " + h[2]);
+        check(h[3] == 0 && h[4] == 0 && h[5] == 0 && h[6] == 0, "没出现的颜色应保持 0");
+        SelfStats.reset();
+        int[] cleared = SelfStats.heartCounts();
+        check(cleared[1] == 0 && cleared[2] == 0, "reset 后心数应清零");
+
+        // ⑤ 面板布局（列优先）
+        check(SelfStatsPanel.rows(0, 2) == 0, "0 行不需要行");
+        check(SelfStatsPanel.rows(1, 2) == 1, "1 行两列 = 1 行");
+        check(SelfStatsPanel.rows(4, 2) == 2, "4 行两列 = 2 行");
+        check(SelfStatsPanel.rows(5, 2) == 3, "5 行两列 = 3 行");
+        check(SelfStatsPanel.rows(5, 0) == 5, "列数 0 应兜底成 1 列");
+        check(SelfStatsPanel.columnOf(0, 3) == 0, "第 0 条在第 0 列");
+        check(SelfStatsPanel.columnOf(2, 3) == 0, "第 2 条还在第 0 列");
+        check(SelfStatsPanel.columnOf(3, 3) == 1, "第 3 条换到第 1 列");
+        check(SelfStatsPanel.columnOf(6, 3) == 2, "第 6 条到第 2 列");
+        check(SelfStatsPanel.columnOf(4, 0) == 0, "行数 0 时列号兜底 0");
+        int[] off = SelfStatsPanel.columnOffsets(new int[]{10, 20, 30}, SelfStatsPanel.COLUMN_GAP);
+        check(off[0] == 0, "第 0 列 x 应为 0");
+        check(off[1] == 10 + SelfStatsPanel.COLUMN_GAP, "第 1 列 x 应为 第0列宽 + 间距");
+        check(off[2] == 10 + SelfStatsPanel.COLUMN_GAP + 20 + SelfStatsPanel.COLUMN_GAP,
+                "第 2 列 x 累加错误");
+        check(SelfStatsPanel.ROW_HEIGHT == 10, "行高应与原版聊天行距一致（10）");
+
+        // ⑥ 配置：新字段的夹取 + 版本迁移
+        EnemyHudConfig.Cfg c = new EnemyHudConfig.Cfg();
+        c.selfStatsSeconds = -5;
+        c.selfStatsColumns = 9;
+        c.selfStatsX = -100;
+        c.selfStatsY = 99999;
+        EnemyHudConfig.normalize(c);
+        check(c.selfStatsSeconds == 0, "selfStatsSeconds -5 应夹到 0");
+        check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
+        check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
+        check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
+        check(EnemyHudConfig.CURRENT_VERSION == 4, "配置版本应为 4");
+        EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
+        check(defaults.showSelfStats, "自身属性面板默认开启");
+        check(defaults.selfStatsSeconds == 30, "自身属性面板默认 30 s 刷新");
+        check(defaults.selfStatsColumns == 2, "自身属性面板默认两列");
+        EnemyHudConfig.Cfg v3 = new EnemyHudConfig.Cfg();
+        v3.configVersion = 3;
+        v3.barWidth = 90;
+        EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
+        check(v3.configVersion == 4, "v3 → v4 应升版本号");
+        check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
     private static void check(boolean condition, String message) {

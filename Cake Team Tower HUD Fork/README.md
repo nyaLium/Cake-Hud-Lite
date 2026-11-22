@@ -1,4 +1,4 @@
-# Cake Team Tower HUD - Fork
+﻿# Cake Team Tower HUD - Fork
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
@@ -270,6 +270,30 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 > 早期版本（1.13.x）曾手工拼图集 UV（`getX()/getY()` + 自算图集尺寸），推导偏差会采样到
 > 图集别处，表现就是「血条不再是原版纹理」；现在直接指向原版 PNG 文件，资源包替换同样生效。
 
+## 自身属性面板（1.20.3，纯客户端）
+
+上游 Cake Tower HUD Plus 的「属性面板」其实**不需要服务端组件**，做法是：
+
+1. 客户端定时发地图自带的 `/trigger ViewStats`（地图自己 `enable` 过，任何玩家可用，不要 OP）；
+2. 地图 `cake_team_tower:misc/view_stats.mcfunction` 用一批 `tellraw @s` 把属性**以 chat 形式**回给本人
+   （血量、四色心、碎/粉心、🗡力量、🗡攻速、🛡防御、元素护甲、计时…）；
+3. 客户端在 `ClientReceiveMessageEvents.ALLOW_GAME` 里截住这些行 —— **吞掉、不进聊天栏**，
+   攒起来按列画成面板；同一趟里按「颜色 + 心形字形」把心数也解析出来。
+
+本 Mod 1.20.3 照这个方式实现了 `SelfStats` + `SelfStatsPanel`：
+
+| 项 | 行为 |
+| --- | --- |
+| 触发 | `ClientTickEvents` 到点发 `/trigger ViewStats`；`selfStatsSeconds=0` 关闭自动刷新 |
+| 采集 | 触发后 1.5 s 窗口，来一行续 1.5 s，单次上限 8 s；只收「数字开头 / ❤ / 属性图标 / `Misc_View_Stats_*` / 纯图标」的行 |
+| 防刷屏 | 收下的行**不显示**在聊天栏（和上游一样） |
+| 解析 | `heartKindOf(字形, 颜色)`：❤+红/黄/黑/蓝 → 红/魂/黑/蓝；私有区字形 + 暗红/亮紫 → 碎/粉；`amountBefore` 取字形前紧邻的数字 |
+| 面板 | 列优先排版，列数 1~3，位置 `selfStatsX/Y`（**GUI 像素**），背景半透明黑 |
+| 门控 | 地图回「Game not started」时整块不画 |
+
+> **拿不到别人**：地图那 147 条 `tellraw` 全是 `@s`，没有一条发给 `@a`，所以这个通道**只能问到自己**。
+> 队友的心数/血量只能靠「队伍血量」bossbar（(x/y) 百分比）或本 Mod 的服务端组件 payload。
+
 ## 配置
 
 `config/ctt-enemy-hud.json`（首次启动生成；游戏内改 2 秒热重载，也可用 Mod Menu 界面）。
@@ -296,7 +320,12 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
   "verticalOffset": 0,
   "hideBehindWalls": true,
   "hideBehindEntities": true,
-  "debug": false
+  "debug": false,
+  "showSelfStats": true,
+  "selfStatsSeconds": 30,
+  "selfStatsColumns": 2,
+  "selfStatsX": 4,
+  "selfStatsY": 40
 }
 ```
 
@@ -320,6 +349,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | `verticalOffset` | 敌人垂直微调，负值更高 | -30 ~ 0 |
 | `hideBehindEntities` | 被更近的实体挡住（屏幕矩形覆盖 ≥70%）时不绘制；解决「后方血条压住前面名字/模型」 | — |
 | `hideBehindWalls` | 被方块挡住视线时不画 | — |
+| `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，0=关）/ 列数 / 左上角 GUI 坐标 | 0~600 / 1~3 / 0~4000 |
 | `debug` | 左上角打印 `entities= / withData= / mates= / drawn=`（**仅配置文件，界面无此项**） | — |
 
 > 1.13.3 起 `showNumbers` / `showHeartCounts` / `showArmor` 已删除（永久开启），
@@ -341,7 +371,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**4746 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**4799 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
 护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）。
@@ -352,7 +382,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.20.2.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.20.3.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 
@@ -390,3 +420,4 @@ gradlew selfCheck      # gradlew build 会自动带上
 - 队友的黑/蓝/碎心客户端拿不到（`spectator_bossbar` 只有 `AllHearts/MaxHP`），那一行保持 `当前/最大`；
   同一套服务端通道扩一列即可补上，尚未做。
 - 队友头顶条依赖「队伍血量」这条 Boss 栏自身存在（自动开启会替你开，3 s 冷却 + 10 分钟熔断）。
+
