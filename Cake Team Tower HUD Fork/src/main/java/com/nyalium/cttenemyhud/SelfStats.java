@@ -86,6 +86,22 @@ public final class SelfStats {
     private static long nextTriggerMs = 0L;
     private static boolean notStarted = false;
 
+    // ── 1.20.23：游戏时间没走 → 数据是「冻住的」，面板不上屏 ──
+
+    /** 「时间冻住」判定：两次采样至少隔这么久（ms），免得 1 s 刷新时撞到同一秒被误判。 */
+    static final long TIME_STALE_MIN_GAP_MS = 1500L;
+
+    /** 上一趟看到的游戏时间原文（{@code Misc_View_Stats_78} 那行的渲染文本）。 */
+    private static String lastTimeText;
+    /** 这一趟收到的游戏时间原文。 */
+    private static String pendingTimeText;
+    /** 连续多少趟时间完全没变。 */
+    private static int sameTimeRounds;
+    /** 上一次采样的墙上时间。 */
+    private static long lastTimeSampleMs;
+    /** true = 时间冻住，面板先不画。 */
+    private static boolean timeFrozen;
+
     private SelfStats() {}
 
     /** 面板上的一行：渲染用的原始 Component + 分类。 */
@@ -237,10 +253,16 @@ public final class SelfStats {
 
     /** 开始一趟采集：只清 PENDING，屏上的旧内容继续显示（避免闪一下空白）。 */
     private static void begin(long now) {
+        beginCapture(now);
+    }
+
+    /** 包可见版本：{@code selfCheck} 用它开一趟采集窗口打「谁会被吞」。 */
+    static void beginCapture(long now) {
         PENDING.clear();
         java.util.Arrays.fill(PENDING_HEARTS, 0);
         capturing = true;
         notStarted = false;
+        pendingTimeText = null;
         windowEndMs = now + CAPTURE_WINDOW_MS;
         hardEndMs = now + CAPTURE_HARD_MS;
     }
@@ -271,6 +293,38 @@ public final class SelfStats {
             if (seen.add(line.text.getString())) SHOWN.add(line);
         }
         System.arraycopy(PENDING_HEARTS, 0, HEARTS, 0, HEARTS.length);
+        updateTimeFrozen(now);
+    }
+
+    /**
+     * 1.20.23：判断游戏时间有没有在走。
+     *
+     * <p>地图的计时行（{@code Misc_View_Stats_78}）在没开局 / 结束后是冻住的；这种时候属性面板
+     * 还挂着上一批数字会误导，所以直接不画。两次采样至少隔 {@link #TIME_STALE_MIN_GAP_MS}
+     * 才算「真的没走」，避免 1 s 刷新时两次落在同一秒被误判。</p>
+     */
+    private static void updateTimeFrozen(long now) {
+        String text = pendingTimeText;
+        pendingTimeText = null;
+        if (text == null) return;                    // 这趟没发计时行：保持上一次判断
+        long gap = now - lastTimeSampleMs;
+        sameTimeRounds = nextSameTimeRounds(lastTimeText, text, gap, sameTimeRounds);
+        timeFrozen = sameTimeRounds > 0;
+        lastTimeText = text;
+        lastTimeSampleMs = now;
+    }
+
+    /**
+     * 纯函数版「时间冻住」状态机（selfCheck 直接打）：返回新的「连续没变」计数。
+     *
+     * <p>同一段文本、且两次采样隔够 {@link #TIME_STALE_MIN_GAP_MS} 才算没走；
+     * 文本变了立刻归零。</p>
+     */
+    static int nextSameTimeRounds(String previous, String current, long gapMs, int rounds) {
+        if (current == null) return rounds;
+        if (!current.equals(previous)) return 0;
+        if (gapMs < TIME_STALE_MIN_GAP_MS) return rounds;
+        return rounds + 1;
     }
 
     /** 面板里是否已有文字完全相同的行。 */
@@ -300,6 +354,11 @@ public final class SelfStats {
         hardEndMs = 0L;
         nextTriggerMs = 0L;
         notStarted = false;
+        lastTimeText = null;
+        pendingTimeText = null;
+        sameTimeRounds = 0;
+        lastTimeSampleMs = 0L;
+        timeFrozen = false;
     }
 
     // ── 采集 ──
@@ -311,9 +370,18 @@ public final class SelfStats {
      */
     public static boolean onGameMessage(Component message, boolean overlay, long nowMs) {
         if (overlay || message == null) return false;
-        if (!capturing || nowMs > windowEndMs || nowMs > hardEndMs) return false;
+        // 玩家聊天（chat.type.text / chat.type.announcement…）**永远不吞**。
+        // 之前「有概率吞掉聊天」就是这里没有这层保险：采集窗口刚好开着时，
+        // 任何「数字开头」或「两个字以内」的聊天都会被当成属性行吃掉。
+        if (isPlayerChat(message)) return false;
         String flat = message.getString();
         if (flat == null) return false;
+
+        // 不在采集窗口里：只认「标题行」当玩家手动 /trigger ViewStats 的开头，其余一律不动。
+        if (!capturing || nowMs > windowEndMs || nowMs > hardEndMs) {
+            if (!isViewStatsTitle(message)) return false;
+            beginCapture(nowMs);
+        }
         if (isGameNotStarted(flat)) {
             notStarted = true;
             capturing = false;
@@ -335,10 +403,9 @@ public final class SelfStats {
         }
 
         Analyzed a = analyze(message);
-        boolean glyphOnly = flat.strip().length() <= 2 && !flat.isBlank();
-        boolean ours = looksLikeStat(flat) || isViewStatsLine(flat) || glyphOnly
-                || a.hasKey() || a.unresolvedKey;
+        boolean ours = isViewStatsLine(flat) || a.hasKey() || a.unresolvedKey || statGlyphLine(flat);
         if (!ours) return false;
+        if (a.keys.contains(TIME_KEY)) pendingTimeText = flat;
 
         SelfStatsKind kind = classify(a);
         // 提示性文本（标题 / 悬停说明）不上面板；缺地图语言文件时整行原文也不上屏。
@@ -399,9 +466,14 @@ public final class SelfStats {
         return HEARTS.clone();
     }
 
-    /** 面板是否该画：有内容、且地图没说「游戏没开始」。 */
+    /** 面板是否该画：有内容、地图没说「游戏没开始」、且游戏时间还在走。 */
     public static boolean visible() {
-        return !notStarted && !SHOWN.isEmpty();
+        return !notStarted && !timeFrozen && !SHOWN.isEmpty();
+    }
+
+    /** 游戏时间是否被判定为「冻住」（自检 / 调试用）。 */
+    static boolean timeFrozen() {
+        return timeFrozen;
     }
 
     // ── 解析（纯函数，selfCheck 直接打） ──
@@ -511,6 +583,62 @@ public final class SelfStats {
         if (s.indexOf('\u2764') >= 0) return true;
         for (String icon : new String[]{"\uD83D\uDDE1", "\uD83D\uDEE1", "\u2603", "\u2600", "\u2620", "\u2693"}) {
             if (s.contains(icon)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * 地图 ViewStats 里「数字 + 图形」那一类行（{@code ["",{score},{text:"🗡",hover}]} 的形态）。
+     *
+     * <p>1.20.23：把原来「数字开头就算」和「两个字以内就算」两条宽规则换成这条 ——
+     * 地图 134 条 tellraw 里，除了带 {@code Misc_View_Stats_*} 翻译键的，剩下的全都是
+     * 「数字 + 下面这些图形之一」，既不会漏，也不会把玩家的「123」「ok」当成属性行。</p>
+     */
+    static boolean statGlyphLine(String flat) {
+        if (flat == null || flat.isEmpty()) return false;
+        boolean digit = false;
+        boolean glyph = false;
+        for (int i = 0; i < flat.length(); ) {
+            int cp = flat.codePointAt(i);
+            i += Character.charCount(cp);
+            if (cp >= '0' && cp <= '9') digit = true;
+            else if (isStatGlyphCp(cp)) glyph = true;
+            if (digit && glyph) return true;
+        }
+        return false;
+    }
+
+    /** 地图属性行里用到的图形码位（含私有区字形）。 */
+    static boolean isStatGlyphCp(int cp) {
+        if (cp == 0x2764) return true;                    // ❤
+        if (cp >= 0xE000 && cp <= 0xF8FF) return true;    // 地图私有区字形
+        for (int icon : STAT_ICONS) {
+            if (icon == cp) return true;
+        }
+        return false;
+    }
+
+    /** 🛡 🗡 🏹 ⚡ ✈ 🔥 ☠ ✏ ⚓ ☃ ☀ ⬇ ⬆ ⇑ ⇓（从 view_stats.mcfunction 里抽出来的全部图形）。 */
+    private static final int[] STAT_ICONS = {
+            0x1F6E1, 0x1F5E1, 0x1F3F9, 0x26A1, 0x2708, 0x1F525, 0x2620, 0x270F,
+            0x2693, 0x2603, 0x2600, 0x2B07, 0x2B06, 0x21D1, 0x21D3,
+    };
+
+    /** 玩家聊天：原版一定用 {@code chat.*} 这个可翻译键，据此一票否决。 */
+    static boolean isPlayerChat(Component message) {
+        if (message == null) return false;
+        if (message.getContents() instanceof TranslatableContents tc) {
+            String key = tc.getKey();
+            return key != null && key.startsWith("chat.");
+        }
+        return false;
+    }
+
+    /** ViewStats 的标题行（{@code Misc_View_Stats_1}）：玩家手动触发时靠它开一趟采集。 */
+    static boolean isViewStatsTitle(Component message) {
+        if (message == null) return false;
+        if (message.getContents() instanceof TranslatableContents tc) {
+            return (KEY_PREFIX + "1").equals(tc.getKey());
         }
         return false;
     }

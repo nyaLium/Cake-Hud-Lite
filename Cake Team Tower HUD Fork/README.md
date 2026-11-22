@@ -2,18 +2,18 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.20.22**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.20.23**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/字号/透明度，
 > 60 个属性逐项开关（**双列按钮 + 滚动**），快捷键 `F8` 打开设置。
 
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.20.22` |
+| 版本 | `1.20.23` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.20.22.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.20.23.jar` |
 
 ## 绘制方式（1.15.0 起）
 
@@ -342,7 +342,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 
 ```json
 {
-  "configVersion": 6,
+  "configVersion": 11,
   "enabled": true,
   "opacity": 0.75,
   "textShadow": true,
@@ -407,7 +407,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 > 老配置文件里的这几个键会被忽略，下次「完成」时自动消失。
 > `autoPartyBossbar` 在 1.13.3 一度移除，1.13.4 恢复（默认开）。
 > 1.14.4 加的 `wrapWidth` 已在 1.19.0 删除（布局改固定三段，自动折行），旧配置里的键会被忽略。
-> `configVersion` 现在是 **6**：v1→v2 把血条默认长度 100 改成 75，v2→v3 把默认缩放 1.0 改成 0.9，
+> `configVersion` 现在是 **11**：v1→v2 把血条默认长度 100 改成 75，v2→v3 把默认缩放 1.0 改成 0.9，
 > v3→v4 新增自身属性面板字段，v4→v5 新增字号/透明度/内容过滤，v5→v6 按属性细分过滤项（粗类自动展开）；
 > 只在「值仍等于旧默认值」时才迁移，手工调过的值不动，新字段一律有默认值。
 > 手改坏配置文件（类型不对 / JSON 语法错）时**保留上一份可用配置**并在日志里 warn，不再静默恢复默认。
@@ -424,7 +424,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**5151 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**5174 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
 护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）、
@@ -436,7 +436,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.20.22.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.20.23.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革

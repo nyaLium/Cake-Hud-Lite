@@ -10,8 +10,13 @@ import net.minecraft.resources.Identifier;
 /**
  * 「移动盾牌指示器」界面（1.20.20）：和属性面板一样拖动定位。
  *
+ * <p>1.20.23：拖动方式改成上游 Cake-Hud 那种<b>绝对定位</b> —— 按下时记
+ * 「鼠标 ↔ 指示器左上角」的偏移，移动时直接 {@code 鼠标位置 - 偏移}，
+ * 不累加每帧增量（增量在某些输入后端是 0，累加式会「拖不动」）。
+ * 另外支持方向键微调（4 px，Shift 16 px）。</p>
+ *
  * <p>预览用 {@code meter_0.png}，按当前 {@code shieldScale} 与 {@code shieldOpacity} 画；
- * 坐标存 {@code shieldX/shieldY}（GUI 像素，左上角）。</p>
+ * 坐标存 {@code shieldX/shieldY}（GUI 像素，左上角；{@code -1} = 自动贴副手槽上方）。</p>
  */
 public final class ShieldLayoutScreen extends Screen {
 
@@ -23,6 +28,8 @@ public final class ShieldLayoutScreen extends Screen {
 
     private final ShieldIndicatorSettingsScreen parent;
     private boolean dragging;
+    private double dragOffsetX;
+    private double dragOffsetY;
 
     public ShieldLayoutScreen(ShieldIndicatorSettingsScreen parent) {
         super(Component.translatable("ctt_enemy_hud.config.shieldMove"));
@@ -35,6 +42,7 @@ public final class ShieldLayoutScreen extends Screen {
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.selfStatsMove.reset"), b -> {
             EnemyHudConfig.get().shieldX = -1;
             EnemyHudConfig.get().shieldY = -1;
+            this.dragging = false;
             this.rebuildWidgets();
         }).bounds(this.width / 2 - BUTTON_WIDTH - GAP / 2, y, BUTTON_WIDTH, ROW_HEIGHT).build());
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
@@ -58,8 +66,8 @@ public final class ShieldLayoutScreen extends Screen {
         int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
         ShieldIndicatorHud.blitScaled(graphics, PREVIEW, pos[0], pos[1], cfg.shieldScale, cfg.shieldOpacity);
         outline(graphics, pos[0], pos[1], w, h, dragging ? 0xC0FFD060 : 0x80FFFFFF);
-        graphics.text(this.font, "x=" + pos[0] + "  y=" + pos[1],
-                Math.max(4, pos[0]), Math.max(4, pos[1] - 12), 0xFFFFFFFF, true);
+        String info = (cfg.shieldX < 0 || cfg.shieldY < 0 ? "auto " : "") + "x=" + pos[0] + "  y=" + pos[1];
+        graphics.text(this.font, info, Math.max(4, pos[0]), Math.max(4, pos[1] - 12), 0xFFFFFFFF, true);
     }
 
     private static void outline(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
@@ -84,30 +92,37 @@ public final class ShieldLayoutScreen extends Screen {
         return new int[]{x, y};
     }
 
+    // ── 拖动（绝对定位，上游同款） ──
+
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
+        if (super.mouseClicked(event, doubled)) return true;
         if (accept(event)) {
-            int[] pos = position(EnemyHudConfig.get());
-            int w = ShieldIndicatorHud.scaledWidth(EnemyHudConfig.get().shieldScale);
-            int h = ShieldIndicatorHud.scaledHeight(EnemyHudConfig.get().shieldScale);
+            EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
+            int w = ShieldIndicatorHud.scaledWidth(cfg.shieldScale);
+            int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
+            int[] pos = position(cfg);
             double[] gui = toGui(event);
             if (gui[0] >= pos[0] && gui[0] <= pos[0] + w && gui[1] >= pos[1] && gui[1] <= pos[1] + h) {
-                this.dragging = true;
-                return true;
+                this.dragOffsetX = gui[0] - pos[0];
+                this.dragOffsetY = gui[1] - pos[1];
+            } else {
+                // 按在空白处也接住：把指示器中心吸附到光标，避免「抓不住」。
+                this.dragOffsetX = w / 2.0;
+                this.dragOffsetY = h / 2.0;
             }
+            this.dragging = true;
+            applyDrag(gui[0], gui[1]);
+            return true;
         }
-        return super.mouseClicked(event, doubled);
+        return false;
     }
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
         if (this.dragging) {
-            EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
-            int[] pos = position(cfg);
-            int w = ShieldIndicatorHud.scaledWidth(cfg.shieldScale);
-            int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
-            cfg.shieldX = Math.max(0, Math.min(this.width - w, pos[0] + (int) Math.round(dragX)));
-            cfg.shieldY = Math.max(0, Math.min(this.height - h, pos[1] + (int) Math.round(dragY)));
+            double[] gui = toGui(event);
+            applyDrag(gui[0], gui[1]);
             return true;
         }
         return super.mouseDragged(event, dragX, dragY);
@@ -120,6 +135,35 @@ public final class ShieldLayoutScreen extends Screen {
             return true;
         }
         return super.mouseReleased(event);
+    }
+
+    /** 键盘兜底：方向键 4 px、按住 Shift 16 px。 */
+    @Override
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int step = event.hasShiftDown() ? 16 : 4;
+        int dx = 0;
+        int dy = 0;
+        if (event.isLeft()) dx = -step;
+        else if (event.isRight()) dx = step;
+        else if (event.isUp()) dy = -step;
+        else if (event.isDown()) dy = step;
+        if (dx == 0 && dy == 0) return super.keyPressed(event);
+        EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
+        int[] pos = position(cfg);
+        moveTo(pos[0] + dx, pos[1] + dy);
+        return true;
+    }
+
+    private void applyDrag(double mouseX, double mouseY) {
+        moveTo((int) Math.round(mouseX - this.dragOffsetX), (int) Math.round(mouseY - this.dragOffsetY));
+    }
+
+    private void moveTo(int x, int y) {
+        EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
+        int w = ShieldIndicatorHud.scaledWidth(cfg.shieldScale);
+        int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
+        cfg.shieldX = SelfStatsPanel.fitInScreen(x, w, this.width);
+        cfg.shieldY = SelfStatsPanel.fitInScreen(y, h, this.height);
     }
 
     private static boolean accept(MouseButtonEvent event) {

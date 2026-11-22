@@ -243,6 +243,11 @@ public final class SelfStatsSettingsScreen extends Screen {
         this.minecraft.gui.setScreen(this.menu);
     }
 
+    /** 「移动面板」里就地切换了 HUD / 容器界面后，回到本页要跟着变。 */
+    void setEditContainer(boolean editContainer) {
+        this.editContainer = editContainer;
+    }
+
     @Override
     public void onClose() {
         back();

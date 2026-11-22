@@ -193,6 +193,16 @@ final class SelfStatsPanel implements HudElement {
         return Math.max(0, Math.min(max, y));
     }
 
+    /**
+     * 拖动时的硬夹取：整块面板留在屏幕内（1.20.23，上游 Cake-Hud 的 {@code clamp(0, width - panelW)} 同款）。
+     *
+     * <p>和 {@link #clampX} 的区别：那个只保证「至少露 16 px」，
+     * 用于「面板已经贴边、别再往外跑」的旧场景；拖动界面现在要求整块可见。</p>
+     */
+    static int fitInScreen(int pos, int size, int screen) {
+        return Math.max(0, Math.min(Math.max(0, screen - Math.max(1, size)), pos));
+    }
+
     /** 没有实时数据时，用这几行示例撑起预览（界面里不会显示假数据到 HUD）。 */
     static List<Component> demoLines() {
         List<Component> out = new ArrayList<>();

@@ -1,5 +1,7 @@
 package com.nyalium.cttenemyhud;
 
+import net.minecraft.network.chat.Component;
+
 /**
  * 自检：穷举配置选项与解析器边界，验证不会产生非法结果。
  *
@@ -34,6 +36,7 @@ public final class SelfCheck {
         filterGridWidth();
         panelModes();
         scrollBand();
+        chatAndDrag();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -1591,6 +1594,53 @@ public final class SelfCheck {
     private static void check(boolean condition, String message) {
         checks++;
         if (!condition) fail(message);
+    }
+
+    /**
+     * 1.20.23：聊天不再被误吞 + 游戏时间冻住时不上屏 + 拖动夹取。
+     *
+     * <p>「属性行」的判据换成地图 tellraw 的真实形态：带 {@code Misc_View_Stats_*} 键，
+     * 或者「数字 + 图形」。原来那种「数字开头 / 两个字以内就算」会把玩家的
+     * 「123」「ok」当成属性行吃掉。</p>
+     */
+    private static void chatAndDrag() {
+        check(SelfStats.statGlyphLine("120\u2764"), "「120❤」应算属性行");
+        check(SelfStats.statGlyphLine("1 \uD83D\uDDE1"), "「1 🗡」应算属性行");
+        check(SelfStats.statGlyphLine("5 \uD83D\uDEE1 3 \u2603"), "护甲行应算属性行");
+        check(SelfStats.statGlyphLine("3 \uE001"), "私有区字形应算属性行");
+        check(!SelfStats.statGlyphLine("123"), "纯数字聊天不该算属性行");
+        check(!SelfStats.statGlyphLine("ok"), "两字聊天不该算属性行");
+        check(!SelfStats.statGlyphLine("3楼集合"), "中文聊天不该算属性行");
+
+        SelfStats.reset();
+        SelfStats.beginCapture(1_000L);
+        check(SelfStats.onGameMessage(Component.literal("120\u2764"), false, 1_100L), "属性行应被吞掉");
+        check(!SelfStats.onGameMessage(Component.literal("ok"), false, 1_100L), "两字聊天不该被吞");
+        check(!SelfStats.onGameMessage(Component.literal("123"), false, 1_100L), "纯数字聊天不该被吞");
+        check(!SelfStats.onGameMessage(Component.translatable("chat.type.text", "A", Component.literal("hi")),
+                false, 1_100L), "玩家聊天不该被吞");
+        check(SelfStats.onGameMessage(Component.translatable("Misc_View_Stats_78"), false, 1_100L),
+                "计时行应被吞");
+
+        // 玩家手动 /trigger ViewStats：标题行自己开一趟采集（之后的行照样进面板、不进聊天）
+        SelfStats.reset();
+        check(SelfStats.onGameMessage(Component.translatable("Misc_View_Stats_1"), false, 5_000L),
+                "标题行应开一趟采集并被吞掉");
+        check(SelfStats.onGameMessage(Component.literal("87\u2764"), false, 5_050L),
+                "手动触发之后紧跟的属性行也应被采集");
+
+        // 游戏时间冻住：同样文本 + 间隔够才计数
+        check(SelfStats.nextSameTimeRounds(null, "T", 3_000, 0) == 0, "第一次采样不算冻住");
+        check(SelfStats.nextSameTimeRounds("T", "T", 3_000, 0) == 1, "同样文本 + 间隔够 → 计数 1");
+        check(SelfStats.nextSameTimeRounds("T", "T", 1_000, 0) == 0, "间隔不足不计数（1 s 刷新不误判）");
+        check(SelfStats.nextSameTimeRounds("T", "T2", 3_000, 5) == 0, "文本变了立刻归零");
+        check(SelfStats.nextSameTimeRounds("T", null, 3_000, 5) == 5, "没收到计时行保持原判断");
+
+        // 拖动夹取：整块留在屏内
+        check(SelfStatsPanel.fitInScreen(-5, 200, 800) == 0, "左边越界应夹到 0");
+        check(SelfStatsPanel.fitInScreen(900, 200, 800) == 600, "右下越界应夹到 屏幕-宽");
+        check(SelfStatsPanel.fitInScreen(100, 200, 800) == 100, "屏内应保持");
+        check(SelfStatsPanel.fitInScreen(300, 2_000, 800) == 0, "面板比屏幕还宽时贴 0");
     }
 
     /**

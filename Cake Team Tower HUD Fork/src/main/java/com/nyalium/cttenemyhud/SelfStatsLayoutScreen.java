@@ -9,14 +9,24 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 
 /**
- * 「移动面板」界面（1.20.4）：直接拖着属性面板放到想要的位置。
+ * 「移动面板」界面（1.20.4；1.20.23 改成上游 Cake-Hud 那种拖动方式）。
  *
- * <p>面板是 GUI 元素、跟屏幕坐标绑死，所以最直观的定位方式就是<b>拖</b>：
- * 打开这个界面后会按当前设置画一份预览（没有实时数据时用示例行），
- * 用鼠标拖到满意位置，点「完成」即可（写盘仍由总界面的「完成」负责）。</p>
+ * <p>上游 {@code ConfigScreen.beginPreviewDrag/movePreviewDrag} 的做法：
+ * <b>按下时记住「鼠标 ↔ 面板左上角」的偏移，移动时直接用鼠标绝对坐标减偏移定位</b>，
+ * 而不是累加每帧的 {@code dragX/dragY}。累加式在两个地方会失灵：</p>
+ * <ul>
+ *   <li>某一帧的增量被丢（鼠标事件被别的界面吃掉、切窗口）时，位置就永久落后；</li>
+ *   <li>部分输入后端只给绝对坐标、增量为 0，拖了等于没拖 —— 这正是「容器界面那套拖不动」的表现。</li>
+ * </ul>
  *
- * <p>坐标存在 {@code selfStatsX / selfStatsY}，单位是 GUI 像素 —— 与界面缩放无关，
- * 换分辨率后位置比例会变，但不会被夹出屏幕（见 {@link SelfStatsPanel#clampX}）。</p>
+ * <p>另外三条一起改：</p>
+ * <ul>
+ *   <li><b>整屏可抓</b>：按在面板上按偏移移动；按在空白处则把面板中心吸附到光标再开始拖，
+ *       不会出现「明明看到了却抓不住」；</li>
+ *   <li><b>方向键微调</b>：←→↑↓ 每次 4 px，Shift 加速到 16 px（鼠标不好使时的兜底）；</li>
+ *   <li><b>就地切换对象</b>：模式 2 下多一个「对象：HUD / 容器界面」按钮，
+ *       不用退回上一页就能确认自己在拖哪一套。</li>
+ * </ul>
  */
 public final class SelfStatsLayoutScreen extends Screen {
 
@@ -24,18 +34,22 @@ public final class SelfStatsLayoutScreen extends Screen {
     private static final int BUTTON_WIDTH = 120;
     private static final int GAP = 8;
 
-    private final Screen parent;
+    private final SelfStatsSettingsScreen parent;
     /** 编辑哪一套：false = HUD，true = 容器界面（模式 2 下两者独立）。 */
-    private final boolean containerConfig;
+    private boolean containerConfig;
 
     private boolean dragging;
+    /** 按下时鼠标相对于面板左上角的偏移（上游同款）。 */
+    private double dragOffsetX;
+    private double dragOffsetY;
 
-    public SelfStatsLayoutScreen(Screen parent, boolean containerConfig) {
+    public SelfStatsLayoutScreen(SelfStatsSettingsScreen parent, boolean containerConfig) {
         super(Component.translatable("ctt_enemy_hud.config.selfStatsMove"));
         this.parent = parent;
         this.containerConfig = containerConfig;
     }
 
+    /** 当前模式的布局参数（跟随 {@link #containerConfig}）。 */
     private EnemyHudConfig.Panel currentPanel() {
         return EnemyHudConfig.panel(EnemyHudConfig.get().selfStatsMode, this.containerConfig);
     }
@@ -43,16 +57,37 @@ public final class SelfStatsLayoutScreen extends Screen {
     @Override
     protected void init() {
         int y = this.height - ROW_HEIGHT - 8;
-        addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.selfStatsMove.reset"), b -> {
-            // 只重置当前显示方式那一套（HUD / 容器界面各有一套）。
-            EnemyHudConfig.movePanel(EnemyHudConfig.get().selfStatsMode, this.containerConfig, 4, 40);
-            this.rebuildWidgets();
-        }).bounds(this.width / 2 - BUTTON_WIDTH - GAP / 2, y, BUTTON_WIDTH, ROW_HEIGHT).build());
+        addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.selfStatsMove.reset"),
+                b -> resetPosition()).bounds(this.width / 2 - BUTTON_WIDTH - GAP / 2, y, BUTTON_WIDTH, ROW_HEIGHT)
+                .build());
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
                 .bounds(this.width / 2 + GAP / 2, y, BUTTON_WIDTH, ROW_HEIGHT).build());
+        // 模式 2 才有「两套」：就地切换正在拖的对象，避免拖错一套还以为拖不动。
+        if (EnemyHudConfig.get().selfStatsMode == 2) {
+            int switchWidth = Math.min(240, this.width - 40);
+            addRenderableWidget(Button.builder(targetLabel(), b -> {
+                this.containerConfig = !this.containerConfig;
+                this.rebuildWidgets();
+            }).bounds(this.width / 2 - switchWidth / 2, y - ROW_HEIGHT - 4, switchWidth, ROW_HEIGHT).build());
+        }
+    }
+
+    private Component targetLabel() {
+        return Component.translatable("ctt_enemy_hud.config.selfStatsMove.target",
+                Component.translatable(this.containerConfig
+                        ? "ctt_enemy_hud.config.selfStatsTarget.container"
+                        : "ctt_enemy_hud.config.selfStatsTarget.hud"));
+    }
+
+    /** 「回到初始位置」：只重置当前这一套。 */
+    private void resetPosition() {
+        EnemyHudConfig.movePanel(EnemyHudConfig.get().selfStatsMode, this.containerConfig, 4, 40);
+        this.dragging = false;
+        this.rebuildWidgets();
     }
 
     private void back() {
+        if (this.parent != null) this.parent.setEditContainer(this.containerConfig);
         this.minecraft.gui.setScreen(this.parent);
     }
 
@@ -62,12 +97,10 @@ public final class SelfStatsLayoutScreen extends Screen {
         graphics.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFFFF);
         graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsMove.hint"),
                 this.width / 2, 36, 0xFFFFD060);
-        // 提示当前在改哪一套配置（HUD / 容器界面）。
         int mode = EnemyHudConfig.get().selfStatsMode;
         Component modeName = Component.translatable(SelfStatsSettingsScreen.modeLabelKey(mode));
         Component shown = modeName;
         if (mode == 2) {
-            // 模式 2 有 HUD / 容器两套：把当前拖的是哪一套写清楚。
             shown = modeName.copy().append(" · ").append(Component.translatable(this.containerConfig
                     ? "ctt_enemy_hud.config.selfStatsTarget.container"
                     : "ctt_enemy_hud.config.selfStatsTarget.hud"));
@@ -102,24 +135,33 @@ public final class SelfStatsLayoutScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
-        int[] bounds = currentBounds();
-        if (acceptButton(event) && insideGui(bounds, event)) {
+        // 先让按钮/滑块吃事件，别把「返回」「回到初始位置」的点击吞成拖动。
+        if (super.mouseClicked(event, doubled)) return true;
+        if (acceptButton(event)) {
+            int[] bounds = currentBounds();
+            double[] gui = toGui(event);
+            if (inside(bounds, gui[0], gui[1])) {
+                // 抓在面板上：保留「按下的那一点」相对面板左上角的偏移，拖起来不跳。
+                this.dragOffsetX = gui[0] - bounds[0];
+                this.dragOffsetY = gui[1] - bounds[1];
+            } else {
+                // 按在空白处：把面板中心吸附到光标再开始拖（整屏可抓，不会出现「抓不住」）。
+                this.dragOffsetX = bounds[2] / 2.0;
+                this.dragOffsetY = bounds[3] / 2.0;
+            }
             this.dragging = true;
+            applyDrag(gui[0], gui[1]);
             return true;
         }
-        return super.mouseClicked(event, doubled);
+        return false;
     }
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
         if (this.dragging) {
-            // 用**增量**而不是绝对坐标：和原版滑块一致，也对不同输入后端更稳
-            // （有的后端在拖动过程中只给相对位移）。
-            int[] bounds = currentBounds();
-            EnemyHudConfig.Panel panel = currentPanel();
-            EnemyHudConfig.movePanel(
-                    SelfStatsPanel.clampX(panel.x + (int) Math.round(dragX), bounds[2], this.width),
-                    SelfStatsPanel.clampY(panel.y + (int) Math.round(dragY), bounds[3], this.height));
+            // 绝对定位：不用 dragX/dragY（某些后端给 0，累加式就永远拖不动）。
+            double[] gui = toGui(event);
+            applyDrag(gui[0], gui[1]);
             return true;
         }
         return super.mouseDragged(event, dragX, dragY);
@@ -134,6 +176,36 @@ public final class SelfStatsLayoutScreen extends Screen {
         return super.mouseReleased(event);
     }
 
+    /** 键盘兜底：方向键 4 px、按住 Shift 16 px。 */
+    @Override
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int step = event.hasShiftDown() ? 16 : 4;
+        int dx = 0;
+        int dy = 0;
+        if (event.isLeft()) dx = -step;
+        else if (event.isRight()) dx = step;
+        else if (event.isUp()) dy = -step;
+        else if (event.isDown()) dy = step;
+        if (dx == 0 && dy == 0) return super.keyPressed(event);
+        int[] bounds = currentBounds();
+        EnemyHudConfig.Panel panel = currentPanel();
+        moveTo(panel.x + dx, panel.y + dy, bounds);
+        return true;
+    }
+
+    private void applyDrag(double mouseX, double mouseY) {
+        int[] bounds = currentBounds();
+        moveTo((int) Math.round(mouseX - this.dragOffsetX), (int) Math.round(mouseY - this.dragOffsetY),
+                bounds);
+    }
+
+    /** 写位置 + 夹进屏幕（整块留在屏内，拖不出边界）。 */
+    private void moveTo(int x, int y, int[] bounds) {
+        EnemyHudConfig.movePanel(EnemyHudConfig.get().selfStatsMode, this.containerConfig,
+                SelfStatsPanel.fitInScreen(x, bounds[2], this.width),
+                SelfStatsPanel.fitInScreen(y, bounds[3], this.height));
+    }
+
     /** 左键（0）为主；部分 SDL/新输入链会把左键报成 1，一并接受。 */
     private static boolean acceptButton(MouseButtonEvent event) {
         return event != null && (event.button() == 0 || event.button() == 1);
@@ -142,9 +214,8 @@ public final class SelfStatsLayoutScreen extends Screen {
     /**
      * 事件坐标 → GUI 坐标。
      *
-     * <p>26.3 的 {@link MouseButtonEvent} 在不同输入后端下可能带「GUI 缩放后的坐标」，
-     * 也可能带「窗口物理像素」；后者会大于 GUI 尺寸。这里按数值判断并统一换算，
-     * 免得拖动只在某些机器上有效。</p>
+     * <p>26.3 的 {@link MouseButtonEvent} 不同输入后端可能带「GUI 缩放后的坐标」，
+     * 也可能带「窗口物理像素」；后者会大于 GUI 尺寸，按数值判断并统一换算。</p>
      */
     private double[] toGui(MouseButtonEvent event) {
         double x = event.x();
@@ -158,15 +229,13 @@ public final class SelfStatsLayoutScreen extends Screen {
         return new double[]{x, y};
     }
 
-    private boolean insideGui(int[] bounds, MouseButtonEvent event) {
-        double[] gui = toGui(event);
-        return inside(bounds, gui[0], gui[1]);
+    private int[] currentBounds() {
+        return SelfStatsPanel.bounds(this.font, currentLines(), currentPanel());
     }
 
-    private int[] currentBounds() {
+    private List<Component> currentLines() {
         List<Component> lines = SelfStats.lines();
-        if (lines.isEmpty()) lines = SelfStatsPanel.demoLines();
-        return SelfStatsPanel.bounds(this.font, lines, currentPanel());
+        return lines.isEmpty() ? SelfStatsPanel.demoLines() : lines;
     }
 
     private static boolean inside(int[] bounds, double x, double y) {
