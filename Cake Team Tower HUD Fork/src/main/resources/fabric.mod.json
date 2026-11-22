@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "ctt-hud-fork",
   "version": "${version}",
-  "name": "Cake Team Tower HUD - Fork",
-  "description": "Fork of Cake-Hud (MIT): enemy / teammate health above name plates, teammate and self stat panels, curse-aware.",
+  "name": "CTT HUD - Fork",
+  "description": "Fork of Cake-Hud (MIT): enemy / teammate health above name plates, plus a client-side stats panel (/trigger ViewStats) with per-attribute filtering.",
   "authors": [
     "nyaLium",
     "Fork of Cake-Hud by TheHolyLord (MIT)"

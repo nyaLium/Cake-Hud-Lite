@@ -1,8 +1,8 @@
 {
-  "modmenu.nameTranslation.ctt-hud-fork": "CTT敌人血条",
-  "modmenu.descriptionTranslation.ctt-hud-fork": "在原版名牌上方显示蛋糕塔敌人的心数、护甲与原版Boss条纹理的血条，纯客户端。",
+  "modmenu.nameTranslation.ctt-hud-fork": "CTT HUD - Fork",
+  "modmenu.descriptionTranslation.ctt-hud-fork": "在原版名牌上方显示蛋糕塔敌人的心数、护甲与原版Boss条纹理的血条，另有属性面板（/trigger ViewStats），纯客户端。",
 
-  "ctt_enemy_hud.config.title": "CTT敌人血条设置",
+  "ctt_enemy_hud.config.title": "CTT HUD - Fork 设置",
   "ctt_enemy_hud.config.section.general": "通用设置",
   "ctt_enemy_hud.config.section.enemy": "敌人设置",
   "ctt_enemy_hud.config.section.player": "玩家设置",

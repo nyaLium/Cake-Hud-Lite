@@ -1202,21 +1202,39 @@ public final class SelfCheck {
             check(kind != SelfStatsKind.HINT, "HINT 不该出现在过滤列表");
         }
 
-        // 可滚动列表的纯函数
-        check(SelfStatsFilterScreen.visibleRows(180, 18) == 10, "180 px 列表应能放 10 行");
-        check(SelfStatsFilterScreen.visibleRows(0, 18) == 0, "列表高度 0 应放 0 行");
-        check(SelfStatsFilterScreen.maxScroll(62, 10) == 52, "62 项 / 10 行可见 → 最大滚动 52");
+        // 双列按钮 + 滚动的纯函数
+        check(SelfStatsFilterScreen.rowCount(60, 2) == 30, "60 项两列 = 30 行，实际 " + SelfStatsFilterScreen.rowCount(60, 2));
+        check(SelfStatsFilterScreen.rowCount(61, 2) == 31, "61 项两列 = 31 行（最后一行只放一个）");
+        check(SelfStatsFilterScreen.rowCount(5, 0) == 0, "列数 0 应得 0 行");
+        check(SelfStatsFilterScreen.visibleRows(148) == 6, "148 px 列表应能放 6 行，实际 " + SelfStatsFilterScreen.visibleRows(148));
+        check(SelfStatsFilterScreen.visibleRows(0) == 0, "列表高度 0 应放 0 行");
+        check(SelfStatsFilterScreen.maxScroll(30, 6) == 24, "30 行 / 6 行可见 → 最大滚动 24");
         check(SelfStatsFilterScreen.maxScroll(5, 10) == 0, "内容比列表短时不该能滚");
-        check(SelfStatsFilterScreen.clampScroll(-3, 52) == 0, "滚动量不该小于 0");
-        check(SelfStatsFilterScreen.clampScroll(999, 52) == 52, "滚动量不该超过上限");
+        check(SelfStatsFilterScreen.clampScroll(-3, 24) == 0, "滚动量不该小于 0");
+        check(SelfStatsFilterScreen.clampScroll(999, 24) == 24, "滚动量不该超过上限");
         check(SelfStatsFilterScreen.scrollByWheel(2, -1.0, 10) == 3, "向下滚一格 → +1 行");
         check(SelfStatsFilterScreen.scrollByWheel(0, 1.0, 10) == 0, "已在顶部再往上滚应保持 0");
         check(SelfStatsFilterScreen.scrollByWheel(9, 1.0, 10) == 8, "向上滚一格 → -1 行");
         check(SelfStatsFilterScreen.scrollByWheel(0, -0.5, 10) == 1, "半格滚动应至少动一行");
-        check(SelfStatsFilterScreen.rowAt(58, 58, 18, 10) == 0, "列表上边应命中第 0 行");
-        check(SelfStatsFilterScreen.rowAt(76, 58, 18, 10) == 1, "隔一行应命中第 1 行");
-        check(SelfStatsFilterScreen.rowAt(57, 58, 18, 10) == -1, "列表上方不该命中");
-        check(SelfStatsFilterScreen.rowAt(58 + 18 * 10, 58, 18, 10) == -1, "列表下方不该命中");
+        check(SelfStatsFilterScreen.itemAt(0, 0, 2, 60) == 0, "第 0 行第 0 列 = 第 0 项");
+        check(SelfStatsFilterScreen.itemAt(0, 1, 2, 60) == 1, "第 0 行第 1 列 = 第 1 项");
+        check(SelfStatsFilterScreen.itemAt(1, 0, 2, 60) == 2, "第 1 行第 0 列 = 第 2 项");
+        check(SelfStatsFilterScreen.itemAt(29, 1, 2, 60) == 59, "第 29 行第 1 列 = 最后一项");
+        check(SelfStatsFilterScreen.itemAt(29, 1, 2, 59) == -1, "最后一项之外应返回 -1");
+        check(SelfStatsFilterScreen.itemAt(0, 2, 2, 60) == -1, "列号越界应返回 -1");
+        check(SelfStatsFilterScreen.itemAt(-1, 0, 2, 60) == -1, "行号越界应返回 -1");
+
+        // 地图私有区字形（从 view_stats.mcfunction 里抽出来的真实码位）
+        check(glyphKind("5\uE004", 0x55FF55) == SelfStatsKind.TOWERS_REGEN, "U+E004 应归为塔内回血");
+        check(glyphKind("5\uE003", 0x55FFFF) == SelfStatsKind.FISHING, "U+E003 应归为钓鱼");
+        check(glyphKind("5\uE001", 0xFFFF55) == SelfStatsKind.BEE, "U+E001 黄色应归为蜜蜂点");
+        check(glyphKind("5\uE001", 0x000000) == SelfStatsKind.ANT, "U+E001 黑色应归为蚂蚁点");
+        check(glyphKind("5\uE010", 0x55FFFF) == SelfStatsKind.KARMA_LIGHT, "U+E010 青色应归为光明因果");
+        check(glyphKind("5\uE010", 0xAA00AA) == SelfStatsKind.KARMA_NEUTRAL, "U+E010 暗紫应归为中立因果");
+        check(glyphKind("5\uE011", 0xAA0000) == SelfStatsKind.KARMA_DARK, "U+E011 应归为黑暗因果");
+        check(glyphKind("5\uE027", 0x892EFF) == SelfStatsKind.KARMA_CELESTIAL, "U+E027 应归为天界因果");
+        check(glyphKind("5\uE026", 0xAA0000) == SelfStatsKind.HEART_CRACKED, "U+E026 暗红应归为碎心");
+        check(glyphKind("5\uE026", 0xFF55FF) == SelfStatsKind.HEART_PINK, "U+E026 亮紫应归为粉心");
 
         // 配置：版本、默认值、粗类展开
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();

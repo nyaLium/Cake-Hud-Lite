@@ -467,14 +467,29 @@ public final class SelfStats {
                 if (rgb == DARK_RED) return SelfStatsKind.BITCHES;
                 return SelfStatsKind.HP_NEG;                              // 灰 = 负生命
             }
-            if (rgb == DARK_RED) return SelfStatsKind.HEART_CRACKED;
-            if (rgb == LIGHT_PURPLE) return SelfStatsKind.HEART_PINK;
-            if (rgb == 0x55FF55) return SelfStatsKind.TOWERS_REGEN;
-            if (rgb == 0xFFFF55) return SelfStatsKind.BEE;
-            if (rgb == 0x000000) return SelfStatsKind.ANT;
-            if (rgb == 0xAA00AA) return SelfStatsKind.KARMA_NEUTRAL;
-            if (rgb == 0x892EFF) return SelfStatsKind.KARMA_CELESTIAL;
-            return SelfStatsKind.MISC;
+            // 地图自定义字体里的私有区图标：字符本身就带身份（见 view_stats.mcfunction）
+            switch (ch) {
+                case '\uE026':                       // 碎心 / 粉心：同一个字形，颜色区分
+                    if (rgb == DARK_RED) return SelfStatsKind.HEART_CRACKED;
+                    if (rgb == LIGHT_PURPLE) return SelfStatsKind.HEART_PINK;
+                    return SelfStatsKind.HEART_CRACKED;
+                case '\uE004':                       // 塔内回血
+                    return SelfStatsKind.TOWERS_REGEN;
+                case '\uE003':                       // 钓鱼
+                    return SelfStatsKind.FISHING;
+                case '\uE001':                       // 蜜蜂点 / 蚂蚁点：同一个字形，颜色区分
+                    if (rgb == 0x000000) return SelfStatsKind.ANT;
+                    return SelfStatsKind.BEE;
+                case '\uE010':                       // 光明因果 / 中立因果：同一个字形，颜色区分
+                    if (rgb == 0xAA00AA) return SelfStatsKind.KARMA_NEUTRAL;
+                    return SelfStatsKind.KARMA_LIGHT;
+                case '\uE011':                       // 黑暗因果
+                    return SelfStatsKind.KARMA_DARK;
+                case '\uE027':                       // 天界因果
+                    return SelfStatsKind.KARMA_CELESTIAL;
+                default:
+                    break;
+            }
         }
         return SelfStatsKind.MISC;
     }

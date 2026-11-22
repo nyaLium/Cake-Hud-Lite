@@ -1,8 +1,8 @@
 {
-  "modmenu.nameTranslation.ctt-hud-fork": "CTT Enemy HUD",
-  "modmenu.descriptionTranslation.ctt-hud-fork": "Client-side heart counts / armour readout and vanilla boss-bar health bar above Cake Team Towers enemies.",
+  "modmenu.nameTranslation.ctt-hud-fork": "CTT HUD - Fork",
+  "modmenu.descriptionTranslation.ctt-hud-fork": "Client-side heart counts / armour readout and vanilla boss-bar health bar above Cake Team Towers enemies, plus a stats panel (/trigger ViewStats).",
 
-  "ctt_enemy_hud.config.title": "CTT Enemy HUD Settings",
+  "ctt_enemy_hud.config.title": "CTT HUD - Fork Settings",
   "ctt_enemy_hud.config.section.general": "General settings",
   "ctt_enemy_hud.config.section.enemy": "Enemy settings",
   "ctt_enemy_hud.config.section.player": "Player settings",

@@ -119,6 +119,10 @@ public final class EnemyHudConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final org.slf4j.Logger LOGGER =
             org.slf4j.LoggerFactory.getLogger("ctt-hud/config");
+    /** 配置文件（1.20.6 起改名为 {@code ctt-hud-fork.json}）。 */
+    public static final String FILE_NAME = "ctt-hud-fork.json";
+    /** 旧文件名：只在迁移时读一次。 */
+    public static final String LEGACY_FILE_NAME = "ctt-enemy-hud.json";
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
@@ -151,7 +155,14 @@ public final class EnemyHudConfig {
     /** 启动时调用：定位文件、必要时写出默认值、读入。 */
     public static void load() {
         try {
-            file = FabricLoader.getInstance().getConfigDir().resolve("ctt-enemy-hud.json");
+            file = FabricLoader.getInstance().getConfigDir().resolve(FILE_NAME);
+            // 1.20.6 起改名：老文件名 → 新文件名（复制一份，旧文件保留，玩家设置不丢）
+            Path legacy = FabricLoader.getInstance().getConfigDir().resolve(LEGACY_FILE_NAME);
+            if (!Files.exists(file) && Files.exists(legacy)) {
+                Files.createDirectories(file.getParent());
+                Files.copy(legacy, file);
+                LOGGER.info("配置改名：已把 {} 复制为 {}（旧文件保留）", LEGACY_FILE_NAME, FILE_NAME);
+            }
             if (!Files.exists(file)) {
                 Files.createDirectories(file.getParent());
                 Files.writeString(file, GSON.toJson(new Cfg()), StandardCharsets.UTF_8);
