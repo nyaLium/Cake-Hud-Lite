@@ -37,7 +37,7 @@ public final class SelfStatsFilterScreen extends Screen {
     /** 列表上边（GUI 像素）：标题 + 统计 + 提示占掉的部分。 */
     static final int TOP = 58;
     /** 底部留给按钮的高度。 */
-    static final int BOTTOM_PAD = 34;
+    static final int BOTTOM_PAD = 58;
     /** 左右边距 + 滚动条宽度。 */
     static final int SIDE = 10;
     static final int SCROLLBAR_WIDTH = 3;

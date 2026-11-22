@@ -21,7 +21,7 @@ public final class SelfStatsSettingsScreen extends Screen {
     private static final int ROW_HEIGHT = 20;
     private static final int ROW_STEP = 26;
     private static final int TOP = 52;
-    private static final int BOTTOM_PAD = 44;
+    private static final int BOTTOM_PAD = 56;
     private static final int WIDTH_MAX = 300;
 
     private final EnemyHudConfigScreen menu;
@@ -123,7 +123,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         List<AbstractWidget> dependent = new ArrayList<>();
 
         for (Row row : rows) {
-            if (!this.pane.intersects(row.y, row.h)) continue;
+            
             int y = this.pane.screenY(row.y);
             AbstractWidget widget = null;
             switch (row.kind) {

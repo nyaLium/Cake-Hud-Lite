@@ -55,8 +55,9 @@ public final class ShieldLayoutScreen extends Screen {
 
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         int[] pos = position(cfg);
-        int w = Math.max(1, Math.round(ShieldIndicatorHud.TEX_W * (float) cfg.shieldScale));
-        int h = Math.max(1, Math.round(ShieldIndicatorHud.TEX_H * (float) cfg.shieldScale));
+        int k = Math.max(1, Math.round((float) cfg.shieldScale));
+        int w = ShieldIndicatorHud.TEX_W * k;
+        int h = ShieldIndicatorHud.TEX_H * k;
         int alpha = (int) Math.round(255.0 * Math.max(0.0, Math.min(1.0, cfg.shieldOpacity)));
         graphics.blit(RenderPipelines.GUI_TEXTURED, PREVIEW, pos[0], pos[1], 0.0f, 0.0f,
                 w, h, ShieldIndicatorHud.TEX_W, ShieldIndicatorHud.TEX_H, (alpha << 24) | 0xFFFFFF);
@@ -74,8 +75,9 @@ public final class ShieldLayoutScreen extends Screen {
 
     /** 当前显示位置；未设置（-1）时按副手槽/屏幕中心算一个默认预览位置。 */
     private int[] position(EnemyHudConfig.Cfg cfg) {
-        int w = Math.max(1, Math.round(ShieldIndicatorHud.TEX_W * (float) cfg.shieldScale));
-        int h = Math.max(1, Math.round(ShieldIndicatorHud.TEX_H * (float) cfg.shieldScale));
+        int k = Math.max(1, Math.round((float) cfg.shieldScale));
+        int w = ShieldIndicatorHud.TEX_W * k;
+        int h = ShieldIndicatorHud.TEX_H * k;
         int x = cfg.shieldX;
         int y = cfg.shieldY;
         if (x < 0 || y < 0) {
@@ -91,8 +93,9 @@ public final class ShieldLayoutScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
         if (accept(event)) {
             int[] pos = position(EnemyHudConfig.get());
-            int w = Math.max(1, Math.round(ShieldIndicatorHud.TEX_W * (float) EnemyHudConfig.get().shieldScale));
-            int h = Math.max(1, Math.round(ShieldIndicatorHud.TEX_H * (float) EnemyHudConfig.get().shieldScale));
+            int k = Math.max(1, Math.round((float) EnemyHudConfig.get().shieldScale));
+            int w = ShieldIndicatorHud.TEX_W * k;
+            int h = ShieldIndicatorHud.TEX_H * k;
             double[] gui = toGui(event);
             if (gui[0] >= pos[0] && gui[0] <= pos[0] + w && gui[1] >= pos[1] && gui[1] <= pos[1] + h) {
                 this.dragging = true;
@@ -107,8 +110,9 @@ public final class ShieldLayoutScreen extends Screen {
         if (this.dragging) {
             EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
             int[] pos = position(cfg);
-            int w = Math.max(1, Math.round(ShieldIndicatorHud.TEX_W * (float) cfg.shieldScale));
-            int h = Math.max(1, Math.round(ShieldIndicatorHud.TEX_H * (float) cfg.shieldScale));
+            int k = Math.max(1, Math.round((float) cfg.shieldScale));
+            int w = ShieldIndicatorHud.TEX_W * k;
+            int h = ShieldIndicatorHud.TEX_H * k;
             cfg.shieldX = Math.max(0, Math.min(this.width - w, pos[0] + (int) Math.round(dragX)));
             cfg.shieldY = Math.max(0, Math.min(this.height - h, pos[1] + (int) Math.round(dragY)));
             return true;

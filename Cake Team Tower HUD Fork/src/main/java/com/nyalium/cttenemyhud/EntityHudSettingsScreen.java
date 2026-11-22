@@ -26,7 +26,7 @@ public final class EntityHudSettingsScreen extends Screen {
     private static final int ROW_STEP = 26;
     private static final int HEADER_HEIGHT = 26;
     private static final int TOP = 52;
-    private static final int BOTTOM_PAD = 44;
+    private static final int BOTTOM_PAD = 56;
     private static final int WIDTH_MAX = 320;
 
     private final EnemyHudConfigScreen menu;
@@ -132,7 +132,7 @@ public final class EntityHudSettingsScreen extends Screen {
         int x = this.width / 2 - width / 2;
         for (Row row : rows) {
             if (row.kind == Kind.HEADER) continue;
-            if (!this.pane.intersects(row.y, row.height)) continue;
+            
             int y = this.pane.screenY(row.y);
             AbstractWidget widget = row.kind == Kind.TOGGLE ? createToggle(row, x, y, width)
                     : createSlider(row, x, y, width);
@@ -168,7 +168,7 @@ public final class EntityHudSettingsScreen extends Screen {
         graphics.centeredText(this.font, this.title, this.width / 2, 22, 0xFFFFFFFF);
         for (Row row : rows) {
             if (row.kind != Kind.HEADER) continue;
-            if (!this.pane.intersects(row.y, row.height)) continue;
+            
             graphics.centeredText(this.font, row.label, this.width / 2, this.pane.screenY(row.y) + 8, 0xFFFFD060);
         }
         this.pane.drawScrollbar(graphics, this.width / 2 + Math.min(WIDTH_MAX, this.width - 60) / 2 + 10);

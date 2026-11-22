@@ -51,8 +51,10 @@ final class ShieldIndicatorHud implements HudElement {
 
         int guiW = graphics.guiWidth();
         int guiH = graphics.guiHeight();
-        int w = Math.max(1, Math.round(TEX_W * (float) cfg.shieldScale));
-        int h = Math.max(1, Math.round(TEX_H * (float) cfg.shieldScale));
+        // 1.20.21：尺寸是「倍」，按整数倍放大原纹理，不再拉伸纹理（避免 1.1 倍时的双列伪影）。
+        int scale = Math.max(1, Math.round((float) cfg.shieldScale));
+        int w = TEX_W * scale;
+        int h = TEX_H * scale;
 
         int x = cfg.shieldX;
         int y = cfg.shieldY;

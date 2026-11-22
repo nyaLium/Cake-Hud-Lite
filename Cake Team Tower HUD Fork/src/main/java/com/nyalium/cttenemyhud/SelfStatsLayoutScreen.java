@@ -63,9 +63,16 @@ public final class SelfStatsLayoutScreen extends Screen {
         graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsMove.hint"),
                 this.width / 2, 36, 0xFFFFD060);
         // 提示当前在改哪一套配置（HUD / 容器界面）。
-        graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsMode.current",
-                        Component.translatable(SelfStatsSettingsScreen.modeLabelKey(
-                                EnemyHudConfig.get().selfStatsMode))),
+        int mode = EnemyHudConfig.get().selfStatsMode;
+        Component modeName = Component.translatable(SelfStatsSettingsScreen.modeLabelKey(mode));
+        Component shown = modeName;
+        if (mode == 2) {
+            // 模式 2 有 HUD / 容器两套：把当前拖的是哪一套写清楚。
+            shown = modeName.copy().append(" · ").append(Component.translatable(this.containerConfig
+                    ? "ctt_enemy_hud.config.selfStatsTarget.container"
+                    : "ctt_enemy_hud.config.selfStatsTarget.hud"));
+        }
+        graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsMode.current", shown),
                 this.width / 2, 50, 0xFF9FE8FF);
 
         List<Component> lines = SelfStats.lines();
