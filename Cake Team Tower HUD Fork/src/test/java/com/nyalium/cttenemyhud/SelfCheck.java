@@ -131,12 +131,14 @@ public final class SelfCheck {
             }
         }
 
-        check(EnemyHudLayout.resolveBarWidth(100) == 100, "默认 100 应保持");
+        check(EnemyHudLayout.resolveBarWidth(100) == 100, "100 在范围内应保持");
         check(EnemyHudLayout.resolveBarWidth(50) == 50, "下限 50 应保持");
         check(EnemyHudLayout.resolveBarWidth(150) == 150, "上限 150 应保持");
         check(EnemyHudLayout.resolveBarWidth(0) == EnemyHudLayout.BAR_WIDTH_MIN, "0 应夹到下限");
         check(EnemyHudLayout.resolveBarWidth(9999) == EnemyHudLayout.BAR_WIDTH_MAX, "过大应夹到上限");
         check(EnemyHudLayout.resolveBarWidth(Double.NaN) == EnemyHudLayout.BAR_WIDTH_DEFAULT, "NaN 回落默认");
+        check(EnemyHudLayout.BAR_WIDTH_DEFAULT == 75, "默认长度应为 75 像素: "
+                + EnemyHudLayout.BAR_WIDTH_DEFAULT);
     }
 
     // ── 3. 配置归一化 ──
@@ -174,7 +176,8 @@ public final class SelfCheck {
         check(c.barWidth == EnemyHudLayout.BAR_WIDTH_DEFAULT, "barWidth NaN 应回落 100");
 
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
-        check(defaults.barWidth == 100.0, "默认血条长度应为 100");
+        check(defaults.barWidth == 75.0, "默认血条长度应为 75");
+        check(defaults.teamBarWidth == 75.0, "队友血条默认长度也应为 75");
         check(defaults.scale == 1.0, "默认缩放应为 1.0");
         check(defaults.verticalOffset == 0, "默认垂直偏移应为 0");
         check(defaults.opacity == 0.75, "默认透明度应为 0.75");
@@ -189,21 +192,28 @@ public final class SelfCheck {
 
         check(EnemyHudConfig.normalize(null) != null, "normalize(null) 不能返回 null");
 
-        // 换行阈值：40~200，200 = 自动。
-        EnemyHudConfig.Cfg wrap = new EnemyHudConfig.Cfg();
-        wrap.wrapWidth = 0;
-        EnemyHudConfig.normalize(wrap);
-        check(wrap.wrapWidth == EnemyHudLayout.WRAP_MIN, "wrapWidth 0 应夹到 " + EnemyHudLayout.WRAP_MIN);
-        wrap.wrapWidth = 9999;
-        EnemyHudConfig.normalize(wrap);
-        check(wrap.wrapWidth == EnemyHudLayout.WRAP_AUTO, "wrapWidth 9999 应夹到自动");
-        wrap.wrapWidth = Double.NaN;
-        EnemyHudConfig.normalize(wrap);
-        check(wrap.wrapWidth == EnemyHudLayout.WRAP_AUTO, "wrapWidth NaN 应回落自动");
-        wrap.wrapWidth = 80;
-        EnemyHudConfig.normalize(wrap);
-        check(wrap.wrapWidth == 80, "wrapWidth 80 应保持");
-        check(defaults.wrapWidth == EnemyHudLayout.WRAP_AUTO, "默认换行阈值应为自动");
+        // 老配置（没有 configVersion）迁移：旧默认 100 → 75，其它字段不动。
+        EnemyHudConfig.Cfg old = new EnemyHudConfig.Cfg();
+        old.barWidth = 100.0;
+        old.teamBarWidth = 100.0;
+        old.scale = 1.2;
+        EnemyHudConfig.migrate("{\"barWidth\":100.0,\"scale\":1.2}", old);
+        check(old.barWidth == 75.0, "旧默认 100 应迁移到 75: " + old.barWidth);
+        check(old.teamBarWidth == 75.0, "队友旧默认 100 也应迁移到 75: " + old.teamBarWidth);
+        check(old.scale == 1.2, "迁移不该动其它字段: " + old.scale);
+        check(old.configVersion == EnemyHudConfig.CURRENT_VERSION, "迁移后应写上 configVersion");
+
+        EnemyHudConfig.Cfg custom = new EnemyHudConfig.Cfg();
+        custom.barWidth = 120.0;
+        custom.teamBarWidth = 60.0;
+        EnemyHudConfig.migrate("{\"barWidth\":120.0,\"teamBarWidth\":60.0}", custom);
+        check(custom.barWidth == 120.0 && custom.teamBarWidth == 60.0,
+                "自己调过的长度不该被迁移覆盖: " + custom.barWidth + "/" + custom.teamBarWidth);
+
+        EnemyHudConfig.Cfg current = new EnemyHudConfig.Cfg();
+        current.barWidth = 100.0;
+        EnemyHudConfig.migrate("{\"configVersion\":2,\"barWidth\":100.0}", current);
+        check(current.barWidth == 100.0, "新配置里显式写 100 不该被改: " + current.barWidth);
 
         for (double op = 0.4; op <= 1.2; op += 0.05) {
             EnemyHudConfig.Cfg t = new EnemyHudConfig.Cfg();
@@ -267,8 +277,8 @@ public final class SelfCheck {
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
         String joined = join(r);
         check(joined.equals("❤100/100 💛60"), "心数行内容=" + joined);
-        check(!joined.contains(EnemyHudLayout.SEPARATOR), "同类之间不该有分隔符=" + joined);
-        check(r.rowCount() == 1, "不超宽时不该折行: " + r.rowCount());
+        check(!joined.contains("|"), "同一条心数行不该有分隔符=" + joined);
+        check(r.rowCount() == 1, "没有护甲时只有一行心数: " + r.rowCount());
 
         EnemyHudLayout.Result single = run("单色", new Data("单红", 80, 100, false, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
@@ -302,51 +312,39 @@ public final class SelfCheck {
                 new int[]{0, 0, 0, 0, 0, 0, 0}), noHearts);
         check(join(numbers).equals("160/100"), "关掉心数应退回绝对血量: " + join(numbers));
 
-        // 一行放得下时，心组与护甲之间只有一个分隔符。
+        // 1.18.0 起固定两行：护甲在最上面，心数紧贴血条；行数不随内容宽度变化。
         EnemyHudLayout.Options withArmor = new EnemyHudLayout.Options();
         withArmor.showBar = false;
         EnemyHudLayout.Result narrowArmor = run("窄护甲", new Data("一个护甲", 100, 100, false, 0,
                 new int[]{3, 0, 0, 0, 0, 0, 0}), withArmor);
-        check(narrowArmor.rowCount() == 1, "窄内容不该折行: " + narrowArmor.rowCount());
-        check(join(narrowArmor).startsWith("❤100/100 | "), "心组与护甲之间才该有分隔符: "
-                + join(narrowArmor));
-        check(!join(narrowArmor).contains("❤100/100 | ❤"), "心里面不该出现分隔符: " + join(narrowArmor));
+        check(narrowArmor.rowCount() == 2, "有护甲时固定两行: " + narrowArmor.rowCount());
+        check(rowText(narrowArmor, 0).equals("\uD83D\uDD253"), "护甲行在最上面: " + rowText(narrowArmor, 0));
+        check(rowText(narrowArmor, 1).equals("❤100/100"), "心数行在护甲下面: " + rowText(narrowArmor, 1));
+        check(!join(narrowArmor).contains("|"), "分成两行之后不再需要分隔符: " + join(narrowArmor));
 
-        // 一行放不下（超过 max(条长, MIN_ROW_WIDTH)）→ 红心顶到上面一行。
         EnemyHudLayout.Result armored = run("心数+护甲", new Data("带护甲", 160, 100, false, 3,
                 new int[]{0, 5, 0, 0, 0, 0, 0}), withArmor);
-        check(armored.rowCount() == 2, "超宽时应折成两行: " + armored.rowCount());
-        check(rowText(armored, 0).equals("❤100/100"), "第一行应只有红心: " + rowText(armored, 0));
-        check(rowText(armored, 1).equals("💛60 | " + "\uD83D\uDEE13" + " "
-                + EnemyData.ARMOR_ICONS[1] + "5"), "第二行应是其它心+护甲: " + rowText(armored, 1));
+        check(armored.rowCount() == 2, "有护甲时固定两行: " + armored.rowCount());
+        check(rowText(armored, 0).equals("\uD83D\uDEE13 " + EnemyData.ARMOR_ICONS[1] + "5"),
+                "第一行应是护甲: " + rowText(armored, 0));
+        check(rowText(armored, 1).equals("❤100/100 💛60"),
+                "第二行应是全部心数: " + rowText(armored, 1));
         check(armored.rows.get(0).top == EnemyHudLayout.TEXT_TOP - EnemyHudLayout.ROW_STEP,
-                "上面一行要再抬 " + EnemyHudLayout.ROW_STEP + " 像素");
-        check(armored.rows.get(1).top == EnemyHudLayout.TEXT_TOP, "下面一行贴着 TEXT_TOP");
+                "护甲行要再抬 " + EnemyHudLayout.ROW_STEP + " 像素");
+        check(armored.rows.get(1).top == EnemyHudLayout.TEXT_TOP, "心数行贴着 TEXT_TOP（紧贴血条）");
         check(armored.textTop == EnemyHudLayout.TEXT_TOP, "textTop 仍指最底一行");
+        check(armored.rows.get(0).isArmourRow(), "第一行应被标记为护甲行");
+        check(!armored.rows.get(1).isArmourRow(), "第二行不是护甲行");
         // 行距正好等于背景框高度：两行背景相邻但**不重叠**（原版 y-1 ~ y+9 共 10 像素）。
         check(EnemyHudLayout.TEXT_BOX_HEIGHT == 10, "背景框高度应为 10 像素");
         check(armored.rows.get(0).top + EnemyHudLayout.TEXT_BOX_HEIGHT == armored.rows.get(1).top,
                 "两行背景框应正好相邻，不留缝也不重叠");
 
-        // 换行阈值的解析：最右 = 自动（不超过血条长度），血条关掉时用默认长度兜底。
-        check(EnemyHudLayout.resolveWrapWidth(EnemyHudLayout.WRAP_AUTO, 120) == 120,
-                "自动阈值应等于条长");
-        check(EnemyHudLayout.resolveWrapWidth(EnemyHudLayout.WRAP_AUTO, 0)
-                == EnemyHudLayout.BAR_WIDTH_DEFAULT, "血条关掉时自动阈值应兜底");
-        check(EnemyHudLayout.resolveWrapWidth(Double.NaN, 120) == 120, "NaN 应视为自动");
-        check(EnemyHudLayout.resolveWrapWidth(0, 120) == 120, "0 应视为自动");
-        check(EnemyHudLayout.resolveWrapWidth(60, 120) == 60, "手填阈值应生效");
-
-        // 手填 60 像素：78 像素的两色行必须折成两行。
-        EnemyHudLayout.Options smallWrap = new EnemyHudLayout.Options();
-        smallWrap.showBar = false;
-        smallWrap.showArmor = false;
-        smallWrap.wrapWidth = 60;
-        EnemyHudLayout.Result wrapped = run("小阈值", new Data("两色", 160, 100, false, 0,
-                new int[]{0, 0, 0, 0, 0, 0, 0}), smallWrap);
-        check(wrapped.rowCount() == 2, "阈值 60 时 78 像素应折行: " + wrapped.rowCount());
-        check(rowText(wrapped, 0).equals("❤100/100"), "折行后第一行=" + rowText(wrapped, 0));
-        check(rowText(wrapped, 1).equals("💛60"), "折行后第二行=" + rowText(wrapped, 1));
+        // 心数再长也只有一行（不折行 → 行数稳定）。五色心 + 4 位数，以前会折两行。
+        EnemyHudLayout.Result wideHearts = EnemyHudLayout.compute(9999, 9999, false, 0, new int[7],
+                HeartCounts.of(9999, 9999, 9999, 9999, 9999), o, SelfCheck::width);
+        check(wideHearts.rowCount() == 1, "心数再长也不折行: " + wideHearts.rowCount());
+        check(!join(wideHearts).contains("|"), "心数行不该有分隔符: " + join(wideHearts));
 
         // 队友（玩家）也能有心数：有 payload 时和敌人一样画心，没 payload 时退回「当前/最大」。
         EnemyHudLayout.Options teamLike = new EnemyHudLayout.Options();
@@ -361,10 +359,9 @@ public final class SelfCheck {
 
         EnemyHudLayout.Result teamHearts = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
                 HeartCounts.of(60, 40, 30, 20, 2), teamLike, SelfCheck::width);
-        check(teamHearts.rowCount() == 2, "队友五色心应折两行: " + teamHearts.rowCount());
-        check(rowText(teamHearts, 0).equals("❤60/150"), "队友第一行=" + rowText(teamHearts, 0));
-        check(rowText(teamHearts, 1).equals("💛40 🖤30 💙20 💔2"),
-                "队友第二行=" + rowText(teamHearts, 1));
+        check(teamHearts.rowCount() == 1, "队友五色心也是一行: " + teamHearts.rowCount());
+        check(rowText(teamHearts, 0).equals("❤60/150 💛40 🖤30 💙20 💔2"),
+                "队友心数行=" + rowText(teamHearts, 0));
 
         // 1.16.3 起：队友**只画心与血条**，护甲段一律不画 —— 即使 payload 带了 defence / 元素护甲。
         EnemyHudLayout.Options teamNoArmor = new EnemyHudLayout.Options();
@@ -444,10 +441,14 @@ public final class SelfCheck {
             EnemyHudLayout.Result r = EnemyHudLayout.compute(150, 150, false, 5, five,
                     HeartCounts.of(60, 40, 0, 0, 0), o, SelfCheck::width);
             String text = join(r);
-            check(text.contains("\uD83D\uDEE15"), "第 " + page + " 页应始终带 🛡5: " + text);
-            check(text.contains("|"), "第 " + page + " 页应有「心 ↔ 护甲」分隔符: " + text);
-            check(text.contains(pageArmour[page]),
-                    "第 " + page + " 页应显示 " + pageArmour[page] + ": " + text);
+            String armour = rowText(r, 0);
+            check(r.rowCount() == 2, "有护甲时应固定两行: " + r.rowCount());
+            check(r.rows.get(0).isArmourRow(), "第一行应是护甲行");
+            check(armour.contains("\uD83D\uDEE15"), "第 " + page + " 页应始终带 🛡5: " + armour);
+            check(armour.contains(pageArmour[page]),
+                    "第 " + page + " 页应显示 " + pageArmour[page] + ": " + armour);
+            check(rowText(r, 1).equals("❤60/150 💛40"), "第二行应是心数: " + rowText(r, 1));
+            check(text.contains("❤60/150"), "心数行始终在: " + text);
         }
 
         EnemyHudLayout.Options p0 = new EnemyHudLayout.Options();
@@ -502,7 +503,8 @@ public final class SelfCheck {
     }
 
     /** 第 index 行拼起来的文字（0 = 最上面那行）。 */
-    private static String rowText(EnemyHudLayout.Result r, int index) {        if (r == null || index < 0 || index >= r.rows.size()) return "";
+    private static String rowText(EnemyHudLayout.Result r, int index) {
+        if (r == null || index < 0 || index >= r.rows.size()) return "";
         StringBuilder sb = new StringBuilder();
         for (EnemyHudLayout.Line l : r.rows.get(index).lines) sb.append(l.text);
         return sb.toString();

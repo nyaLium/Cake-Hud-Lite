@@ -19,6 +19,11 @@ public final class EnemyHudConfig {
 
     /** 配置字段。默认值 = 首次运行写出的内容。 */
     public static final class Cfg {
+        /**
+         * 配置版本。老文件没有这个键 → 读到的仍是默认值，靠 {@link #read()} 里的
+         * 「JSON 里到底有没有这个键」来判定，见 {@link #CURRENT_VERSION}。
+         */
+        public int configVersion = CURRENT_VERSION;
         /** 总开关：false 时完全不绘制。 */
         public boolean enabled = true;
         /** 整体不透明度，0.50 ~ 1.00（低于 0.50 会被夹到 0.50）。 */
@@ -42,8 +47,8 @@ public final class EnemyHudConfig {
         public boolean autoPartyBossbar = true;
         /** 隐藏上方 Boss 栏里「队伍血量」那一条（数据照常读取）。 */
         public boolean hideTeamBossBar = true;
-        /** 玩家血条长度（原版名牌像素）。 */
-        public double teamBarWidth = 100.0;
+        /** 玩家血条长度（原版名牌像素），默认 75。 */
+        public double teamBarWidth = 75.0;
         /** 玩家血条整体缩放。 */
         public double teamScale = 1.0;
         /** 玩家血条垂直微调。 */
@@ -52,13 +57,8 @@ public final class EnemyHudConfig {
         public double teamMaxDistance = 48.0;
         /** 超过这个距离（格）不再绘制。 */
         public double maxDistance = 48.0;
-        /** 血条长度（原版名牌像素），50 ~ 150，默认 100。 */
-        public double barWidth = 100.0;
-        /**
-         * 换行阈值（原版名牌像素），40 ~ 200；拉到最右（200）= **自动**，即不超过血条长度。
-         * 整行文字超过它就折成两行：红心在上，其余心 + 护甲在下。
-         */
-        public double wrapWidth = EnemyHudLayout.WRAP_AUTO;
+        /** 血条长度（原版名牌像素），50 ~ 150，默认 75。 */
+        public double barWidth = 75.0;
         /** 整组 UI 的额外缩放，0.75 ~ 1.50，1.0 = 与原版名牌同字号。 */
         public double scale = 1.0;
         /** 整组 UI 的垂直微调（原版名牌像素），-30 ~ 0，负数=更高。 */
@@ -73,6 +73,11 @@ public final class EnemyHudConfig {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final long RECHECK_MS = 2000L;
+
+    /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
+    public static final int CURRENT_VERSION = 2;
+    /** 旧版默认血条长度（1.18.0 起默认改成 75）。 */
+    private static final double LEGACY_BAR_WIDTH = 100.0;
 
     private static Cfg cfg = new Cfg();
     private static Path file;
@@ -154,9 +159,28 @@ public final class EnemyHudConfig {
             String json = Files.readString(file, StandardCharsets.UTF_8);
             Cfg read = GSON.fromJson(json, Cfg.class);
             cfg = normalize(read);
+            migrate(json, cfg);
         } catch (Exception e) {
             cfg = new Cfg();
         }
+    }
+
+    /**
+     * 老配置文件升级到 {@link #CURRENT_VERSION}。
+     *
+     * <p>v1（没有 {@code configVersion} 键）的血条长度还是旧默认值 100，而 1.18.0 起默认 75。
+     * 只有在用户还是旧默认值（100）时才跟着改；自己调过（!= 100）的保留原值 ——
+     * 既不覆盖玩家的选择，也不会让老配置看起来「默认值没生效」。</p>
+     */
+    static void migrate(String json, Cfg cfg) {
+        if (cfg == null) return;
+        boolean legacy = json == null || !json.contains("\"configVersion\"");
+        if (!legacy && cfg.configVersion >= CURRENT_VERSION) return;
+        if (legacy) {
+            if (cfg.barWidth == LEGACY_BAR_WIDTH) cfg.barWidth = EnemyHudLayout.BAR_WIDTH_DEFAULT;
+            if (cfg.teamBarWidth == LEGACY_BAR_WIDTH) cfg.teamBarWidth = EnemyHudLayout.BAR_WIDTH_DEFAULT;
+        }
+        cfg.configVersion = CURRENT_VERSION;
     }
 
     /**
@@ -169,12 +193,10 @@ public final class EnemyHudConfig {
         read.opacity = clamp(read.opacity, 0.5, 1.0);
         read.scale = clamp(read.scale, 0.75, 1.5);
         read.maxDistance = clamp(read.maxDistance, 4.0, 256.0);
-        // 血条长度：非法值回落默认 100，其余夹在 50~150。
+        // 血条长度：非法值回落默认 75，其余夹在 50~150。
         if (Double.isNaN(read.barWidth)) read.barWidth = EnemyHudLayout.BAR_WIDTH_DEFAULT;
         read.barWidth = clamp(read.barWidth, EnemyHudLayout.BAR_WIDTH_MIN, EnemyHudLayout.BAR_WIDTH_MAX);
         read.verticalOffset = (int) clamp(read.verticalOffset, -30.0, 0.0);
-        // 换行阈值：NaN 视作「自动」（clamp 对 NaN 返回上限）；越界夹到 40~200。
-        read.wrapWidth = clamp(read.wrapWidth, EnemyHudLayout.WRAP_MIN, EnemyHudLayout.WRAP_AUTO);
         if (Double.isNaN(read.teamBarWidth)) read.teamBarWidth = EnemyHudLayout.BAR_WIDTH_DEFAULT;
         read.teamBarWidth = clamp(read.teamBarWidth, EnemyHudLayout.BAR_WIDTH_MIN, EnemyHudLayout.BAR_WIDTH_MAX);
         read.teamScale = clamp(read.teamScale, 0.75, 1.5);

@@ -8,27 +8,29 @@ import java.util.List;
  * 每一个配置组合（见 {@code src/test/java/.../SelfCheck.java}）。
  *
  * <h2>坐标系</h2>
- * <p>「原版名牌像素」：原点 = 原版名牌锚点，y 向下为正，1 像素 = 0.025 格。</p>
+ * <p>「原版名牌像素」：原点 = 原版名牌锚点，y 向下为正，1 像素 = 0.025 格（再乘缩放）。</p>
  * <p>原版 {@code EntityRenderer.submitNameDisplay} 的顺序是：</p>
  * <pre>
  *   if (scoreText != null) { 画分数; pose.translate(0, 9 × 1.15 × 0.025, 0); }  // 上抬 10.35 像素
  *   if (nameTag   != null) { 画名字 }
  * </pre>
- * <p>也就是说<b>分数</b>贴在锚点（{@code y ∈ [0, 9]}），<b>名字</b>在分数被上抬后才画。
- * 分数一旦隐藏，那次上抬就不执行，名字自然落回 {@code y ∈ [0, 9]} —— 这正是需要的
- * 「名字下移」位置，本 Mod 自己画名字时就用它（{@link #NAME_TOP}）。</p>
+ * <p>分数一旦隐藏，那次上抬就不执行，名字自然落回 {@code y ∈ [0, 9]}。</p>
  *
- * <p>于是整组 HUD 自下而上：名称 {@code [0, 9]} → 血条 → 文字，互不重叠。</p>
+ * <h2>固定三段（1.18.0 起）</h2>
+ * <p>位置从下往上排，行数<b>不随内容宽度变化</b>（以前会按宽度在 1~2 行之间跳，玩家很难发现）：</p>
+ * <pre>
+ *     护甲行（🛡 防御 + 2 项元素护甲，会翻页）   ← 最上面，只有真有护甲时才占一行
+ *     心数行（❤当前/上限 + 其它各类心）          ← 紧贴血条上面，永远只有一行
+ *     ───────── 血条 ─────────
+ *     名称（原版）
+ * </pre>
  *
- * <h2>两行文字</h2>
- * <p>红心现在写成 {@code ❤当前/上限}，配上魂心/护甲后整行容易比血条还宽。所以文字是
- * <b>可折行</b>的：超过「换行阈值」({@link Options#wrapWidth}，默认
- * {@link #WRAP_AUTO} = 不超过血条长度) 时，红心单独占上面一行，其余心与护甲留在下面一行；
- * 上面的行每次再抬 {@link #ROW_STEP} 像素，血条位置不变。</p>
+ * <p>所以 {@link Result#rows} 的顺序是<b>从上到下</b>：有护甲时 {@code rows[0]} 是护甲、
+ * {@code rows[last]} 是心数；最下面那一行永远贴在 {@link #TEXT_TOP}。</p>
  */
 public final class EnemyHudLayout {
 
-    /** 文字行顶部（布局像素）。 */
+    /** 最下面一行文字的顶部（布局像素）。 */
     public static final int TEXT_TOP = -18;
     /** 血条顶部（布局像素）。血条下沿 = -2，正好留出名字背景框的上沿。 */
     public static final int BAR_TOP = -7;
@@ -43,37 +45,24 @@ public final class EnemyHudLayout {
      * 一行文字的<b>背景框</b>高度。
      *
      * <p>原版 {@code Font.PreparedTextBuilder.markBackground} 是从 {@code y - 1} 画到
-     * {@code y + 9}，比字体的 9 像素行高<b>多出 1 像素</b>（上下各留半像素，落地成 y-1 与 y+9）。
-     * 两行文字挨着画时，如果行距也用 9，上行的底边（{@code y + 9}）与下行的顶边
-     * （{@code y' - 1 = y + 8}）就会重叠 1 像素 —— 两层半透明黑叠在一起，中间那道
-     * 「阴影」明显更深一条。所以行距必须是这个值。</p>
+     * {@code y + 9}，比字体的 9 像素行高<b>多出 1 像素</b>。两行挨着画时行距必须是 10，
+     * 否则上行的底边会压住下行的顶边 1 像素，两层 25% 黑叠成一条更深的暗带。</p>
      */
     public static final int TEXT_BOX_HEIGHT = NAME_HEIGHT + 1;
 
-    /** 行高：文字折成多行时，每往上一行抬这么多像素。必须 ≥ {@link #TEXT_BOX_HEIGHT}。 */
+    /** 行距：往上一行抬这么多像素。必须 ≥ {@link #TEXT_BOX_HEIGHT}。 */
     public static final int ROW_STEP = TEXT_BOX_HEIGHT;
 
-    /** 换行阈值可调下限（像素）。 */
-    public static final int WRAP_MIN = 40;
-    /** 换行阈值可调上限；滑块拉到这里 = **自动**。 */
-    public static final int WRAP_MAX = 200;
-    /** 阈值等于这个值即「自动」：不超过血条长度。 */
-    public static final double WRAP_AUTO = WRAP_MAX;
-
-    /** 血条长度的允许范围与默认值（原版名牌像素）。 */
+    /** 血条长度的允许范围与默认值（原版名牌像素）。默认 75（1.18.0 起）。 */
     public static final int BAR_WIDTH_MIN = 50;
     public static final int BAR_WIDTH_MAX = 150;
-    public static final int BAR_WIDTH_DEFAULT = 100;
+    public static final int BAR_WIDTH_DEFAULT = 75;
 
-    /** 分段之间的分隔符与颜色（灰）。 */
-    public static final String SEPARATOR = " | ";
-    public static final int SEPARATOR_COLOR = 0x9E9E9E;
-
-    /** 同一组内各段之间的间隔（各类心之间用它，不是分隔符）。 */
+    /** 同一行内各段之间的间隔（各类心之间、护甲项之间）。 */
     public static final String HEART_GAP = " ";
 
     /**
-     * 元素护甲一页最多显示几项（1.17.0 起）。
+     * 元素护甲一页最多显示几项。
      *
      * <p>七种元素护甲同时显示会把整行拉得很长，所以护甲部分**每页 2 项、循环翻页**；
      * {@code 🛡 防御} 不受分页影响，一直显示。翻页节奏见 {@code ArmourCycle}。</p>
@@ -94,11 +83,6 @@ public final class EnemyHudLayout {
         public boolean showBar = true;
         /** 固定长度（原版名牌像素），夹在 BAR_WIDTH_MIN ~ BAR_WIDTH_MAX。 */
         public double barWidth = BAR_WIDTH_DEFAULT;
-        /**
-         * 换行阈值（像素）。{@link #WRAP_AUTO} = 自动（不超过血条长度）。
-         * 整行文字超过它就折成两行：红心在上，其余心 + 护甲在下。
-         */
-        public double wrapWidth = WRAP_AUTO;
         public int verticalOffset = 0;
         /** 文字是否带阴影（纯渲染开关，放这里只为让测试能覆盖到）。 */
         public boolean textShadow = true;
@@ -135,17 +119,31 @@ public final class EnemyHudLayout {
             this.width = width;
             this.top = top;
         }
+
+        /** 本行是不是护甲行（第一段是 🛡 或护甲图标）。调试 / 测试用。 */
+        public boolean isArmourRow() {
+            return !lines.isEmpty() && isArmourIcon(lines.get(0).text);
+        }
+
+        private static boolean isArmourIcon(String text) {
+            if (text == null || text.isEmpty()) return false;
+            if (text.startsWith("\uD83D\uDEE1")) return true;          // 🛡 防御
+            for (String icon : EnemyData.ARMOR_ICONS) {
+                if (text.startsWith(icon)) return true;
+            }
+            return false;
+        }
     }
 
     /** 布局结果。 */
     public static final class Result {
-        /** 从下到上按视觉顺序排列：最后一个是最靠近血条那行。 */
+        /** 从上到下的可见行；最后一个是最靠近血条那行。 */
         public final List<Row> rows;
         /** 所有行扁平化后的段（调试 / 测试用）。 */
         public final List<Line> lines;
         public final int textWidth;
         public final int barWidth;
-        /** 最底一行的文字顶部（多行时上面的行依次再往上 9 像素）。 */
+        /** 最下面一行的文字顶部（多行时上面的行依次再往上 ROW_STEP 像素）。 */
         public final int textTop;
         public final int barTop;
         public final boolean hasText;
@@ -190,33 +188,26 @@ public final class EnemyHudLayout {
         Options opt = options != null ? options : new Options();
         WidthMeasurer w = measurer != null ? measurer : String::length;
 
-        // 红心（或队友的「当前/最大」）单独一组，太长时它自己占上面一行。
-        List<Line> head = new ArrayList<>(4);
-        // 其它心 + 护甲，留在下面一行。
-        List<Line> rest = new ArrayList<>(12);
-
+        // ① 心数行：紧贴血条上面，**永远只有一行**（不折行，行数变化会让玩家看漏）。
+        List<Line> heartRow = new ArrayList<>(8);
         if (opt.showNumbers) {
             if (opt.showHearts && hearts != null && hearts.any()) {
                 if (hearts.has(HeartCounts.RED)) {
-                    head.add(redLine(hearts.get(HeartCounts.RED), maxHp));
+                    heartRow.add(redLine(hearts.get(HeartCounts.RED), maxHp));
                 }
-                appendHeartSegments(rest, hearts);
+                appendHeartSegments(heartRow, hearts);
             } else if (!percentOnly) {
                 // 拆不出各类心（例如队友只有 AllHearts/MaxHP）：退回原来的「当前/最大」。
-                head.add(new Line(num(Math.max(0, hp)) + "/" + num(Math.max(0, maxHp)), 0xFFFFFF));
+                heartRow.add(new Line(num(Math.max(0, hp)) + "/" + num(Math.max(0, maxHp)), 0xFFFFFF));
             }
         }
 
+        // ② 护甲行：放在最上面，同样只有一行（🛡 常驻 + 元素护甲按页取 2 项）。
+        List<Line> armourRow = new ArrayList<>(6);
         if (opt.showArmor && hasArmor(defence, armor)) {
-            // 分隔符是「心组 ↔ 护甲」之间的，红心在 head 里也算有内容。
-            if (!head.isEmpty() || !rest.isEmpty()) {
-                rest.add(new Line(SEPARATOR, SEPARATOR_COLOR));
-            }
-            // 🛡 防御常驻，不参与翻页。
             if (defence != 0) {
-                rest.add(new Line("\uD83D\uDEE1" + num(defence), EnemyData.DEFENCE_COLOR));
+                armourRow.add(new Line("\uD83D\uDEE1" + num(defence), EnemyData.DEFENCE_COLOR));
             }
-            // 元素护甲：7 种里只取当前页的 ARMOUR_PAGE_SIZE 项，其余靠循环翻页看到。
             int page = clampArmourPage(opt.armourPage, armourPageCount(armor));
             int seen = 0;
             if (armor != null) {
@@ -227,10 +218,10 @@ public final class EnemyHudLayout {
                     int itemPage = seen / ARMOUR_PAGE_SIZE;
                     seen++;
                     if (itemPage != page) continue;
-                    if (!rest.isEmpty()) {
-                        rest.add(new Line(" ", 0xFFFFFF));
+                    if (!armourRow.isEmpty()) {
+                        armourRow.add(new Line(HEART_GAP, 0xFFFFFF));
                     }
-                    rest.add(new Line(EnemyData.ARMOR_ICONS[i] + num(v), EnemyData.ARMOR_COLORS[i]));
+                    armourRow.add(new Line(EnemyData.ARMOR_ICONS[i] + num(v), EnemyData.ARMOR_COLORS[i]));
                 }
             }
         }
@@ -240,49 +231,25 @@ public final class EnemyHudLayout {
             barWidth = resolveBarWidth(opt.barWidth);
         }
 
-        // 分隔符只存在于「心 ↔ 护甲」之间；护甲成为单独一行时，换行就代替了它。
-        boolean hasSeparator = !rest.isEmpty() && SEPARATOR.equals(rest.get(0).text);
-
-        List<Line> merged = new ArrayList<>(head.size() + rest.size() + 1);
-        merged.addAll(head);
-        if (!head.isEmpty() && !rest.isEmpty() && !hasSeparator) {
-            merged.add(new Line(HEART_GAP, 0xFFFFFF));
-        }
-        merged.addAll(rest);
-
-        List<Line> bottom = hasSeparator
-                ? new ArrayList<>(rest.subList(1, rest.size()))
-                : rest;
-
-        int headWidth = width(head, w);
-        int bottomWidth = width(bottom, w);
-        int mergedWidth = width(merged, w);
-
-        // 一行放得下就一行；放不下（且红心之后确实还有东西）就把红心顶到上面一行。
-        int wrapLimit = resolveWrapWidth(opt.wrapWidth, barWidth);
+        // 从上到下：护甲 → 心数。最下面那行贴 TEXT_TOP。
         List<List<Line>> groups = new ArrayList<>(2);
-        if (headWidth > 0 && bottomWidth > 0 && mergedWidth > wrapLimit) {
-            groups.add(head);
-            groups.add(bottom);
-        } else if (!merged.isEmpty()) {
-            groups.add(merged);
-        }
+        if (!armourRow.isEmpty()) groups.add(armourRow);
+        if (!heartRow.isEmpty()) groups.add(heartRow);
 
         int bottomTop = TEXT_TOP + opt.verticalOffset;
         int count = groups.size();
         List<Row> rows = new ArrayList<>(count);
         List<Line> flat = new ArrayList<>(12);
-        int flatWidth = 0;
+        int textWidth = 0;
         for (int i = 0; i < count; i++) {
             List<Line> group = groups.get(i);
             int width = width(group, w);
-            // 最后一行贴着 TEXT_TOP，往上的行依次再抬 9 像素。
             rows.add(new Row(group, width, bottomTop - ROW_STEP * (count - 1 - i)));
             flat.addAll(group);
-            flatWidth += width;
+            textWidth += width;
         }
 
-        return new Result(rows, flat, flatWidth, barWidth,
+        return new Result(rows, flat, textWidth, barWidth,
                 bottomTop, BAR_TOP + opt.verticalOffset);
     }
 
@@ -311,10 +278,6 @@ public final class EnemyHudLayout {
      *
      * <p>顺序固定为魂 / 黑 / 蓝 / 碎 / 粉，不随数值大小变化，眼睛每次落在同一位置。
      * 碎心与粉心互斥（数据包 {@code CrackedHearts} 的符号决定是哪一个），所以最多只出现一个。</p>
-     *
-     * <p>各类心之间只用 <b>一个空格</b> 相连，整组算「一段」；只有心组与护甲之间
-     * 才用 {@link #SEPARATOR} 隔开（{@code ❤100/100 💛60 | 🛡3 ☃5}）。红心由
-     * {@link #redLine} 单独产出，这里从 {@link HeartCounts#SOUL} 开始。</p>
      */
     private static void appendHeartSegments(List<Line> lines, HeartCounts hearts) {
         for (int kind = HeartCounts.SOUL; kind < HeartCounts.COUNT; kind++) {
@@ -328,7 +291,7 @@ public final class EnemyHudLayout {
 
     // ── 大数值缩写 ──
 
-    /** 超过这个值开始用 k / m / b 缩写（1.17.0 起）。 */
+    /** 超过这个值开始用 k / m / b 缩写。 */
     public static final int NUM_EXACT_LIMIT = 100_000;
 
     /**
@@ -379,19 +342,6 @@ public final class EnemyHudLayout {
         if (Double.isNaN(configured)) return BAR_WIDTH_DEFAULT;
         int width = (int) Math.round(configured);
         return Math.max(BAR_WIDTH_MIN, Math.min(BAR_WIDTH_MAX, width));
-    }
-
-    /**
-     * 换行阈值的最终像素值。
-     *
-     * <p>拉到最右（{@code >= WRAP_AUTO}）或值非法 → **自动**，直接用血条长度；
-     * 血条关掉（长度 0）时用 {@link #BAR_WIDTH_DEFAULT} 兜底，避免所有怪都被折成两行。</p>
-     */
-    public static int resolveWrapWidth(double configured, int barWidth) {
-        if (Double.isNaN(configured) || configured <= 0 || configured >= WRAP_AUTO) {
-            return barWidth > 0 ? barWidth : BAR_WIDTH_DEFAULT;
-        }
-        return (int) Math.round(configured);
     }
 
     public static boolean hasArmor(int defence, int[] armor) {

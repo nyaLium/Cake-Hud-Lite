@@ -23,8 +23,6 @@
   "ctt_enemy_hud.config.showTeammates": "显示队友血量",
   "ctt_enemy_hud.config.autoPartyBossbar": "自动开启队伍血量条",
   "ctt_enemy_hud.config.barWidth": "血条长度：%s",
-	"ctt_enemy_hud.config.wrapWidth": "换行阈值：%s",
-	"ctt_enemy_hud.config.wrapWidth.auto": "换行阈值：自动",
   "ctt_enemy_hud.config.scale": "整体缩放：%s",
   "ctt_enemy_hud.config.verticalOffset": "垂直偏移：%s",
   "ctt_enemy_hud.config.maxDistance": "显示距离：%s 格"

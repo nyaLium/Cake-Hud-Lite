@@ -109,21 +109,48 @@ public final class HudWorldRenderer {
             }
         }
 
-        // ② 文字行：直接交给原版画名字的 submitNameTag（背景框 + 深度测试都白拿）。
-        int index = 0;
-        for (EnemyHudLayout.Row row : layout.rows) {
-            // submitNameTag 的 int 参数就是「名牌像素」里的 y，正好是我们的 row.top。
-            collector.submitNameTag(pose, attachment, row.top, toComponent(row),
-                    cfg.textShadow, light, camera);
-            index++;
-        }
+        // ② 文字行：自己用 submitText 提交。
+        //    原版 submitNameTag 把颜色写死成不透明白、缩放写死 0.025，导致「不透明度」和
+        //    「缩放」对文字完全无效；自己提交后两者都生效（背景框仍按原版 y-1 ~ y+9 画）。
+        int alpha = (int) Math.round(255.0 * cfg.opacity);
+        int bgAlpha = (int) Math.round(0x40 * cfg.opacity);   // 原版名牌底色 ≈ 25% 黑
+        submitRows(collector, pose, camera, attachment, layout, options.scale,
+                cfg, light, alpha, bgAlpha);
 
         // ③ 血条：同样的 billboard 变换，用原版 boss_bar 纹理自己提交两个四边形。
         if (layout.barWidth > 0) {
-            submitBar(mc, pose, collector, camera, attachment, layout, data, teammate, cfg, light);
+            submitBar(mc, pose, collector, camera, attachment, layout, data, teammate, cfg, light,
+                    (float) options.scale);
         }
 
         if (pushed) pose.popPose();
+    }
+
+    /**
+     * 提交所有文字行。
+     *
+     * <p>与 {@code SubmitNodeCollection.submitNameTag} 的差别只有三点：颜色带 alpha
+     * （不透明度生效）、缩放可调（缩放设置生效）、阴影开关是<b>字形投影</b>而不是原版那层
+     * 「透视副本」。背景框仍由原版 {@code PreparedTextBuilder} 画成 {@code y-1 ~ y+9}。</p>
+     */
+    private static void submitRows(SubmitNodeCollector collector, PoseStack pose,
+                                   CameraRenderState camera, Vec3 attachment,
+                                   EnemyHudLayout.Result layout, double scale,
+                                   EnemyHudConfig.Cfg cfg, int light, int alpha, int bgAlpha) {
+        float s = (float) scale;
+        int color = (alpha << 24) | 0xFFFFFF;
+        int background = bgAlpha << 24;
+        pose.pushPose();
+        pose.translate(attachment.x, attachment.y + 0.5, attachment.z);
+        pose.rotate(camera.orientation);
+        // 与原版 submitNameTag 同样的映射：1 单位 = 1 个名牌像素，y 向下为正；再乘缩放。
+        pose.scale(0.025f * s, -0.025f * s, 0.025f * s);
+        for (EnemyHudLayout.Row row : layout.rows) {
+            collector.submitText(pose, -row.width / 2.0f, row.top,
+                    toComponent(row).getVisualOrderText(),
+                    cfg.textShadow, Font.DisplayMode.NORMAL, light, color, background, 0);
+        }
+        pose.popPose();
     }
 
     /**
@@ -224,7 +251,8 @@ public final class HudWorldRenderer {
     private static void submitBar(Minecraft mc, PoseStack pose, SubmitNodeCollector collector,
                                   CameraRenderState camera, Vec3 attachment,
                                   EnemyHudLayout.Result layout, EnemyData.Snapshot data,
-                                  boolean teammate, EnemyHudConfig.Cfg cfg, int light) {
+                                  boolean teammate, EnemyHudConfig.Cfg cfg, int light,
+                                  float scale) {
         BossBarTexture.Tint tint = teammate
                 ? BossBarTexture.Tint.GREEN
                 : BossBarTexture.tintFor(data.kind);
@@ -240,8 +268,8 @@ public final class HudWorldRenderer {
         pose.pushPose();
         pose.translate(attachment.x, attachment.y + 0.5, attachment.z);
         pose.rotate(camera.orientation);
-        // 与原版 submitNameTag 完全一致的缩放：1 单位 = 1 个名牌像素，y 向下为正。
-        pose.scale(0.025f, -0.025f, 0.025f);
+        // 与文字同一套映射：1 单位 = 1 个名牌像素，y 向下为正；缩放与文字一致。
+        pose.scale(0.025f * scale, -0.025f * scale, 0.025f * scale);
 
         // 两段**不重叠**：填充段用 progress 纹理，空槽段用 background 纹理。
         // 早先是「整条 background + 压在它上面的 progress」，两张共面四边形在深度
@@ -309,7 +337,6 @@ public final class HudWorldRenderer {
         o.showArmor = false;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.teamBarWidth;
-        o.wrapWidth = cfg.wrapWidth;
         o.verticalOffset = cfg.teamVerticalOffset;
         o.textShadow = cfg.textShadow;
         o.scale = cfg.teamScale;
@@ -324,7 +351,6 @@ public final class HudWorldRenderer {
         o.showArmor = true;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.barWidth;
-        o.wrapWidth = cfg.wrapWidth;
         o.verticalOffset = cfg.verticalOffset;
         o.textShadow = cfg.textShadow;
         o.scale = cfg.scale;
