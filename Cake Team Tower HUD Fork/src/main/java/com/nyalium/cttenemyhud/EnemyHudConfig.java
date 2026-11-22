@@ -86,12 +86,18 @@ public final class EnemyHudConfig {
          * 每种上下文（HUD / 容器）各有一套位置·列数·字号·不透明度。
          */
         public int selfStatsMode = 0;
-        /** 容器界面那一套配置（位置 / 列数 / 缩放 / 不透明度）。 */
+        /** 容器界面那一套配置（模式 1 专用）。 */
         public int containerX = 4;
         public int containerY = 20;
         public int containerColumns = 2;
         public double containerScale = 1.0;
         public double containerOpacity = 1.0;
+        /** 「HUD + 容器界面」那一套配置（模式 2 专用，HUD 与容器界面共用这一套）。 */
+        public int bothX = 4;
+        public int bothY = 40;
+        public int bothColumns = 2;
+        public double bothScale = 1.0;
+        public double bothOpacity = 1.0;
         /** 属性面板文字缩放，0.50 ~ 2.00（1.20.4）。 */
         public double selfStatsScale = 1.0;
         /** 属性面板文字不透明度，0.20 ~ 1.00（1.20.4）。 */
@@ -137,7 +143,7 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 7;
+    public static final int CURRENT_VERSION = 8;
     /** 旧版默认血条长度（1.18.0 起默认改成 75）。 */
     private static final double LEGACY_BAR_WIDTH = 100.0;
     /** 旧版默认缩放（1.19.0 起默认改成 0.9）。 */
@@ -204,20 +210,21 @@ public final class EnemyHudConfig {
         cfg = new Cfg();
     }
 
-    /** 属性面板当前生效的布局（位置 / 列数 / 缩放 / 透明度）。 */
+    /** 当前显示方式那一套面板布局（三种方式各自独立）。 */
     public static Panel panel() {
-        return panelFor(get().selfStatsMode == 1);
+        return panelForMode(get().selfStatsMode);
     }
 
-    /** 指定上下文的面板布局：{@code container = true} 取容器界面那一套。 */
-    public static Panel panelFor(boolean container) {
+    /** 指定显示方式的面板布局：0 = HUD，1 = 容器界面，2 = HUD + 容器界面。 */
+    public static Panel panelForMode(int mode) {
         Cfg c = get();
-        if (container) {
-            return new Panel(c.containerX, c.containerY, c.containerColumns,
+        return switch (mode) {
+            case 1 -> new Panel(c.containerX, c.containerY, c.containerColumns,
                     c.containerScale, c.containerOpacity);
-        }
-        return new Panel(c.selfStatsX, c.selfStatsY, c.selfStatsColumns,
-                c.selfStatsScale, c.selfStatsOpacity);
+            case 2 -> new Panel(c.bothX, c.bothY, c.bothColumns, c.bothScale, c.bothOpacity);
+            default -> new Panel(c.selfStatsX, c.selfStatsY, c.selfStatsColumns,
+                    c.selfStatsScale, c.selfStatsOpacity);
+        };
     }
 
     /** 当前模式是否要在容器界面上画（模式 1、2）。 */
@@ -230,35 +237,51 @@ public final class EnemyHudConfig {
         return get().selfStatsMode != 1;
     }
 
-    /** 移动当前模式那一套面板（拖动界面用）。 */
+    /** 移动当前模式那一套面板（拖动界面用；三种方式互不影响）。 */
     public static void movePanel(int x, int y) {
         Cfg c = get();
-        if (c.selfStatsMode == 1) {
-            c.containerX = x;
-            c.containerY = y;
-        } else {
-            c.selfStatsX = x;
-            c.selfStatsY = y;
+        switch (c.selfStatsMode) {
+            case 1 -> {
+                c.containerX = x;
+                c.containerY = y;
+            }
+            case 2 -> {
+                c.bothX = x;
+                c.bothY = y;
+            }
+            default -> {
+                c.selfStatsX = x;
+                c.selfStatsY = y;
+            }
         }
     }
 
     /** 写当前模式那一套的列数 / 缩放 / 不透明度。 */
     public static void setPanelColumns(int columns) {
         Cfg c = get();
-        if (c.selfStatsMode == 1) c.containerColumns = columns;
-        else c.selfStatsColumns = columns;
+        switch (c.selfStatsMode) {
+            case 1 -> c.containerColumns = columns;
+            case 2 -> c.bothColumns = columns;
+            default -> c.selfStatsColumns = columns;
+        }
     }
 
     public static void setPanelScale(double scale) {
         Cfg c = get();
-        if (c.selfStatsMode == 1) c.containerScale = scale;
-        else c.selfStatsScale = scale;
+        switch (c.selfStatsMode) {
+            case 1 -> c.containerScale = scale;
+            case 2 -> c.bothScale = scale;
+            default -> c.selfStatsScale = scale;
+        }
     }
 
     public static void setPanelOpacity(double opacity) {
         Cfg c = get();
-        if (c.selfStatsMode == 1) c.containerOpacity = opacity;
-        else c.selfStatsOpacity = opacity;
+        switch (c.selfStatsMode) {
+            case 1 -> c.containerOpacity = opacity;
+            case 2 -> c.bothOpacity = opacity;
+            default -> c.selfStatsOpacity = opacity;
+        }
     }
 
     /** 当前生效的「隐藏类」集合。 */
@@ -333,6 +356,14 @@ public final class EnemyHudConfig {
             if (cfg.scale == LEGACY_SCALE) cfg.scale = DEFAULT_SCALE;
             if (cfg.teamScale == LEGACY_SCALE) cfg.teamScale = DEFAULT_SCALE;
         }
+        if (version < 8) {
+            // 模式 2 的那一套从 HUD 那套复制，升级后三种方式各自独立但初值一致。
+            cfg.bothX = cfg.selfStatsX;
+            cfg.bothY = cfg.selfStatsY;
+            cfg.bothColumns = cfg.selfStatsColumns;
+            cfg.bothScale = cfg.selfStatsScale;
+            cfg.bothOpacity = cfg.selfStatsOpacity;
+        }
         if (version < 7) {
             // 容器界面那一套从 HUD 那套复制，避免升级后两套配置对不上。
             cfg.containerX = cfg.selfStatsX;
@@ -382,6 +413,11 @@ public final class EnemyHudConfig {
         read.containerY = (int) clamp(read.containerY, 0.0, 4000.0);
         read.containerScale = clamp(read.containerScale, 1.0, 2.0);
         read.containerOpacity = clamp(read.containerOpacity, 0.2, 1.0);
+        read.bothColumns = (int) clamp(read.bothColumns, 1.0, 3.0);
+        read.bothX = (int) clamp(read.bothX, 0.0, 4000.0);
+        read.bothY = (int) clamp(read.bothY, 0.0, 4000.0);
+        read.bothScale = clamp(read.bothScale, 1.0, 2.0);
+        read.bothOpacity = clamp(read.bothOpacity, 0.2, 1.0);
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
         return read;
     }

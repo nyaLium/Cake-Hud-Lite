@@ -45,7 +45,7 @@ final class SelfStatsPanel implements HudElement {
         if (!SelfStats.visible()) return;
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
-        EnemyHudConfig.Panel panel = EnemyHudConfig.panelFor(false);
+        EnemyHudConfig.Panel panel = EnemyHudConfig.panel();
         draw(g, mc.font, lines, panel, cfg.textShadow);
         if (cfg.debug) {
             // 排查用：屏幕/面板尺寸、过滤前后的行数（debug=true 时左下角一行，避开地图顶部的字）。
@@ -70,7 +70,7 @@ final class SelfStatsPanel implements HudElement {
         if (!SelfStats.visible()) return;
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
-        EnemyHudConfig.Panel panel = EnemyHudConfig.panelFor(true);
+        EnemyHudConfig.Panel panel = EnemyHudConfig.panel();
         draw(g, mc.font, lines, panel, cfg.textShadow);
         // 1.20.15：光标停在某一行上时，显示这一行的官方 hover（和原版 ViewStats 聊天里一样）。
         int index = lineAt(mc.font, lines, panel, mouseX, mouseY);
