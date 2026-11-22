@@ -290,6 +290,10 @@ public final class SelfCheck {
 
             c.selfStatsMode = 1;
             check(EnemyHudConfig.containerMode(), "模式 1 应是容器模式");
+            check(!EnemyHudConfig.hudMode(), "模式 1 不应在 HUD 上画");
+            c.selfStatsMode = 2;
+            check(EnemyHudConfig.containerMode() && EnemyHudConfig.hudMode(), "模式 2 应 HUD + 容器都画");
+            c.selfStatsMode = 1;   // 后面的断言按「容器模式」继续
             c.containerX = 22;
             c.containerColumns = 1;
             c.containerScale = 2.0;
@@ -329,7 +333,7 @@ public final class SelfCheck {
         wild.containerColumns = 9;
         wild.selfStatsScale = 0.1;
         EnemyHudConfig.normalize(wild);
-        check(wild.selfStatsMode == 1, "selfStatsMode 9 应夹到 1");
+        check(wild.selfStatsMode == 2, "selfStatsMode 9 应夹到 2");
         check(wild.containerScale == 1.0, "containerScale 0.1 应夹到 1.0（字号最小 1.00）");
         check(wild.containerColumns == 3, "containerColumns 9 应夹到 3");
         check(wild.selfStatsScale == 1.0, "selfStatsScale 0.1 应夹到 1.0（字号最小 1.00）");

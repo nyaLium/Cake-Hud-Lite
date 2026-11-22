@@ -1,7 +1,6 @@
 {
   "modmenu.nameTranslation.ctt-hud-fork": "CTT HUD - Fork",
   "modmenu.descriptionTranslation.ctt-hud-fork": "Client-side heart counts / armour readout and vanilla boss-bar health bar above Cake Team Towers enemies, plus a stats panel (/trigger ViewStats).",
-
   "ctt_enemy_hud.config.title": "CTT HUD - Fork Settings",
   "ctt_enemy_hud.config.section.general": "General settings",
   "ctt_enemy_hud.config.section.enemy": "Enemy settings",
@@ -9,7 +8,6 @@
   "ctt_enemy_hud.config.section.self_stats": "Stats panel",
   "ctt_enemy_hud.config.back": "Back",
   "ctt_enemy_hud.config.reset": "Reset to defaults",
-
   "ctt_enemy_hud.config.enabled": "Enabled",
   "ctt_enemy_hud.config.textShadow": "Text shadow",
   "ctt_enemy_hud.config.opacity": "Opacity: %s",
@@ -18,7 +16,6 @@
   "ctt_enemy_hud.config.hideBelowNameScore": "Hide score under name tag",
   "ctt_enemy_hud.config.hideEnemyBossBar": "Hide top boss bar - nearest enemy info",
   "ctt_enemy_hud.config.hideTeamBossBar": "Hide top boss bar - party health",
-
   "ctt_enemy_hud.config.showBar": "Show bar",
   "ctt_enemy_hud.config.useServerData": "Prefer server data",
   "ctt_enemy_hud.config.showTeammates": "Show teammate health",
@@ -27,7 +24,6 @@
   "ctt_enemy_hud.config.scale": "Scale: %s",
   "ctt_enemy_hud.config.verticalOffset": "Vertical offset: %s",
   "ctt_enemy_hud.config.maxDistance": "Distance: %s blocks",
-
   "ctt_enemy_hud.config.showSelfStats": "Show stats panel",
   "ctt_enemy_hud.config.selfStatsMode": "Display mode: %s",
   "ctt_enemy_hud.config.selfStatsMode.always": "Always",
@@ -45,15 +41,12 @@
   "ctt_enemy_hud.config.selfStatsY": "Y position: %s",
   "ctt_enemy_hud.config.selfStatsMove": "Move panel",
   "ctt_enemy_hud.config.selfStatsFilter": "Content filter",
-
   "ctt_enemy_hud.config.selfStatsMove.hint": "Drag the panel where you want it; \"Reset position\" puts it back top-left",
   "ctt_enemy_hud.config.selfStatsMove.reset": "Reset position",
   "ctt_enemy_hud.config.selfStatsMove.demo": " (sample data)",
-
   "ctt_enemy_hud.config.selfStatsFilter.showAll": "Show all",
   "ctt_enemy_hud.config.selfStatsFilter.count": "%s items · %s hidden",
   "ctt_enemy_hud.config.selfStatsFilter.scrollHint": "Scroll with the wheel · click a row to toggle",
-
   "ctt_enemy_hud.config.kind.timer": "Timer",
   "ctt_enemy_hud.config.kind.heart_red": "Red heart",
   "ctt_enemy_hud.config.kind.heart_soul": "Soul heart",
@@ -114,6 +107,6 @@
   "ctt_enemy_hud.config.kind.karma_celestial": "Celestial karma",
   "ctt_enemy_hud.config.kind.misc": "Misc",
   "ctt_enemy_hud.config.kind.status": "Status effects",
-
-  "key.ctt_enemy_hud.open_config": "Open CTT settings"
+  "key.ctt_enemy_hud.open_config": "Open CTT settings",
+  "ctt_enemy_hud.config.selfStatsMode.both": "HUD + container"
 }

@@ -225,12 +225,10 @@ public final class EnemyHudSettingsScreen extends Screen {
 
         y = TOP;
         Button mode = Button.builder(key("selfStatsMode",
-                        Component.translatable(cfg.selfStatsMode == 1
-                                ? "ctt_enemy_hud.config.selfStatsMode.container"
-                                : "ctt_enemy_hud.config.selfStatsMode.always")), b -> {
+                        Component.translatable(modeLabelKey(cfg.selfStatsMode))), b -> {
                     EnemyHudConfig.Cfg c = EnemyHudConfig.get();
-                    c.selfStatsMode = c.selfStatsMode == 1 ? 0 : 1;
-                    // 两种显示方式各有一套配置：切换后立刻按新模式重建/重绘。
+                    c.selfStatsMode = (c.selfStatsMode + 1) % 3;   // 0 → 1 → 2 → 0
+                    // 每种显示方式各有一套配置：切换后立刻按新模式重建/重绘。
                     this.rebuildWidgets();
                 })
                 .bounds(rightX, y, w, ROW_HEIGHT).build();
@@ -261,6 +259,15 @@ public final class EnemyHudSettingsScreen extends Screen {
             for (AbstractWidget widget : dependent) widget.active = false;
         }
         return 4;
+    }
+
+    /** 显示方式按钮的翻译键（0/1/2）。 */
+    static String modeLabelKey(int mode) {
+        return switch (mode) {
+            case 1 -> "ctt_enemy_hud.config.selfStatsMode.container";
+            case 2 -> "ctt_enemy_hud.config.selfStatsMode.both";
+            default -> "ctt_enemy_hud.config.selfStatsMode.always";
+        };
     }
 
     @Override

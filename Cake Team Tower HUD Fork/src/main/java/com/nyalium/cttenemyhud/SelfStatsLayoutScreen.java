@@ -38,7 +38,7 @@ public final class SelfStatsLayoutScreen extends Screen {
         int y = this.height - ROW_HEIGHT - 8;
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.selfStatsMove.reset"), b -> {
             // 只重置当前显示方式那一套（HUD / 容器界面各有一套）。
-            EnemyHudConfig.movePanel(4, EnemyHudConfig.containerMode() ? 20 : 40);
+            EnemyHudConfig.movePanel(4, 40);
             this.rebuildWidgets();
         }).bounds(this.width / 2 - BUTTON_WIDTH - GAP / 2, y, BUTTON_WIDTH, ROW_HEIGHT).build());
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
@@ -57,9 +57,8 @@ public final class SelfStatsLayoutScreen extends Screen {
                 this.width / 2, 36, 0xFFFFD060);
         // 提示当前在改哪一套配置（HUD / 容器界面）。
         graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsMode.current",
-                        Component.translatable(EnemyHudConfig.containerMode()
-                                ? "ctt_enemy_hud.config.selfStatsMode.container"
-                                : "ctt_enemy_hud.config.selfStatsMode.always")),
+                        Component.translatable(EnemyHudSettingsScreen.modeLabelKey(
+                                EnemyHudConfig.get().selfStatsMode))),
                 this.width / 2, 50, 0xFF9FE8FF);
 
         List<Component> lines = SelfStats.lines();

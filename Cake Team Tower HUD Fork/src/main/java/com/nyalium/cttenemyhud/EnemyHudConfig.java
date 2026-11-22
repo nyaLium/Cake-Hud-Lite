@@ -82,8 +82,8 @@ public final class EnemyHudConfig {
         public int selfStatsX = 4;
         public int selfStatsY = 40;
         /**
-         * 属性面板显示方式（1.20.14）：0 = 始终显示（HUD 元素），1 = 在容器界面显示
-         * （打开箱子/背包等容器界面时画在界面上，HUD 上不画）。两种方式各有一套配置。
+         * 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，2 = HUD + 容器都显示（1.20.16）。
+         * 每种上下文（HUD / 容器）各有一套位置·列数·字号·不透明度。
          */
         public int selfStatsMode = 0;
         /** 容器界面那一套配置（位置 / 列数 / 缩放 / 不透明度）。 */
@@ -220,9 +220,14 @@ public final class EnemyHudConfig {
                 c.selfStatsScale, c.selfStatsOpacity);
     }
 
-    /** 当前模式是否为「在容器界面显示」。 */
+    /** 当前模式是否要在容器界面上画（模式 1、2）。 */
     public static boolean containerMode() {
-        return get().selfStatsMode == 1;
+        return get().selfStatsMode != 0;
+    }
+
+    /** 当前模式是否要在 HUD 上画（模式 0、2）。 */
+    public static boolean hudMode() {
+        return get().selfStatsMode != 1;
     }
 
     /** 移动当前模式那一套面板（拖动界面用）。 */
@@ -371,7 +376,7 @@ public final class EnemyHudConfig {
         read.selfStatsScale = clamp(read.selfStatsScale, 1.0, 2.0);
         read.selfStatsOpacity = clamp(read.selfStatsOpacity, 0.2, 1.0);
         // 1.20.14：显示方式（0=始终显示 HUD，1=在容器界面显示）+ 容器那一套配置
-        read.selfStatsMode = (int) clamp(read.selfStatsMode, 0.0, 1.0);
+        read.selfStatsMode = (int) clamp(read.selfStatsMode, 0.0, 2.0);
         read.containerColumns = (int) clamp(read.containerColumns, 1.0, 3.0);
         read.containerX = (int) clamp(read.containerX, 0.0, 4000.0);
         read.containerY = (int) clamp(read.containerY, 0.0, 4000.0);

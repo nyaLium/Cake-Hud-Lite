@@ -41,7 +41,7 @@ final class SelfStatsPanel implements HudElement {
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         if (!cfg.enabled || !cfg.showSelfStats) return;
         // 1.20.14：「在容器界面显示」模式下 HUD 上不画，改由 ContainerPanelMixin 画在容器界面上。
-        if (EnemyHudConfig.containerMode()) return;
+        if (!EnemyHudConfig.hudMode()) return;
         if (!SelfStats.visible()) return;
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
