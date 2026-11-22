@@ -332,6 +332,24 @@ public final class SelfCheck {
         check(wrapped.rowCount() == 2, "阈值 60 时 78 像素应折行: " + wrapped.rowCount());
         check(rowText(wrapped, 0).equals("❤100/100"), "折行后第一行=" + rowText(wrapped, 0));
         check(rowText(wrapped, 1).equals("💛60"), "折行后第二行=" + rowText(wrapped, 1));
+
+        // 队友（玩家）也能有心数：有 payload 时和敌人一样画心，没 payload 时退回「当前/最大」。
+        EnemyHudLayout.Options teamLike = new EnemyHudLayout.Options();
+        teamLike.showHearts = true;
+        teamLike.showArmor = true;
+        teamLike.showBar = false;
+
+        EnemyHudLayout.Result teamNoHearts = EnemyHudLayout.compute(73, 120, false, 0, new int[7],
+                HeartCounts.unknown(), teamLike, SelfCheck::width);
+        check(join(teamNoHearts).equals("73/120"),
+                "队友拿不到心数时应退回当前/最大: " + join(teamNoHearts));
+
+        EnemyHudLayout.Result teamHearts = EnemyHudLayout.compute(150, 150, false, 0, new int[7],
+                HeartCounts.of(60, 40, 30, 20, 2), teamLike, SelfCheck::width);
+        check(teamHearts.rowCount() == 2, "队友五色心应折两行: " + teamHearts.rowCount());
+        check(rowText(teamHearts, 0).equals("❤60/150"), "队友第一行=" + rowText(teamHearts, 0));
+        check(rowText(teamHearts, 1).equals("💛40 🖤30 💙20 💔2"),
+                "队友第二行=" + rowText(teamHearts, 1));
         // 用转义写死期望值：🛡 在源码里常被写成「🛡+U+FE0F」，直接比字面量会踩变体选择符。
         check(join(armored).contains("\uD83D\uDEE13"), "防御段缺失: " + join(armored));
         check(join(armored).contains(EnemyData.ARMOR_ICONS[1] + "5"), "元素护甲段缺失: " + join(armored));

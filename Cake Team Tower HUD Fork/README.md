@@ -2,7 +2,7 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.15.1**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.16.0**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 设置界面一纵排布（通用 / 敌人 / 玩家 / 恢复默认 + 底部完成）。
 
 | 项目 | 内容 |
@@ -12,7 +12,7 @@
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.15.1.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.16.0.jar` |
 
 ## 绘制方式（1.15.0 起）
 
@@ -132,13 +132,21 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 名字匹配来源有本地玩家、视野内玩家实体、以及 Tab 名单（`getPlayerInfo`）三路 ——
 最后一路很关键，队伍条会列出不在渲染距离内的队友。
 
-### 队友为什么没有心数
+### 队友的心数
 
 玩家独有的黑心 / 蓝心只出现在**玩家自己**的 `player_1001..1010` 上，而那条 bar
 用 `bossbar set ... players @a[scores={BossbarID=100N}]` 只发给本人；
-队友能看到的 `spectator_bossbar` 标题里只有 `AllHearts/MaxHP`。四个分项拆不开，所以队友这一行
-按原样显示 `当前/最大`（不做近似，宁缺毋假）。补齐需要服务端组件（参考 Cake-Hud 的
-`TeamHeartsPayload`），那是另一个工程。
+队友能看到的 `spectator_bossbar` 标题里只有 `AllHearts/MaxHP` —— **纯客户端拆不开四色心**。
+
+所以：
+
+| 服务端组件 | 队友那一行 |
+| --- | --- |
+| 没装 | `当前/最大`（不做近似，宁缺毋假） |
+| 装了（1.16.0 起） | 和敌人一样的心数行：`❤60/150` + `💛40 🖤30 💙20 💔2`，碎心/粉心也在 |
+
+服务端会把**附近的其他玩家**也按 UUID 推进 `mob_health`（字段与怪完全一样），
+客户端 `resolveData` 优先用它，拿不到才回退队伍条。
 
 ## 同名敌人的唯一认领
 
@@ -319,7 +327,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.15.1.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.16.0.jar` → 丢进 `.minecraft/mods`。
 
 ## 版本沿革
 

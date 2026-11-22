@@ -117,7 +117,7 @@ public final class CttEnemyHudServer implements ModInitializer {
         LAST_SENT_MS.keySet().removeIf(uuid -> server.getPlayerList().getPlayer(uuid) == null);
     }
 
-    /** 取这名玩家周围最近的 CTT 怪。 */
+    /** 取这名玩家周围最近的 CTT 怪，外加附近的其他玩家（队友）。 */
     private static List<MobHealthPayload.Entry> collect(Scoreboard scoreboard, ServerPlayer player) {
         AABB box = player.getBoundingBox().inflate(RADIUS);
         List<Entity> nearby = player.level().getEntities(player, box);
@@ -128,8 +128,11 @@ public final class CttEnemyHudServer implements ModInitializer {
         List<Entity> mobs = new ArrayList<>(nearby.size());
         for (Entity entity : nearby) {
             if (!(entity instanceof LivingEntity)) continue;
-            if (entity instanceof Player || entity instanceof ArmorStand) continue;
+            if (entity instanceof ArmorStand) continue;
             if (!entity.isAlive() || entity.isRemoved()) continue;
+            // 玩家也推：队友那一行同样需要四色心 / 碎心 / 粉心（队伍条只有 AllHearts/MaxHP）。
+            // 自己不用推（本端不画自己的条）。
+            if (entity == player) continue;
             if (!isCttMob(scoreboard, entity)) continue;
             mobs.add(entity);
         }

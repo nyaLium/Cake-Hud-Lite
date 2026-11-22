@@ -112,6 +112,21 @@ public final class HudWorldRenderer {
     private static EnemyData.Snapshot resolveData(Minecraft mc, Entity entity,
                                                   EnemyHudConfig.Cfg cfg, boolean teammate) {
         UUID id = entity.getUUID();
+
+        // 服务端选装组件优先：玩家和怪一样有 uuid/hp/四色心/碎心/粉心，
+        // 队友那一行因此也能画心数（没有 payload 时下面的回退只有 AllHearts/MaxHP）。
+        MobHealthPayload.Entry pushed = cfg.useServerData ? ClientMobHealthCache.lookup(id) : null;
+        if (pushed != null) {
+            EnemyData.Snapshot data = EnemyData.fromPayload(pushed.hp(), pushed.maxHp(),
+                    pushed.soul(), pushed.black(), pushed.blue(), pushed.cracked(),
+                    pushed.maxSoul(), pushed.maxBlack(), pushed.maxBlue(),
+                    pushed.defence(), pushed.armour());
+            if (pushed.targetted()) {
+                ArmourCache.observe(id, fullArmourSlots(pushed));
+            }
+            return data;
+        }
+
         if (teammate) {
             refresh(mc);
             TeamBarTitle.Entry entry = teamEntries.get(id);
@@ -124,20 +139,7 @@ public final class HudWorldRenderer {
         EnemyData.Snapshot data = EnemyData.read(scoreboard, entity);
         if (data == null) return null;
 
-        // ① 服务端选装组件：按 UUID 的权威数据（每只怪都有绝对值 + 四色心）。
-        MobHealthPayload.Entry pushed = cfg.useServerData ? ClientMobHealthCache.lookup(id) : null;
-        if (pushed != null) {
-            data = EnemyData.fromPayload(pushed.hp(), pushed.maxHp(),
-                    pushed.soul(), pushed.black(), pushed.blue(), pushed.cracked(),
-                    pushed.maxSoul(), pushed.maxBlack(), pushed.maxBlue(),
-                    pushed.defence(), pushed.armour());
-            if (pushed.targetted()) {
-                ArmourCache.observe(id, fullArmourSlots(pushed));
-            }
-            return data;
-        }
-
-        // ② 纯客户端：客户端 Boss 栏那条「最近敌人」条 + ArmourCache 轮换累积。
+        // 纯客户端：客户端 Boss 栏那条「最近敌人」条 + ArmourCache 轮换累积。
         refresh(mc);
         BossBarTracker.Bar bar = exactBars.get(id);
         if (bar != null) {
@@ -239,12 +241,18 @@ public final class HudWorldRenderer {
 
     // ── 布局选项 ──
 
-    /** 玩家血条用独立的一套长度/缩放/偏移。 */
+    /**
+     * 玩家血条用独立的一套长度/缩放/偏移。
+     *
+     * <p>{@code showHearts = true}：装了服务端组件时队友也有四色心 / 碎心 / 粉心，
+     * 会画成和敌人一样的心数行；拿不到心数（服务端没装）时
+     * {@code EnemyHudLayout} 会自动退回「当前/最大」。</p>
+     */
     private static EnemyHudLayout.Options teamOptions(EnemyHudConfig.Cfg cfg) {
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
         o.showNumbers = true;
-        o.showHearts = false;
-        o.showArmor = false;
+        o.showHearts = true;
+        o.showArmor = true;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.teamBarWidth;
         o.wrapWidth = cfg.wrapWidth;
