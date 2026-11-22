@@ -10,38 +10,27 @@ import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 
 /**
- * 「实体血条设置」（1.20.19 合并原「通用 / 敌人 / 玩家」三个子页面）。
+ * 「实体血条设置」（1.20.19 合并原通用/敌人/玩家；1.20.20 修正滚动并加滚动条）。
  *
- * <pre>
- *   实体血条设置
- *   ── 通用 ──
- *   文字阴影 / 隐藏名字下方的分数 / 隐藏敌人 Boss 栏 / 隐藏队伍 Boss 栏 / 整体不透明度
- *   ── 敌人设置 ──
- *   显示血条 / 显示距离 / 血条长度 / 整体缩放 / 垂直偏移 / 优先服务端数据
- *   ── 玩家设置 ──
- *   显示队友血量 / 队友显示距离 / 队友血条长度 / 队友缩放 / 队友垂直偏移
- * </pre>
- *
- * <p>行数超过屏幕时用滚轮滚动（每次重建控件，只创建落在可视区内的行）；
- * 某个总开关关闭时，它下面那一组的控件全部 {@code active = false}。</p>
+ * <p>单列 + 分组标题；内容超出可视区时滚轮滚动，右侧显示滚动条并夹住上下限。</p>
  */
 public final class EntityHudSettingsScreen extends Screen {
 
     private static final int ROW_HEIGHT = 20;
     private static final int ROW_STEP = 26;
-    private static final int HEADER_HEIGHT = 24;
+    private static final int HEADER_HEIGHT = 26;
     private static final int TOP = 52;
     private static final int BOTTOM_PAD = 44;
     private static final int WIDTH_MAX = 320;
 
     private final EnemyHudConfigScreen menu;
-
-    private int scroll;
-    /** 每行/每个标题在内容坐标系里的 y（0 = 内容顶部）。 */
+    private ScrollPane pane = new ScrollPane(TOP, 1000);
     private final List<Row> rows = new ArrayList<>();
 
     public EntityHudSettingsScreen(EnemyHudConfigScreen menu) {
@@ -49,133 +38,113 @@ public final class EntityHudSettingsScreen extends Screen {
         this.menu = menu;
     }
 
-    /** 一行内容：header 只画字，其他控件在 rebuild 时按可视区创建。 */
     private record Row(Component label, int y, int height, Kind kind, Object payload) {}
 
-    private enum Kind { HEADER, TOGGLE, SLIDER, BUTTON }
+    private enum Kind { HEADER, TOGGLE, SLIDER }
+
+    private record ToggleSpec(BooleanSupplier get, Consumer<Boolean> set) {}
+
+    /** group：0 = 通用，1 = 敌人，2 = 玩家（决定开关关闭时是否灰掉）。 */
+    private record SliderSpec(double min, double max, double step, double value,
+                              DoubleFunction<Component> label, DoubleConsumer onChange,
+                              int group) {}
 
     @Override
     protected void init() {
         buildRows();
+        this.pane.contentHeight(lastY);
         rebuildWidgets();
     }
 
-    private void back() {
-        this.minecraft.gui.setScreen(this.menu);
-    }
+    private int lastY;
 
-    /** 描述所有行（只描述一次；滚动时重建控件但不重建描述）。 */
     private void buildRows() {
         if (!rows.isEmpty()) return;
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         int y = 0;
-        y = addHeader("ctt_enemy_hud.config.header.general", y);
-        y = addToggle("textShadow", y, () -> EnemyHudConfig.get().textShadow, v -> EnemyHudConfig.get().textShadow = v);
-        y = addToggle("hideBelowNameScore", y, () -> EnemyHudConfig.get().hideBelowNameScore, v -> EnemyHudConfig.get().hideBelowNameScore = v);
-        y = addToggle("hideEnemyBossBar", y, () -> EnemyHudConfig.get().hideEnemyBossBar, v -> EnemyHudConfig.get().hideEnemyBossBar = v);
-        y = addToggle("hideTeamBossBar", y, () -> EnemyHudConfig.get().hideTeamBossBar, v -> EnemyHudConfig.get().hideTeamBossBar = v);
-        y = addSlider("opacity", y, 50.0, 100.0, 1.0, cfg.opacity * 100.0,
-                v -> Component.translatable("ctt_enemy_hud.config.opacity", Math.round(v) + "%"),
-                v -> EnemyHudConfig.get().opacity = v / 100.0);
-        y = addHeader("ctt_enemy_hud.config.header.enemy", y);
-        y = addToggle("showBar", y, () -> EnemyHudConfig.get().showBar, v -> EnemyHudConfig.get().showBar = v);
-        y = addSlider("maxDistance", y, 4.0, 128.0, 4.0, cfg.maxDistance,
-                v -> Component.translatable("ctt_enemy_hud.config.maxDistance", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().maxDistance = v);
-        y = addSlider("barWidth", y, 50.0, 150.0, 1.0, cfg.barWidth,
-                v -> Component.translatable("ctt_enemy_hud.config.barWidth", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().barWidth = v);
-        y = addSlider("scale", y, 0.75, 1.5, 0.05, cfg.scale,
-                v -> Component.translatable("ctt_enemy_hud.config.scale", String.format(Locale.ROOT, "%.2f", v)),
-                v -> EnemyHudConfig.get().scale = v);
-        y = addSlider("verticalOffset", y, -30.0, 0.0, 1.0, cfg.verticalOffset,
-                v -> Component.translatable("ctt_enemy_hud.config.verticalOffset", signed((int) Math.round(v))),
-                v -> EnemyHudConfig.get().verticalOffset = (int) Math.round(v));
-        y = addToggle("useServerData", y, () -> EnemyHudConfig.get().useServerData, v -> EnemyHudConfig.get().useServerData = v);
-        y = addHeader("ctt_enemy_hud.config.header.player", y);
-        y = addToggle("showTeammates", y, () -> EnemyHudConfig.get().showTeammates, v -> EnemyHudConfig.get().showTeammates = v);
-        y = addSlider("teamMaxDistance", y, 4.0, 128.0, 4.0, cfg.teamMaxDistance,
-                v -> Component.translatable("ctt_enemy_hud.config.maxDistance", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().teamMaxDistance = v);
-        y = addSlider("teamBarWidth", y, 50.0, 150.0, 1.0, cfg.teamBarWidth,
-                v -> Component.translatable("ctt_enemy_hud.config.barWidth", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().teamBarWidth = v);
-        y = addSlider("teamScale", y, 0.75, 1.5, 0.05, cfg.teamScale,
-                v -> Component.translatable("ctt_enemy_hud.config.scale", String.format(Locale.ROOT, "%.2f", v)),
-                v -> EnemyHudConfig.get().teamScale = v);
-        y = addSlider("teamVerticalOffset", y, -30.0, 0.0, 1.0, cfg.teamVerticalOffset,
-                v -> Component.translatable("ctt_enemy_hud.config.verticalOffset", signed((int) Math.round(v))),
-                v -> EnemyHudConfig.get().teamVerticalOffset = (int) Math.round(v));
-        contentHeight = y;
+        y = header("ctt_enemy_hud.config.header.general", y);
+        y = toggle("textShadow", y, () -> EnemyHudConfig.get().textShadow, v -> EnemyHudConfig.get().textShadow = v);
+        y = toggle("hideBelowNameScore", y, () -> EnemyHudConfig.get().hideBelowNameScore,
+                v -> EnemyHudConfig.get().hideBelowNameScore = v);
+        y = toggle("hideEnemyBossBar", y, () -> EnemyHudConfig.get().hideEnemyBossBar,
+                v -> EnemyHudConfig.get().hideEnemyBossBar = v);
+        y = toggle("hideTeamBossBar", y, () -> EnemyHudConfig.get().hideTeamBossBar,
+                v -> EnemyHudConfig.get().hideTeamBossBar = v);
+        y = slider("opacity", y, 50, 100, 1, cfg.opacity * 100,
+                v -> key("opacity", Math.round(v) + "%"),
+                v -> EnemyHudConfig.get().opacity = v / 100.0, 0);
+        y = header("ctt_enemy_hud.config.header.enemy", y);
+        y = toggle("showBar", y, () -> EnemyHudConfig.get().showBar, v -> EnemyHudConfig.get().showBar = v);
+        y = slider("maxDistance", y, 4, 128, 4, cfg.maxDistance,
+                v -> key("maxDistance", (int) Math.round(v)), v -> EnemyHudConfig.get().maxDistance = v, 1);
+        y = slider("barWidth", y, 50, 150, 1, cfg.barWidth,
+                v -> key("barWidth", (int) Math.round(v)), v -> EnemyHudConfig.get().barWidth = v, 1);
+        y = slider("scale", y, 0.75, 1.5, 0.05, cfg.scale,
+                v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> EnemyHudConfig.get().scale = v, 1);
+        y = slider("verticalOffset", y, -30, 0, 1, cfg.verticalOffset,
+                v -> key("verticalOffset", signed((int) Math.round(v))),
+                v -> EnemyHudConfig.get().verticalOffset = (int) Math.round(v), 1);
+        y = toggle("useServerData", y, () -> EnemyHudConfig.get().useServerData,
+                v -> EnemyHudConfig.get().useServerData = v);
+        y = header("ctt_enemy_hud.config.header.player", y);
+        y = toggle("showTeammates", y, () -> EnemyHudConfig.get().showTeammates,
+                v -> EnemyHudConfig.get().showTeammates = v);
+        y = slider("teamMaxDistance", y, 4, 128, 4, cfg.teamMaxDistance,
+                v -> key("maxDistance", (int) Math.round(v)), v -> EnemyHudConfig.get().teamMaxDistance = v, 2);
+        y = slider("teamBarWidth", y, 50, 150, 1, cfg.teamBarWidth,
+                v -> key("barWidth", (int) Math.round(v)), v -> EnemyHudConfig.get().teamBarWidth = v, 2);
+        y = slider("teamScale", y, 0.75, 1.5, 0.05, cfg.teamScale,
+                v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> EnemyHudConfig.get().teamScale = v, 2);
+        y = slider("teamVerticalOffset", y, -30, 0, 1, cfg.teamVerticalOffset,
+                v -> key("verticalOffset", signed((int) Math.round(v))),
+                v -> EnemyHudConfig.get().teamVerticalOffset = (int) Math.round(v), 2);
+        lastY = y;
     }
 
-    private int contentHeight;
-
-    private int addHeader(String key, int y) {
-        rows.add(new Row(Component.translatable(key), y, HEADER_HEIGHT, Kind.HEADER, key));
+    private int header(String key, int y) {
+        rows.add(new Row(Component.translatable(key), y, HEADER_HEIGHT, Kind.HEADER, null));
         return y + HEADER_HEIGHT;
     }
 
-    private int addToggle(String key, int y, java.util.function.BooleanSupplier get,
-                          java.util.function.Consumer<Boolean> set) {
-        rows.add(new Row(Component.translatable("ctt_enemy_hud.config." + key), y, ROW_HEIGHT,
-                Kind.TOGGLE, new ToggleSpec(get, set)));
+    private int toggle(String key, int y, BooleanSupplier get, Consumer<Boolean> set) {
+        rows.add(new Row(key(key), y, ROW_HEIGHT, Kind.TOGGLE, new ToggleSpec(get, set)));
         return y + ROW_STEP;
     }
 
-    private record ToggleSpec(java.util.function.BooleanSupplier get,
-                              java.util.function.Consumer<Boolean> set) {}
-
-    private int addSlider(String key, int y, double min, double max, double step, double value,
-                          DoubleFunction<Component> label, DoubleConsumer onChange) {
-        rows.add(new Row(Component.translatable("ctt_enemy_hud.config." + key), y, ROW_HEIGHT,
-                Kind.SLIDER, new SliderSpec(key, min, max, step, value, label, onChange)));
+    private int slider(String key, int y, double min, double max, double step, double value,
+                       DoubleFunction<Component> label, DoubleConsumer onChange, int group) {
+        rows.add(new Row(key(key), y, ROW_HEIGHT, Kind.SLIDER,
+                new SliderSpec(min, max, step, value, label, onChange, group)));
         return y + ROW_STEP;
-    }
-
-    private record SliderSpec(String key, double min, double max, double step, double value,
-                              DoubleFunction<Component> label, DoubleConsumer onChange) {}
-
-    private int maxScroll() {
-        int visible = this.height - TOP - BOTTOM_PAD;
-        return Math.max(0, contentHeight - visible);
     }
 
     @Override
     public void rebuildWidgets() {
+        int keepScroll = this.pane.scroll();
+        this.pane = new ScrollPane(TOP, this.height - BOTTOM_PAD);
+        this.pane.contentHeight(lastY);
+        this.pane.scrollBy(keepScroll);
         clearWidgets();
-        // 先按当前滚动量创建可视区内的控件，再重建底部「返回」。
-        int width = Math.min(WIDTH_MAX, this.width - 40);
-        int x = this.width / 2 - width / 2;
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         boolean enemyActive = cfg.showBar;
         boolean playerActive = cfg.showTeammates;
+        int width = Math.max(120, Math.min(WIDTH_MAX, this.width - 60));
+        int x = this.width / 2 - width / 2;
         for (Row row : rows) {
             if (row.kind == Kind.HEADER) continue;
-            int y = TOP + row.y - scroll;
-            if (y + ROW_HEIGHT < TOP - ROW_STEP || y > this.height - BOTTOM_PAD) continue;
-            AbstractWidget widget = switch (row.kind) {
-                case TOGGLE -> createToggle(row, x, y, width);
-                case SLIDER -> createSlider(row, x, y, width);
-                default -> null;
-            };
-            if (widget == null) continue;
-            if (isEnemyKey(row) && !enemyActive) widget.active = false;
-            if (isPlayerKey(row) && !playerActive) widget.active = false;
+            if (!this.pane.intersects(row.y, row.height)) continue;
+            int y = this.pane.screenY(row.y);
+            AbstractWidget widget = row.kind == Kind.TOGGLE ? createToggle(row, x, y, width)
+                    : createSlider(row, x, y, width);
+            if (row.kind == Kind.SLIDER) {
+                int group = ((SliderSpec) row.payload).group();
+                if (group == 1 && !enemyActive) widget.active = false;
+                if (group == 2 && !playerActive) widget.active = false;
+            }
             addRenderableWidget(widget);
         }
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
                 .bounds(this.width / 2 - 60, this.height - ROW_HEIGHT - 8, 120, ROW_HEIGHT).build());
-    }
-
-    private static boolean isEnemyKey(Row row) {
-        return row.kind == Kind.SLIDER && row.payload instanceof SliderSpec s
-                ? !s.key().startsWith("team") && !s.key().equals("opacity") : false;
-    }
-
-    private static boolean isPlayerKey(Row row) {
-        return row.kind == Kind.SLIDER && row.payload instanceof SliderSpec s
-                ? s.key().startsWith("team") : false;
     }
 
     private AbstractWidget createToggle(Row row, int x, int y, int width) {
@@ -199,33 +168,44 @@ public final class EntityHudSettingsScreen extends Screen {
         graphics.centeredText(this.font, this.title, this.width / 2, 22, 0xFFFFFFFF);
         for (Row row : rows) {
             if (row.kind != Kind.HEADER) continue;
-            int y = TOP + row.y - scroll;
-            if (y + row.height < TOP - ROW_STEP || y > this.height - BOTTOM_PAD) continue;
-            graphics.centeredText(this.font, row.label, this.width / 2, y + 6, 0xFFFFD060);
+            if (!this.pane.intersects(row.y, row.height)) continue;
+            graphics.centeredText(this.font, row.label, this.width / 2, this.pane.screenY(row.y) + 8, 0xFFFFD060);
         }
-        // 滚动提示
-        if (maxScroll() > 0) {
-            graphics.centeredText(this.font,
-                    Component.translatable("ctt_enemy_hud.config.scrollHint"),
+        this.pane.drawScrollbar(graphics, this.width / 2 + Math.min(WIDTH_MAX, this.width - 60) / 2 + 10);
+        if (this.pane.maxScroll() > 0) {
+            graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.scrollHint"),
                     this.width / 2, this.height - ROW_HEIGHT - 26, 0xFFA0A0A0);
         }
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        int next = Math.max(0, Math.min(maxScroll(), this.scroll - (int) Math.round(scrollY * ROW_STEP)));
-        if (next != this.scroll) {
-            this.scroll = next;
-            this.rebuildWidgets();
-        }
+        this.pane.scrollBy(-(int) Math.round(scrollY * ROW_STEP));
+        this.rebuildWidgets();
         return true;
+    }
+
+    private void back() {
+        this.minecraft.gui.setScreen(this.menu);
+    }
+
+    @Override
+    public void onClose() {
+        back();
+    }
+
+    private static Component key(String id) {
+        return Component.translatable("ctt_enemy_hud.config." + id);
+    }
+
+    private static Component key(String id, Object... args) {
+        return Component.translatable("ctt_enemy_hud.config." + id, args);
     }
 
     private static String signed(int v) {
         return v > 0 ? "+" + v : Integer.toString(v);
     }
 
-    /** 简化版滑块（原 EnemyHudSettingsScreen 的内部类在这里重写一份）。 */
     private static final class ValueSlider extends net.minecraft.client.gui.components.AbstractSliderButton {
         private final double min;
         private final double max;

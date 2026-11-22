@@ -2,6 +2,7 @@ package com.nyalium.cttenemyhud;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -10,7 +11,9 @@ import java.util.Locale;
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 
-/** 盾牌指示器设置（1.20.19 合并自 CTT Shield Indicator）。 */
+/**
+ * 盾牌指示器设置（1.20.20：位置改为拖动定位 + 透明度）。
+ */
 public final class ShieldIndicatorSettingsScreen extends Screen {
 
     private static final int ROW_HEIGHT = 20;
@@ -33,13 +36,12 @@ public final class ShieldIndicatorSettingsScreen extends Screen {
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         boolean on = cfg.shieldEnabled;
 
-        CycleButton<Boolean> toggle = CycleButton.onOffBuilder(cfg.shieldEnabled)
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.shieldEnabled)
                 .create(x, y, width, ROW_HEIGHT, Component.translatable("ctt_enemy_hud.config.shieldEnabled"),
                         (b, v) -> {
                             EnemyHudConfig.get().shieldEnabled = v;
                             this.rebuildWidgets();
-                        });
-        addRenderableWidget(toggle);
+                        }));
         y += ROW_GAP;
 
         AbstractSliderButton scale = new ValueSlider(x, y, width, ROW_HEIGHT,
@@ -51,38 +53,22 @@ public final class ShieldIndicatorSettingsScreen extends Screen {
         addRenderableWidget(scale);
         y += ROW_GAP;
 
-        AbstractSliderButton offset = new ValueSlider(x, y, width, ROW_HEIGHT,
-                -160.0, 160.0, 1.0, cfg.shieldOffset,
-                v -> Component.translatable("ctt_enemy_hud.config.shieldOffset", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().shieldOffset = (int) Math.round(v));
-        offset.active = on;
-        addRenderableWidget(offset);
+        AbstractSliderButton opacity = new ValueSlider(x, y, width, ROW_HEIGHT,
+                0.1, 1.0, 0.05, cfg.shieldOpacity,
+                v -> Component.translatable("ctt_enemy_hud.config.shieldOpacity",
+                        Math.round(v * 100.0) + "%"),
+                v -> EnemyHudConfig.get().shieldOpacity = v);
+        opacity.active = on;
+        addRenderableWidget(opacity);
         y += ROW_GAP;
 
-        AbstractSliderButton gap = new ValueSlider(x, y, width, ROW_HEIGHT,
-                0.0, 40.0, 1.0, cfg.shieldGap,
-                v -> Component.translatable("ctt_enemy_hud.config.shieldGap", (int) Math.round(v)),
-                v -> EnemyHudConfig.get().shieldGap = (int) Math.round(v));
-        gap.active = on;
-        addRenderableWidget(gap);
-        y += ROW_GAP;
+        Button move = Button.builder(Component.translatable("ctt_enemy_hud.config.shieldMove"),
+                        b -> this.minecraft.gui.setScreen(new ShieldLayoutScreen(this)))
+                .bounds(x, y, width, ROW_HEIGHT).build();
+        move.active = on;
+        addRenderableWidget(move);
 
-        net.minecraft.client.gui.components.Button position =
-                net.minecraft.client.gui.components.Button.builder(
-                                Component.translatable("ctt_enemy_hud.config.shieldPosition",
-                                        Component.translatable(cfg.shieldPosition == 1
-                                                ? "ctt_enemy_hud.config.shieldPosition.center"
-                                                : "ctt_enemy_hud.config.shieldPosition.offhand")), b -> {
-                                    EnemyHudConfig.Cfg c = EnemyHudConfig.get();
-                                    c.shieldPosition = c.shieldPosition == 1 ? 0 : 1;
-                                    this.rebuildWidgets();
-                                })
-                        .bounds(x, y, width, ROW_HEIGHT).build();
-        position.active = on;
-        addRenderableWidget(position);
-
-        addRenderableWidget(net.minecraft.client.gui.components.Button.builder(
-                        Component.translatable("ctt_enemy_hud.config.back"), b -> back())
+        addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
                 .bounds(this.width / 2 - 60, this.height - ROW_HEIGHT - 8, 120, ROW_HEIGHT).build());
     }
 
@@ -101,7 +87,6 @@ public final class ShieldIndicatorSettingsScreen extends Screen {
         back();
     }
 
-    /** 简化滑块。 */
     private static final class ValueSlider extends AbstractSliderButton {
         private final double min;
         private final double max;

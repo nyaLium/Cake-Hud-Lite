@@ -5,7 +5,7 @@
   "ctt_enemy_hud.config.section.general": "通用设置",
   "ctt_enemy_hud.config.section.enemy": "敌人设置",
   "ctt_enemy_hud.config.section.player": "玩家设置",
-  "ctt_enemy_hud.config.section.self_stats": "属性面板",
+  "ctt_enemy_hud.config.section.self_stats": "属性面板设置…",
   "ctt_enemy_hud.config.back": "返回",
   "ctt_enemy_hud.config.reset": "恢复默认",
   "ctt_enemy_hud.config.enabled": "总开关",
@@ -124,5 +124,7 @@
   "ctt_enemy_hud.config.shieldGap": "与动作栏间距：%s px",
   "ctt_enemy_hud.config.shieldPosition": "位置：%s",
   "ctt_enemy_hud.config.shieldPosition.offhand": "副手槽上方",
-  "ctt_enemy_hud.config.shieldPosition.center": "屏幕中心"
+  "ctt_enemy_hud.config.shieldPosition.center": "屏幕中心",
+  "ctt_enemy_hud.config.shieldOpacity": "不透明度：%s",
+  "ctt_enemy_hud.config.shieldMove": "移动指示器"
 }

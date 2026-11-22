@@ -24,13 +24,13 @@ public final class SelfStatsLayoutScreen extends Screen {
     private static final int BUTTON_WIDTH = 120;
     private static final int GAP = 8;
 
-    private final EnemyHudSettingsScreen parent;
+    private final Screen parent;
     /** 编辑哪一套：false = HUD，true = 容器界面（模式 2 下两者独立）。 */
     private final boolean containerConfig;
 
     private boolean dragging;
 
-    public SelfStatsLayoutScreen(EnemyHudSettingsScreen parent, boolean containerConfig) {
+    public SelfStatsLayoutScreen(Screen parent, boolean containerConfig) {
         super(Component.translatable("ctt_enemy_hud.config.selfStatsMove"));
         this.parent = parent;
         this.containerConfig = containerConfig;
@@ -64,7 +64,7 @@ public final class SelfStatsLayoutScreen extends Screen {
                 this.width / 2, 36, 0xFFFFD060);
         // 提示当前在改哪一套配置（HUD / 容器界面）。
         graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.selfStatsMode.current",
-                        Component.translatable(EnemyHudSettingsScreen.modeLabelKey(
+                        Component.translatable(SelfStatsSettingsScreen.modeLabelKey(
                                 EnemyHudConfig.get().selfStatsMode))),
                 this.width / 2, 50, 0xFF9FE8FF);
 

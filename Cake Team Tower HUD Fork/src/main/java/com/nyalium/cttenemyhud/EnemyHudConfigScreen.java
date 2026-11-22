@@ -63,7 +63,7 @@ public final class EnemyHudConfigScreen extends Screen {
         y += ROW_GAP;
 
         Button stats = Button.builder(section("self_stats"),
-                        b -> open(EnemyHudSettingsScreen.Section.SELF_STATS))
+                        b -> this.minecraft.gui.setScreen(new SelfStatsSettingsScreen(this)))
                 .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build();
         if (!cfg.enabled) stats.active = false;
         addRenderableWidget(stats);
@@ -86,10 +86,6 @@ public final class EnemyHudConfigScreen extends Screen {
         int doneY = Math.max(y + ROW_GAP, this.height - ROW_HEIGHT - 8);
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> done())
                 .bounds(x, doneY, BUTTON_WIDTH, ROW_HEIGHT).build());
-    }
-
-    private void open(EnemyHudSettingsScreen.Section section) {
-        this.minecraft.gui.setScreen(new EnemyHudSettingsScreen(this, section));
     }
 
     /** 完成：写盘并关闭。 */

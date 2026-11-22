@@ -119,14 +119,13 @@ public final class EnemyHudConfig {
 
         /** 盾牌指示器（1.20.19 合并自 CTT Shield Indicator）。 */
         public boolean shieldEnabled = true;
-        /** 0 = 副手槽上方，1 = 屏幕中心。 */
-        public int shieldPosition = 0;
-        /** 可见宽度 = 20px × scale。 */
-        public double shieldScale = 1.1;
-        /** 水平偏移（像素）。 */
-        public int shieldOffset = 0;
-        /** 副手槽模式：与 actionbar 的间距（像素）。 */
-        public int shieldGap = 2;
+        /** 屏幕 GUI 坐标（左上角）；-1 = 未设置，默认副手槽上方。 */
+        public int shieldX = -1;
+        public int shieldY = -1;
+        /** 纹理缩放（1.0 = 36×106 原尺寸）。 */
+        public double shieldScale = 1.0;
+        /** 不透明度 0.1~1.0。 */
+        public double shieldOpacity = 1.0;
     }
 
     /**
@@ -160,7 +159,7 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 9;
+    public static final int CURRENT_VERSION = 10;
     /** 旧版默认血条长度（1.18.0 起默认改成 75）。 */
     private static final double LEGACY_BAR_WIDTH = 100.0;
     /** 旧版默认缩放（1.19.0 起默认改成 0.9）。 */
@@ -446,6 +445,11 @@ public final class EnemyHudConfig {
             if (cfg.scale == LEGACY_SCALE) cfg.scale = DEFAULT_SCALE;
             if (cfg.teamScale == LEGACY_SCALE) cfg.teamScale = DEFAULT_SCALE;
         }
+        if (version < 10) {
+            // 盾牌指示器改成可拖动坐标：旧的位置/偏移字段不再使用，默认交给自动位置。
+            cfg.shieldX = -1;
+            cfg.shieldY = -1;
+        }
         if (version < 9) {
             // 模式 2 的容器那套从「模式 2 的 HUD 那套」复制。
             cfg.bothContainerX = cfg.bothX;
@@ -522,11 +526,11 @@ public final class EnemyHudConfig {
         read.bothContainerScale = clamp(read.bothContainerScale, 1.0, 2.0);
         read.bothContainerOpacity = clamp(read.bothContainerOpacity, 0.2, 1.0);
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
-        // 盾牌指示器
-        read.shieldPosition = (int) clamp(read.shieldPosition, 0.0, 1.0);
+        // 盾牌指示器（1.20.20：可拖动定位 + 透明度）
+        read.shieldX = (int) clamp(read.shieldX, -1.0, 4000.0);
+        read.shieldY = (int) clamp(read.shieldY, -1.0, 4000.0);
         read.shieldScale = clamp(read.shieldScale, 0.5, 3.0);
-        read.shieldOffset = (int) clamp(read.shieldOffset, -160.0, 160.0);
-        read.shieldGap = (int) clamp(read.shieldGap, 0.0, 40.0);
+        read.shieldOpacity = clamp(read.shieldOpacity, 0.1, 1.0);
         return read;
     }
 

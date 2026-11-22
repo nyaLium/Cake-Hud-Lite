@@ -42,12 +42,12 @@ public final class SelfStatsFilterScreen extends Screen {
     static final int SIDE = 10;
     static final int SCROLLBAR_WIDTH = 3;
 
-    private final EnemyHudSettingsScreen parent;
+    private final Screen parent;
     private List<String> hidden;
     /** 第一个可见<b>行</b>（一行 = 两个属性）。 */
     private int scroll;
 
-    public SelfStatsFilterScreen(EnemyHudSettingsScreen parent) {
+    public SelfStatsFilterScreen(Screen parent) {
         super(Component.translatable("ctt_enemy_hud.config.selfStatsFilter"));
         this.parent = parent;
     }

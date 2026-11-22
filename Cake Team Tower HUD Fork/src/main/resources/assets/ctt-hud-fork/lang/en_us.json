@@ -5,7 +5,7 @@
   "ctt_enemy_hud.config.section.general": "General settings",
   "ctt_enemy_hud.config.section.enemy": "Enemy settings",
   "ctt_enemy_hud.config.section.player": "Player settings",
-  "ctt_enemy_hud.config.section.self_stats": "Stats panel",
+  "ctt_enemy_hud.config.section.self_stats": "Stats panel settings…",
   "ctt_enemy_hud.config.back": "Back",
   "ctt_enemy_hud.config.reset": "Reset to defaults",
   "ctt_enemy_hud.config.enabled": "Enabled",
@@ -124,5 +124,7 @@
   "ctt_enemy_hud.config.shieldGap": "Gap above action bar: %s px",
   "ctt_enemy_hud.config.shieldPosition": "Position: %s",
   "ctt_enemy_hud.config.shieldPosition.offhand": "Above offhand",
-  "ctt_enemy_hud.config.shieldPosition.center": "Screen center"
+  "ctt_enemy_hud.config.shieldPosition.center": "Screen center",
+  "ctt_enemy_hud.config.shieldOpacity": "Opacity: %s",
+  "ctt_enemy_hud.config.shieldMove": "Move indicator"
 }
