@@ -86,6 +86,11 @@ public final class HudTarget {
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         if (!managed(mc, entity)) return false;
 
+        // 死亡 / 观战：CTT 里死掉的玩家就是**旁观模式**，所以一条规则同时管住两种状态。
+        // 只挡「画」，不挡 managed —— managed 还负责摘掉原版 below_name 分数，
+        // 旁观者那条 0% 同样不该冒出来。
+        if (entity instanceof Player player && player.isSpectator()) return false;
+
         Vec3 camPos = cameraPos(mc);
         double distance = camPos.distanceTo(entity.position());
         double limit = entity instanceof Player ? cfg.teamMaxDistance : cfg.maxDistance;

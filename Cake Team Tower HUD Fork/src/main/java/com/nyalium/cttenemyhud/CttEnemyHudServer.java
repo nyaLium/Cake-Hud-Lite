@@ -133,6 +133,8 @@ public final class CttEnemyHudServer implements ModInitializer {
             // 玩家也推：队友那一行同样需要四色心 / 碎心 / 粉心（队伍条只有 AllHearts/MaxHP）。
             // 自己不用推（本端不画自己的条）。
             if (entity == player) continue;
+            // 死亡 / 观战：CTT 里死掉的玩家就是旁观模式，客户端一律不画，推了也没人用。
+            if (entity instanceof Player other && other.isSpectator()) continue;
             if (!isCttMob(scoreboard, entity)) continue;
             mobs.add(entity);
         }
