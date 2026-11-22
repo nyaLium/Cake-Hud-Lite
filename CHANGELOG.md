@@ -2,6 +2,8 @@
 
 > 这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud)（作者 TheHolyLord，MIT）的 Fork 版。
 > 版本保留规则见 [versions/VERSIONING.md](versions/VERSIONING.md)：**每个版本都必须留档，不覆盖、不删除。**
+> 全量归档清单（大小 / SHA-256 / 内嵌版本号 / git 标签）见 **[versions/ARCHIVE.md](versions/ARCHIVE.md)**，
+> 用 `python versions/tools/archive_audit.py` 可重新生成并校验。
 
 ## 版本索引
 
