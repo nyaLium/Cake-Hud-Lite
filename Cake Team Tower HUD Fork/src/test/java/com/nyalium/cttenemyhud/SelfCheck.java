@@ -414,7 +414,15 @@ public final class SelfCheck {
         check(defaults.opacity == 0.75, "默认透明度应为 0.75");
         check(defaults.showBar, "默认应画血条");
         check(!defaults.hideBehindWalls, "1.20.14 起默认不再按墙隐藏");
-        check(defaults.hideBehindEntities, "默认应忽略被其它实体挡住的怪");
+        check(!defaults.hideBehindEntities, "1.20.15 起被其它实体挡住时不再隐藏（写死关闭）");
+        check(defaults.autoPartyBossbar, "1.20.15 起自动开队伍条写死开启");
+        EnemyHudConfig.Cfg forcedCfg = new EnemyHudConfig.Cfg();
+        forcedCfg.hideBehindWalls = true;
+        forcedCfg.hideBehindEntities = true;
+        forcedCfg.autoPartyBossbar = false;
+        EnemyHudConfig.normalize(forcedCfg);
+        check(!forcedCfg.hideBehindWalls && !forcedCfg.hideBehindEntities && forcedCfg.autoPartyBossbar,
+                "normalize 应把这三项写死");
         check(defaults.hideBelowNameScore, "默认应隐藏 below_name 分数");
         check(defaults.hideEnemyBossBar, "默认应隐藏上方 Boss 栏里的最近敌人信息");
         check(defaults.hideTeamBossBar, "默认应隐藏上方 Boss 栏里的队伍血量");

@@ -92,11 +92,45 @@ public final class SelfStats {
     static final class Line {
         final Component text;
         final SelfStatsKind kind;
+        /** 这一行在 ViewStats 聊天里带的 hover 文本（官方属性名/说明），没有则 null。 */
+        final Component hover;
 
         Line(Component text, SelfStatsKind kind) {
             this.text = text;
             this.kind = kind;
+            this.hover = findHover(text);
         }
+    }
+
+    /** 每种属性最近一次看到的官方 hover 文本（来自 ViewStats 的行）。 */
+    private static final java.util.Map<SelfStatsKind, Component> KIND_HOVER = new java.util.HashMap<>();
+
+    /** 从组件树里找第一个 {@code show_text} hover。 */
+    static Component findHover(Component component) {
+        if (component == null) return null;
+        var hover = component.getStyle().getHoverEvent();
+        if (hover instanceof net.minecraft.network.chat.HoverEvent.ShowText showText) {
+            return showText.value();
+        }
+        for (Component sibling : component.getSiblings()) {
+            Component found = findHover(sibling);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    /** 过滤界面用的官方名称：优先用 ViewStats 里看到的 hover（= 官方翻译），没有则回退到内置翻译。 */
+    static Component displayName(SelfStatsKind kind) {
+        Component hoverName = KIND_HOVER.get(kind);
+        if (hoverName != null) return hoverName;
+        return Component.translatable("ctt_enemy_hud.kind." + kind.id);
+    }
+
+    /** 记下这一行对应的官方 hover。 */
+    private static void rememberHover(SelfStatsKind kind, Component message) {
+        if (kind == null || kind == SelfStatsKind.HINT) return;
+        Component hover = findHover(message);
+        if (hover != null) KIND_HOVER.putIfAbsent(kind, hover);
     }
 
     // ── 触发 ──
@@ -261,6 +295,7 @@ public final class SelfStats {
         java.util.Arrays.fill(PENDING_HEARTS, 0);
         capturing = false;
         emptyCaptures = 0;
+        KIND_HOVER.clear();
         windowEndMs = 0L;
         hardEndMs = 0L;
         nextTriggerMs = 0L;
@@ -310,6 +345,7 @@ public final class SelfStats {
         boolean panelWorthy = kind != SelfStatsKind.HINT && !a.unresolvedKey;
         // 1.20.13：同一趟里出现完全相同的行只留一条 —— 手动 /trigger 与自动刷新撞在一起时，
         // 地图会把同一批属性回两遍，面板就会出现「多重显示」。
+        if (panelWorthy) rememberHover(kind, message);
         if (panelWorthy && PENDING.size() < MAX_LINES && !containsSameText(PENDING, message)) {
             PENDING.add(new Line(message, kind));
         }
@@ -330,6 +366,18 @@ public final class SelfStats {
             out.add(line.text);
         }
         return out;
+    }
+
+    /** 过滤后第 {@code index} 行的官方 hover（没有返回 null）。 */
+    static Component hoverAt(int index) {
+        Set<String> hidden = EnemyHudConfig.hiddenKinds();
+        int i = 0;
+        for (Line line : SHOWN) {
+            if (hidden.contains(line.kind.id)) continue;
+            if (i == index) return line.hover;
+            i++;
+        }
+        return null;
     }
 
     /** 不受过滤影响的完整行数（自检 / 调试用）。 */

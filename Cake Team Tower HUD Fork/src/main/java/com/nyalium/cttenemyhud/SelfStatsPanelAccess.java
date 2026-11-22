@@ -13,7 +13,7 @@ public final class SelfStatsPanelAccess {
     private SelfStatsPanelAccess() {}
 
     /** 在容器界面上画属性面板（模式不为 1、开关关闭或没有数据时什么都不做）。 */
-    public static void drawOnContainer(GuiGraphicsExtractor graphics) {
-        SelfStatsPanel.drawOnContainer(graphics);
+    public static void drawOnContainer(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        SelfStatsPanel.drawOnContainer(graphics, mouseX, mouseY);
     }
 }

@@ -221,7 +221,8 @@ public final class SelfStatsFilterScreen extends Screen {
         MutableComponent mark = Component.literal(shown ? "\u2714 " : "\u2718 ")
                 .withStyle(style -> style.withColor(shown
                         ? TextColor.fromRgb(0x55FF55) : TextColor.fromRgb(0xFF5555)));
-        MutableComponent name = Component.translatable("ctt_enemy_hud.config.kind." + kind.id)
+        // 1.20.15：优先用 ViewStats 里看到的官方名称（hover 文本），没有则回退到内置翻译。
+        MutableComponent name = SelfStats.displayName(kind).copy()
                 .withStyle(style -> style.withColor(shown
                         ? TextColor.fromRgb(0xFFFFFF) : TextColor.fromRgb(0x8A8A8A)));
         return mark.append(name);

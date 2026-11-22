@@ -25,7 +25,7 @@ public abstract class ContainerPanelMixin {
     private void cttEnemyHud$drawSelfStatsOnContainer(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
                                                       float partialTick, CallbackInfo ci) {
         if ((Object) this instanceof AbstractContainerScreen<?>) {
-            SelfStatsPanelAccess.drawOnContainer(graphics);
+            SelfStatsPanelAccess.drawOnContainer(graphics, mouseX, mouseY);
         }
     }
 }

@@ -94,11 +94,7 @@ public final class EnemyHudSettingsScreen extends Screen {
                 v -> EnemyHudConfig.get().opacity = v / 100.0));
 
         y = TOP;
-        // 1.20.14：「被墙挡住时隐藏」默认关闭且不再提供开关（改为始终显示，避免 HUD 突然消失）。
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideBehindEntities)
-                .create(rightX, y, w, ROW_HEIGHT, key("hideBehindEntities"),
-                        (b, v) -> EnemyHudConfig.get().hideBehindEntities = v));
-        y += ROW_GAP;
+        // 1.20.15：「被墙挡住时隐藏 / 被其他实体挡住时隐藏」都写死为关闭，不再提供开关。
         addRenderableWidget(CycleButton.onOffBuilder(cfg.hideEnemyBossBar)
                 .create(rightX, y, w, ROW_HEIGHT, key("hideEnemyBossBar"),
                         (b, v) -> EnemyHudConfig.get().hideEnemyBossBar = v));
@@ -154,10 +150,7 @@ public final class EnemyHudSettingsScreen extends Screen {
                 .create(leftX, y, w, ROW_HEIGHT, key("showTeammates"),
                         (b, v) -> EnemyHudConfig.get().showTeammates = v));
         y += ROW_GAP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.autoPartyBossbar)
-                .create(leftX, y, w, ROW_HEIGHT, key("autoPartyBossbar"),
-                        (b, v) -> EnemyHudConfig.get().autoPartyBossbar = v));
-        y += ROW_GAP;
+        // 1.20.15：「自动开启队伍血量条」写死为开启，不再提供开关。
         addRenderableWidget(new ValueSlider(leftX, y, w, ROW_HEIGHT,
                 4.0, 128.0, 4.0, cfg.teamMaxDistance,
                 v -> key("maxDistance", (int) Math.round(v)),

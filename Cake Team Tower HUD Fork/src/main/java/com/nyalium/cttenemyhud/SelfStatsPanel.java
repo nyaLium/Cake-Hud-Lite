@@ -60,8 +60,8 @@ final class SelfStatsPanel implements HudElement {
         }
     }
 
-    /** 在容器界面上画属性面板（「在容器界面显示」模式）。 */
-    static void drawOnContainer(GuiGraphicsExtractor g) {
+    /** 在容器界面上画属性面板（「在容器界面显示」模式），并在光标下显示该属性的官方名称。 */
+    static void drawOnContainer(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null) return;
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
@@ -70,7 +70,48 @@ final class SelfStatsPanel implements HudElement {
         if (!SelfStats.visible()) return;
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
-        draw(g, mc.font, lines, EnemyHudConfig.panelFor(true), cfg.textShadow);
+        EnemyHudConfig.Panel panel = EnemyHudConfig.panelFor(true);
+        draw(g, mc.font, lines, panel, cfg.textShadow);
+        // 1.20.15：光标停在某一行上时，显示这一行的官方 hover（和原版 ViewStats 聊天里一样）。
+        int index = lineAt(mc.font, lines, panel, mouseX, mouseY);
+        if (index >= 0) {
+            Component hover = SelfStats.hoverAt(index);
+            if (hover != null) {
+                g.setComponentTooltipForNextFrame(mc.font, List.of(hover), mouseX, mouseY);
+            }
+        }
+    }
+
+    /** 屏幕坐标 → 命中的行下标（没有命中返回 -1）。 */
+    static int lineAt(Font font, List<Component> lines, EnemyHudConfig.Panel panel,
+                      double mouseX, double mouseY) {
+        if (font == null || lines == null || lines.isEmpty() || panel == null) return -1;
+        int cols = Math.max(1, Math.min(3, panel.columns));
+        int rows = rows(lines.size(), cols);
+        double scale = Math.max(0.25, Math.min(3.0, panel.scale));
+        double lx = (mouseX - panel.x) / scale;
+        double ly = (mouseY - panel.y) / scale;
+        if (lx < 0 || ly < 0) return -1;
+        int r = (int) (ly / ROW_HEIGHT);
+        if (r >= rows) return -1;
+
+        int[] widths = new int[cols];
+        for (int i = 0; i < lines.size(); i++) {
+            Component line = lines.get(i);
+            int w = Math.max(font.width(line), font.width(line.getString()));
+            int c = columnOf(i, rows);
+            if (w > widths[c]) widths[c] = w;
+        }
+        int[] offsets = columnOffsets(widths, COLUMN_GAP);
+        for (int c = 0; c < cols; c++) {
+            int start = c * rows;
+            if (start >= lines.size()) break;
+            if (lx >= offsets[c] && lx <= offsets[c] + widths[c]) {
+                int index = start + r;
+                return index < Math.min(lines.size(), start + rows) ? index : -1;
+            }
+        }
+        return -1;
     }
 
     /** 画整块面板（HUD 元素与「移动面板」预览共用）。 */    static void draw(GuiGraphicsExtractor g, Font font, List<Component> lines,

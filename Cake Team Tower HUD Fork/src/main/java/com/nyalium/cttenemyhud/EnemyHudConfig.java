@@ -358,6 +358,10 @@ public final class EnemyHudConfig {
         read.teamScale = clamp(read.teamScale, 0.75, 1.5);
         read.teamVerticalOffset = (int) clamp(read.teamVerticalOffset, -30.0, 0.0);
         read.teamMaxDistance = clamp(read.teamMaxDistance, 4.0, 256.0);
+        // 1.20.15：这三项写死，不再可配置
+        read.autoPartyBossbar = true;
+        read.hideBehindWalls = false;
+        read.hideBehindEntities = false;
         // 自身属性面板（1.20.3）：间隔 0~600 s，列 1~3，坐标夹进屏幕范围
         read.selfStatsSeconds = (int) clamp(read.selfStatsSeconds, 1.0, 5.0);
         read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);
