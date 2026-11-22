@@ -363,6 +363,36 @@ public final class SelfCheck {
         check(rowText(teamHearts, 0).equals("❤60/150"), "队友第一行=" + rowText(teamHearts, 0));
         check(rowText(teamHearts, 1).equals("💛40 🖤30 💙20 💔2"),
                 "队友第二行=" + rowText(teamHearts, 1));
+
+        // 1.16.3 起：队友**只画心与血条**，护甲段一律不画 —— 即使 payload 带了 defence / 元素护甲。
+        EnemyHudLayout.Options teamNoArmor = new EnemyHudLayout.Options();
+        teamNoArmor.showHearts = true;
+        teamNoArmor.showArmor = false;
+        teamNoArmor.showBar = true;
+        teamNoArmor.barWidth = 100;
+
+        EnemyHudLayout.Result teamArmored = EnemyHudLayout.compute(150, 150, false, 5,
+                new int[]{3, 1, 0, 0, 0, 0, 0}, HeartCounts.of(60, 40, 30, 20, 2),
+                teamNoArmor, SelfCheck::width);
+        String teamFlat = join(teamArmored);
+        check(!teamFlat.contains("\uD83D\uDEE1"), "队友不该出现 🛡 护甲段: " + teamFlat);
+        check(!teamFlat.contains(EnemyData.ARMOR_ICONS[1]), "队友不该出现 🔥 元素护甲段: " + teamFlat);
+        check(!teamFlat.contains("|"), "队友不该出现护甲分隔符: " + teamFlat);
+        // 折成两行时 join() 会把两行首尾相接，所以去掉空格再比。
+        check(teamFlat.replace(" ", "").equals("\u276460/150\uD83D\uDC9B40\uD83D\uDDA430\uD83D\uDC9920\uD83D\uDC942"),
+                "队友这一行只应有心: " + teamFlat);
+        check(teamArmored.barWidth == 100, "队友的血条仍要画: " + teamArmored.barWidth);
+
+        // 同样的数据给敌人，护甲段照旧要在（确认只改了队友那一套选项）。
+        EnemyHudLayout.Options enemyArmor = new EnemyHudLayout.Options();
+        enemyArmor.showHearts = true;
+        enemyArmor.showArmor = true;
+        enemyArmor.showBar = false;
+        enemyArmor.barWidth = 100;
+        EnemyHudLayout.Result mobArmored = EnemyHudLayout.compute(150, 150, false, 5,
+                new int[]{3, 1, 0, 0, 0, 0, 0}, HeartCounts.of(60, 40, 30, 20, 2),
+                enemyArmor, SelfCheck::width);
+        check(join(mobArmored).contains("\uD83D\uDEE1"), "敌人的防御段不该被误伤: " + join(mobArmored));
         // 用转义写死期望值：🛡 在源码里常被写成「🛡+U+FE0F」，直接比字面量会踩变体选择符。
         check(join(armored).contains("\uD83D\uDEE13"), "防御段缺失: " + join(armored));
         check(join(armored).contains(EnemyData.ARMOR_ICONS[1] + "5"), "元素护甲段缺失: " + join(armored));

@@ -255,12 +255,16 @@ public final class HudWorldRenderer {
      * <p>{@code showHearts = true}：装了服务端组件时队友也有四色心 / 碎心 / 粉心，
      * 会画成和敌人一样的心数行；拿不到心数（服务端没装）时
      * {@code EnemyHudLayout} 会自动退回「当前/最大」。</p>
+     *
+     * <p>{@code showArmor = false}（1.16.3 起）：队友**只画心与血条**，不画护甲段 ——
+     * 玩家那一行没有分隔符、没有 🛡 / 🔥 / ☃ 这类护甲段。payload 里的 defence / armour
+     * 照旧收下（数据结构不用改），只是不给布局用。</p>
      */
     private static EnemyHudLayout.Options teamOptions(EnemyHudConfig.Cfg cfg) {
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
         o.showNumbers = true;
         o.showHearts = true;
-        o.showArmor = true;
+        o.showArmor = false;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.teamBarWidth;
         o.wrapWidth = cfg.wrapWidth;
