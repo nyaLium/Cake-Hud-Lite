@@ -19,6 +19,7 @@
   "ctt_enemy_hud.config.showBar": "Show bar",
   "ctt_enemy_hud.config.useServerData": "Prefer server data",
   "ctt_enemy_hud.config.showTeammates": "Show teammate health",
+  "ctt_enemy_hud.config.teamShowBar": "Show bar",
   "ctt_enemy_hud.config.autoPartyBossbar": "Auto-enable party health bar",
   "ctt_enemy_hud.config.barWidth": "Bar length: %s",
   "ctt_enemy_hud.config.scale": "Scale: %s",

@@ -39,6 +39,7 @@ public final class SelfCheck {
         chatAndDrag();
         panelTimerAndGrass();
         scrollbarDrag();
+        scopedSettings();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -1442,7 +1443,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(EnemyHudConfig.CURRENT_VERSION == 15, "配置版本应为 15");
+        check(EnemyHudConfig.CURRENT_VERSION == 16, "配置版本应为 16");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1451,7 +1452,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 15, "v3 → v15 应升版本号");
+        check(v3.configVersion == 16, "v3 → v16 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1626,7 +1627,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
-        check(EnemyHudConfig.CURRENT_VERSION == 15, "配置版本应为 15");
+        check(EnemyHudConfig.CURRENT_VERSION == 16, "配置版本应为 16");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1649,7 +1650,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 15, "v4 → v15 应升版本号");
+        check(v4.configVersion == 16, "v4 → v16 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板
@@ -1848,9 +1849,9 @@ public final class SelfCheck {
         pane.contentHeight(500);            // 视口 148，最大滚动 352
         check(pane.scrollbarVisible(), "内容比视口高时应有滚动条");
         check(pane.barX(400) == 396, "滚动条 x = 锚点 - 宽（4）");
-        check(pane.hitsBar(396, 100, 400) && pane.hitsBar(393, 100, 400) && pane.hitsBar(402, 100, 400),
-                "滚动条 ±3 px 容差内都应命中");
-        check(!pane.hitsBar(392, 100, 400) && !pane.hitsBar(404, 100, 400), "容差外不该命中");
+        check(pane.hitsBar(396, 100, 400) && pane.hitsBar(391, 100, 400) && pane.hitsBar(405, 100, 400),
+                "滚动条 ±5 px 容差内都应命中");
+        check(!pane.hitsBar(390, 100, 400) && !pane.hitsBar(406, 100, 400), "容差外不该命中");
         check(!pane.hitsBar(396, 20, 400) && !pane.hitsBar(396, 220, 400),
                 "可视区上下之外的同列位置不该响应（否则会点到下面的按钮/Tab 键）");
         check(pane.hitsThumb(52 + 5), "滑块在顶部时应命中上沿");
@@ -1875,6 +1876,57 @@ public final class SelfCheck {
                 "过滤列表滑块高度按可见行占比，实际 " + SelfStatsFilterScreen.thumbHeight(145, 47, 6));
         check(SelfStatsFilterScreen.thumbHeight(0, 47, 6) == 0, "轨道高 0 → 过滤列表没有滑块");
         check(SelfStatsFilterScreen.thumbHeight(145, 0, 6) == 0, "没有行 → 没有滑块");
+    }
+
+    /**
+     * 1.20.33：局部设置不许影响全局设置。
+     *
+     * <p>这轮修掉的三处「串台」：① 队友血条跟着敌人的 {@code showBar} 走；
+     * ② 实体设置页的滑块在 {@code rebuildWidgets()} 时回弹到建表时的旧值；
+     * ③ 「回到初始位置」对容器面板用了 HUD 的默认 y。另外锁住几组本来就该独立的配置。</p>
+     */
+    private static void scopedSettings() {
+        // ① 队友条的显示开关和敌人分开
+        EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
+        cfg.showBar = false;
+        cfg.teamShowBar = true;
+        check(!HudWorldRenderer.options(cfg).showBar, "关掉敌人血条后敌人确实不画条");
+        check(HudWorldRenderer.teamOptions(cfg).showBar, "关掉敌人血条不该连带队友条");
+        cfg.showBar = true;
+        cfg.teamShowBar = false;
+        check(!HudWorldRenderer.teamOptions(cfg).showBar, "队友条可以自己关");
+        check(HudWorldRenderer.options(cfg).showBar, "关队友条不该连带敌人");
+        check(EnemyHudConfig.normalize(new EnemyHudConfig.Cfg()).teamShowBar, "队友条默认开");
+
+        // ② 四套面板配置互不串改
+        EnemyHudConfig.reset();
+        EnemyHudConfig.movePanel(2, true, 11, 22);
+        EnemyHudConfig.Cfg live = EnemyHudConfig.get();
+        check(live.bothContainerX == 11 && live.bothContainerY == 22, "模式 2 容器那套应被写入");
+        check(live.bothX == 4 && live.bothY == 40, "模式 2 的 HUD 那套不该被带动");
+        check(live.selfStatsX == 4 && live.selfStatsY == 40, "模式 0 那套不该被带动");
+        check(live.containerX == 4 && live.containerY == 20, "模式 1 那套不该被带动");
+        EnemyHudConfig.setPanelColumns(2, false, 3);
+        check(live.bothColumns == 3, "模式 2 HUD 列数应写入");
+        check(live.bothContainerColumns == 2, "模式 2 容器列数不该被带动");
+        EnemyHudConfig.setPanelScale(1, false, 1.5);
+        check(live.containerScale == 1.5, "模式 1 字号应写入");
+        check(live.selfStatsScale == 1.0 && live.bothScale == 1.0, "其它两套字号不该被带动");
+        EnemyHudConfig.setPanelOpacity(2, true, 0.5);
+        check(live.bothContainerOpacity == 0.5 && live.bothOpacity == 1.0, "不透明度只写当前对象");
+
+        // ③ 两种文字阴影互不影响，且都不碰盾牌
+        live.textShadow = true;
+        check(live.selfStatsTextShadow, "改实体血条阴影不该动面板阴影（默认开）");
+        live.selfStatsTextShadow = false;
+        check(live.textShadow, "改面板阴影不该动实体血条阴影");
+        check(Math.abs(live.shieldScale - 0.7) < 1e-9 && Math.abs(live.shieldOpacity - 0.65) < 1e-9,
+                "面板/实体设置不该动盾牌默认值");
+        EnemyHudConfig.reset();
+
+        // ④ 「回到初始位置」按当前对象取默认 y
+        check(SelfStatsLayoutScreen.defaultY(true) == 20, "容器面板默认 y = 20（与配置默认值一致）");
+        check(SelfStatsLayoutScreen.defaultY(false) == 40, "HUD 面板默认 y = 40");
     }
 
     /**

@@ -18,8 +18,8 @@ final class ScrollPane {
 
     /** 滚动条宽度（像素）。 */
     static final int BAR_WIDTH = 4;
-    /** 命中容差：4 px 的条太细，左右各放宽这么多像素才抓得住。 */
-    static final int BAR_HIT_PAD = 3;
+    /** 命中容差：4 px 的条太细，左右各放宽这么多像素才抓得住（1.20.33 从 3 加到 5）。 */
+    static final int BAR_HIT_PAD = 5;
 
     private final int top;
     private final int bottom;
@@ -139,14 +139,20 @@ final class ScrollPane {
         scroll = clamp(scrollForThumbTop(thumbTop - top, viewportHeight(), thumbHeight(), maxScroll()));
     }
 
-    /** 画右侧滚动条（轨道 + 滑块）；没有可滚动内容时什么都不画。 */
-    void drawScrollbar(GuiGraphicsExtractor g, int rightX) {
+    /**
+     * 画右侧滚动条（轨道 + 滑块）；没有可滚动内容时什么都不画。
+     *
+     * <p>1.20.33：光标停在条上 / 正在拖时滑块提亮，告诉玩家「这条能抓」。</p>
+     */
+    void drawScrollbar(GuiGraphicsExtractor g, int rightX, double mouseX, double mouseY, boolean dragging) {
         if (!scrollbarVisible()) return;
         int x = barX(rightX);
-        g.fill(x, top, x + BAR_WIDTH, bottom, 0x30000000);
+        boolean hot = dragging || hitsBar(mouseX, mouseY, rightX);
+        g.fill(x, top, x + BAR_WIDTH, bottom, hot ? 0x40000000 : 0x30000000);
         int thumb = thumbHeight();
         int offset = thumbOffset();
-        g.fill(x, top + offset, x + BAR_WIDTH, top + offset + thumb, 0xC0FFFFFF);
+        g.fill(x, top + offset, x + BAR_WIDTH, top + offset + thumb,
+                hot ? 0xFFFFFFFF : 0xC0FFFFFF);
     }
 
     // ── 纯函数（selfCheck 直接打） ──

@@ -81,9 +81,20 @@ public final class SelfStatsLayoutScreen extends Screen {
 
     /** 「回到初始位置」：只重置当前这一套。 */
     private void resetPosition() {
-        EnemyHudConfig.movePanel(EnemyHudConfig.get().selfStatsMode, this.containerConfig, 4, 40);
+        EnemyHudConfig.movePanel(EnemyHudConfig.get().selfStatsMode, this.containerConfig,
+                DEFAULT_X, defaultY(this.containerConfig));
         this.dragging = false;
         this.rebuildWidgets();
+    }
+
+    /** 面板位置的出厂值：HUD 那套在 y=40，容器界面那套在 y=20（与配置默认值一致）。 */
+    private static final int DEFAULT_X = 4;
+    static final int DEFAULT_Y_HUD = 40;
+    static final int DEFAULT_Y_CONTAINER = 20;
+
+    /** 纯函数（selfCheck 直接打）：当前对象对应的默认 y。 */
+    static int defaultY(boolean container) {
+        return container ? DEFAULT_Y_CONTAINER : DEFAULT_Y_HUD;
     }
 
     private void back() {

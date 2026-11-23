@@ -243,7 +243,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         }
         this.pane.endClip(graphics);
         graphics.centeredText(this.font, this.title, this.width / 2, 22, 0xFFFFFFFF);
-        this.pane.drawScrollbar(graphics, scrollbarRight());
+        this.pane.drawScrollbar(graphics, scrollbarRight(), mouseX, mouseY, this.barDragging);
         if (this.pane.maxScroll() > 0) {
             graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.scrollHint"),
                     this.width / 2, this.height - ROW_HEIGHT - 26, 0xFFA0A0A0);

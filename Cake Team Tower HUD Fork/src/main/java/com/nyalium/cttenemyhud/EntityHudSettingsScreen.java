@@ -14,6 +14,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
+import java.util.function.DoubleSupplier;
 
 /**
  * 「实体血条设置」（1.20.19 合并原通用/敌人/玩家；1.20.20 修正滚动并加滚动条）。
@@ -44,10 +45,17 @@ public final class EntityHudSettingsScreen extends Screen {
 
     private enum Kind { HEADER, TOGGLE, SLIDER }
 
-    private record ToggleSpec(BooleanSupplier get, Consumer<Boolean> set) {}
+    /** group：0 = 通用，1 = 敌人，2 = 玩家（父开关关掉时灰掉）。 */
+    private record ToggleSpec(BooleanSupplier get, Consumer<Boolean> set, int group) {}
 
-    /** group：0 = 通用，1 = 敌人，2 = 玩家（决定开关关闭时是否灰掉）。 */
-    private record SliderSpec(double min, double max, double step, double value,
+    /**
+     * 滑块：{@code min/max/step} + 当前值 supplier。
+     *
+     * <p>1.20.33 起 value 是 {@link DoubleSupplier} 而不是快照值 —— 行表只建一次，
+     * 以前滚动/开关导致 {@code rebuildWidgets()} 时会用**建表时**的旧值重建滑块，
+     * 滑条位置会弹回去（值没丢，但看起来像被改了）。</p>
+     */
+    private record SliderSpec(double min, double max, double step, DoubleSupplier value,
                               DoubleFunction<Component> label, DoubleConsumer onChange,
                               int group) {}
 
@@ -62,42 +70,44 @@ public final class EntityHudSettingsScreen extends Screen {
 
     private void buildRows() {
         if (!rows.isEmpty()) return;
-        EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         int y = 0;
         y = header("ctt_enemy_hud.config.header.general", y);
-        y = toggle("textShadow", y, () -> EnemyHudConfig.get().textShadow, v -> EnemyHudConfig.get().textShadow = v);
-        y = toggle("hideBelowNameScore", y, () -> EnemyHudConfig.get().hideBelowNameScore,
+        y = toggle("textShadow", y, 0, () -> EnemyHudConfig.get().textShadow, v -> EnemyHudConfig.get().textShadow = v);
+        y = toggle("hideBelowNameScore", y, 0, () -> EnemyHudConfig.get().hideBelowNameScore,
                 v -> EnemyHudConfig.get().hideBelowNameScore = v);
-        y = toggle("hideEnemyBossBar", y, () -> EnemyHudConfig.get().hideEnemyBossBar,
+        y = toggle("hideEnemyBossBar", y, 0, () -> EnemyHudConfig.get().hideEnemyBossBar,
                 v -> EnemyHudConfig.get().hideEnemyBossBar = v);
-        y = toggle("hideTeamBossBar", y, () -> EnemyHudConfig.get().hideTeamBossBar,
+        y = toggle("hideTeamBossBar", y, 0, () -> EnemyHudConfig.get().hideTeamBossBar,
                 v -> EnemyHudConfig.get().hideTeamBossBar = v);
-        y = slider("opacity", y, 50, 100, 1, cfg.opacity * 100,
+        y = slider("opacity", y, 50, 100, 1, () -> EnemyHudConfig.get().opacity * 100,
                 v -> key("opacity", Math.round(v) + "%"),
                 v -> EnemyHudConfig.get().opacity = v / 100.0, 0);
         y = header("ctt_enemy_hud.config.header.enemy", y);
-        y = toggle("showBar", y, () -> EnemyHudConfig.get().showBar, v -> EnemyHudConfig.get().showBar = v);
-        y = slider("maxDistance", y, 4, 128, 4, cfg.maxDistance,
+        y = toggle("showBar", y, 0, () -> EnemyHudConfig.get().showBar, v -> EnemyHudConfig.get().showBar = v);
+        y = slider("maxDistance", y, 4, 128, 4, () -> EnemyHudConfig.get().maxDistance,
                 v -> key("maxDistance", (int) Math.round(v)), v -> EnemyHudConfig.get().maxDistance = v, 1);
-        y = slider("barWidth", y, 50, 150, 1, cfg.barWidth,
+        y = slider("barWidth", y, 50, 150, 1, () -> EnemyHudConfig.get().barWidth,
                 v -> key("barWidth", (int) Math.round(v)), v -> EnemyHudConfig.get().barWidth = v, 1);
-        y = slider("scale", y, 0.75, 1.5, 0.05, cfg.scale,
+        y = slider("scale", y, 0.75, 1.5, 0.05, () -> EnemyHudConfig.get().scale,
                 v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> EnemyHudConfig.get().scale = v, 1);
-        y = slider("verticalOffset", y, -30, 0, 1, cfg.verticalOffset,
+        y = slider("verticalOffset", y, -30, 0, 1, () -> EnemyHudConfig.get().verticalOffset,
                 v -> key("verticalOffset", signed((int) Math.round(v))),
                 v -> EnemyHudConfig.get().verticalOffset = (int) Math.round(v), 1);
-        y = toggle("useServerData", y, () -> EnemyHudConfig.get().useServerData,
+        y = toggle("useServerData", y, 0, () -> EnemyHudConfig.get().useServerData,
                 v -> EnemyHudConfig.get().useServerData = v);
         y = header("ctt_enemy_hud.config.header.player", y);
-        y = toggle("showTeammates", y, () -> EnemyHudConfig.get().showTeammates,
+        y = toggle("showTeammates", y, 0, () -> EnemyHudConfig.get().showTeammates,
                 v -> EnemyHudConfig.get().showTeammates = v);
-        y = slider("teamMaxDistance", y, 4, 128, 4, cfg.teamMaxDistance,
+        // 1.20.33：队友条自己的开关（原来借用了「敌人设置 → 显示血条」）。
+        y = toggle("teamShowBar", y, 2, () -> EnemyHudConfig.get().teamShowBar,
+                v -> EnemyHudConfig.get().teamShowBar = v);
+        y = slider("teamMaxDistance", y, 4, 128, 4, () -> EnemyHudConfig.get().teamMaxDistance,
                 v -> key("maxDistance", (int) Math.round(v)), v -> EnemyHudConfig.get().teamMaxDistance = v, 2);
-        y = slider("teamBarWidth", y, 50, 150, 1, cfg.teamBarWidth,
+        y = slider("teamBarWidth", y, 50, 150, 1, () -> EnemyHudConfig.get().teamBarWidth,
                 v -> key("barWidth", (int) Math.round(v)), v -> EnemyHudConfig.get().teamBarWidth = v, 2);
-        y = slider("teamScale", y, 0.75, 1.5, 0.05, cfg.teamScale,
+        y = slider("teamScale", y, 0.75, 1.5, 0.05, () -> EnemyHudConfig.get().teamScale,
                 v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> EnemyHudConfig.get().teamScale = v, 2);
-        y = slider("teamVerticalOffset", y, -30, 0, 1, cfg.teamVerticalOffset,
+        y = slider("teamVerticalOffset", y, -30, 0, 1, () -> EnemyHudConfig.get().teamVerticalOffset,
                 v -> key("verticalOffset", signed((int) Math.round(v))),
                 v -> EnemyHudConfig.get().teamVerticalOffset = (int) Math.round(v), 2);
         lastY = y;
@@ -108,12 +118,12 @@ public final class EntityHudSettingsScreen extends Screen {
         return y + HEADER_HEIGHT;
     }
 
-    private int toggle(String key, int y, BooleanSupplier get, Consumer<Boolean> set) {
-        rows.add(new Row(key(key), y, ROW_HEIGHT, Kind.TOGGLE, new ToggleSpec(get, set)));
+    private int toggle(String key, int y, int group, BooleanSupplier get, Consumer<Boolean> set) {
+        rows.add(new Row(key(key), y, ROW_HEIGHT, Kind.TOGGLE, new ToggleSpec(get, set, group)));
         return y + ROW_STEP;
     }
 
-    private int slider(String key, int y, double min, double max, double step, double value,
+    private int slider(String key, int y, double min, double max, double step, DoubleSupplier value,
                        DoubleFunction<Component> label, DoubleConsumer onChange, int group) {
         rows.add(new Row(key(key), y, ROW_HEIGHT, Kind.SLIDER,
                 new SliderSpec(min, max, step, value, label, onChange, group)));
@@ -140,11 +150,12 @@ public final class EntityHudSettingsScreen extends Screen {
             int y = this.pane.screenY(row.y);
             AbstractWidget widget = row.kind == Kind.TOGGLE ? createToggle(row, x, y, width)
                     : createSlider(row, x, y, width);
-            if (row.kind == Kind.SLIDER) {
-                int group = ((SliderSpec) row.payload).group();
-                if (group == 1 && !enemyActive) widget.active = false;
-                if (group == 2 && !playerActive) widget.active = false;
-            }
+            // 父开关关掉时，属于它的那些行灰掉（开关和滑块一起处理，1.20.33）
+            int group = row.kind == Kind.TOGGLE
+                    ? ((ToggleSpec) row.payload).group()
+                    : ((SliderSpec) row.payload).group();
+            if (group == 1 && !enemyActive) widget.active = false;
+            if (group == 2 && !playerActive) widget.active = false;
             addWidget(widget);
             this.contentRows.add(widget);
         }
@@ -164,7 +175,7 @@ public final class EntityHudSettingsScreen extends Screen {
     private AbstractWidget createSlider(Row row, int x, int y, int width) {
         SliderSpec spec = (SliderSpec) row.payload;
         return new ValueSlider(x, y, width, ROW_HEIGHT, spec.min(), spec.max(), spec.step(),
-                spec.value(), spec.label(), spec.onChange());
+                spec.value().getAsDouble(), spec.label(), spec.onChange());
     }
 
     @Override
@@ -172,7 +183,7 @@ public final class EntityHudSettingsScreen extends Screen {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         paintContent(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(this.font, this.title, this.width / 2, 22, 0xFFFFFFFF);
-        this.pane.drawScrollbar(graphics, scrollbarRight());
+        this.pane.drawScrollbar(graphics, scrollbarRight(), mouseX, mouseY, this.barDragging);
         if (this.pane.maxScroll() > 0) {
             graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.scrollHint"),
                     this.width / 2, this.height - ROW_HEIGHT - 26, 0xFFA0A0A0);

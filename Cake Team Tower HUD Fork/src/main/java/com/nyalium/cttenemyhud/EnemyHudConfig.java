@@ -57,6 +57,13 @@ public final class EnemyHudConfig {
         public boolean hideEnemyBossBar = true;
         /** 是否显示队友血量（绿色条）。自己永远不显示。 */
         public boolean showTeammates = true;
+        /**
+         * 队友头顶是否画血条（1.20.33 起独立）。
+         *
+         * <p>以前队友条跟着敌人的 {@link #showBar} 走：在「敌人设置」里关掉血条，
+         * 队友的条会一起消失 —— 两处设置互相影响，已拆开。</p>
+         */
+        public boolean teamShowBar = true;
         /** 自动 /trigger TogglePartyBossbar 打开「队伍血量」条（队友血量的数据源，纯客户端）。 */
         public boolean autoPartyBossbar = true;
         /** 隐藏上方 Boss 栏里「队伍血量」那一条（数据照常读取）。 */
@@ -183,7 +190,7 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 15;
+    public static final int CURRENT_VERSION = 16;
 
     /** 盾牌指示器的缩放范围（倍）。1.20.22 起是小数倍，纹理整张等比缩放。 */
     public static final double SHIELD_SCALE_MIN = 0.5;
@@ -481,6 +488,11 @@ public final class EnemyHudConfig {
             // 沿用本文件的惯例：**只有仍停在旧默认值 1.0 时才跟着改**，自己调过的不覆盖。
             if (cfg.shieldScale == 1.0) cfg.shieldScale = 0.7;
             if (cfg.shieldOpacity == 1.0) cfg.shieldOpacity = 0.75;
+        }
+        if (version < 16) {
+            // 1.20.33：队友血条从敌人的 showBar 里独立出来（teamShowBar，默认开）。
+            // 老配置里没有这个键 → 用默认值；**不复制旧 showBar** —— 那个开关在「敌人设置」里，
+            // 关掉它本来就不该连带队友。
         }
         if (version < 15) {
             // 1.20.32：① 实体血条的「文字阴影」跟到新默认值「关」；

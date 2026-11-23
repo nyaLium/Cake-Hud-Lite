@@ -60,8 +60,8 @@ public final class SelfStatsFilterScreen extends Screen {
     /** 左右边距 + 滚动条宽度。 */
     static final int SIDE = 10;
     static final int SCROLLBAR_WIDTH = 3;
-    /** 滚动条命中容差：3 px 的条太细，左右各放宽这么多像素才抓得住。 */
-    static final int SCROLLBAR_HIT_PAD = 3;
+    /** 滚动条命中容差：3 px 的条太细，左右各放宽这么多像素才抓得住（1.20.33 从 3 加到 5）。 */
+    static final int SCROLLBAR_HIT_PAD = 5;
     /** 分组标题文字相对行顶的下移量（行高 20、字高 8 → 居中）。 */
     static final int HEADER_TEXT_DY = 6;
     /** 分组标题颜色（和设置界面里的分节标题一致）。 */
@@ -244,7 +244,7 @@ public final class SelfStatsFilterScreen extends Screen {
         }
 
         // 右侧滚动条（贴着两列按钮的右边）
-        drawScrollbar(graphics);
+        drawScrollbar(graphics, mouseX, mouseY);
     }
 
     // ── 滚动条（1.20.32：可点可拖，绘制与命中判定共用一套几何） ──
@@ -275,14 +275,17 @@ public final class SelfStatsFilterScreen extends Screen {
         return ScrollPane.thumbOffset(trackHeight(), thumbHeight(), this.scroll, maxScroll());
     }
 
-    private void drawScrollbar(GuiGraphicsExtractor graphics) {
+    private void drawScrollbar(GuiGraphicsExtractor graphics, double mouseX, double mouseY) {
         int track = trackHeight();
         if (track <= 0 || maxScroll() <= 0) return;
         int x = trackLeft();
-        graphics.fill(x, TOP, x + SCROLLBAR_WIDTH, TOP + track, 0x30000000);
+        // 光标停在条上 / 正在拖时提亮（1.20.33），让人知道这条能抓
+        boolean hot = this.barDragging || (hitsBar(mouseX, mouseY));
+        graphics.fill(x, TOP, x + SCROLLBAR_WIDTH, TOP + track, hot ? 0x40000000 : 0x30000000);
         int thumb = thumbHeight();
         int offset = thumbOffset();
-        graphics.fill(x, TOP + offset, x + SCROLLBAR_WIDTH, TOP + offset + thumb, 0xC0FFFFFF);
+        graphics.fill(x, TOP + offset, x + SCROLLBAR_WIDTH, TOP + offset + thumb,
+                hot ? 0xFFFFFFFF : 0xC0FFFFFF);
     }
 
     /** 光标是否落在滚动条那一列（含左右各 {@link #SCROLLBAR_HIT_PAD} 的容差；纵向限在轨道上）。 */

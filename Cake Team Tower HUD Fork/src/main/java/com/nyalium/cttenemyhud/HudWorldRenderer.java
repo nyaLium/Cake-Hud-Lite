@@ -389,12 +389,13 @@ public final class HudWorldRenderer {
      * 玩家那一行没有分隔符、没有 🛡 / 🔥 / ☃ 这类护甲段。payload 里的 defence / armour
      * 照旧收下（数据结构不用改），只是不给布局用。</p>
      */
-    private static EnemyHudLayout.Options teamOptions(EnemyHudConfig.Cfg cfg) {
+    static EnemyHudLayout.Options teamOptions(EnemyHudConfig.Cfg cfg) {
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
         o.showNumbers = true;
         o.showHearts = true;
         o.showArmor = false;
-        o.showBar = cfg.showBar;
+        // 1.20.33：队友条用自己的开关，不再被「敌人设置 → 显示血条」连带关掉。
+        o.showBar = cfg.teamShowBar;
         o.barWidth = cfg.teamBarWidth;
         o.verticalOffset = cfg.teamVerticalOffset;
         o.textShadow = cfg.textShadow;
@@ -403,7 +404,7 @@ public final class HudWorldRenderer {
     }
 
     /** 敌人：心数、护甲永久显示，只有血条可关。 */
-    private static EnemyHudLayout.Options options(EnemyHudConfig.Cfg cfg) {
+    static EnemyHudLayout.Options options(EnemyHudConfig.Cfg cfg) {
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
         o.showNumbers = true;
         o.showHearts = true;
