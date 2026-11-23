@@ -18,19 +18,29 @@ import net.minecraft.world.item.component.CustomData;
  * <p>判定：副手物品非空、{@code custom_data} 里 {@code shield:1b}/{@code shieldAbility:1b} 为真、
  * 可损坏且耐久未满；耐久满（damage=0）不画。</p>
  *
- * <p>位置与属性面板一致：{@code shieldX/Y} 是屏幕 GUI 坐标（左上角），
- * 未设置（-1）时默认贴副手槽上方。</p>
+ * <p>位置：{@code shieldX/Y} 是屏幕 GUI 坐标（左上角）；未设置（-1）时走
+ * {@link #defaultX}/{@link #defaultY} 的<b>默认位置</b>：</p>
+ * <ul>
+ *   <li>水平：对准副手**物品格**的中心 —— 右手玩家副手在快捷栏左侧，即 {@code guiW/2 - 109}；
+ *       左手玩家（{@code main_hand=left}）自动镜像到 {@code guiW/2 + 109}；</li>
+ *   <li>垂直：整条指示器的**底边**落在屏幕底部往上 76 px（{@code guiH - 76 - h}）。</li>
+ * </ul>
  *
  * <p>1.20.22：缩放改成 {@code 0.5~1.5} 小数倍，并且是<b>真正的缩放</b> ——
- * 源区固定为整张 36×106 纹理，目标框 {@code 36*k × 106*k}。之前用的是
- * {@code blit} 的「宽高当源区」重载，目标放大到 k 倍时 UV 也跟着跨了 k 张纹理，
- * 于是画成了 k×k 平铺（1.2 倍能看到右下角多出两条）。</p>
+ * 源区固定为整张纹理，目标框 {@code TEX_W*k × TEX_H*k}。</p>
+ *
+ * <p>1.20.26：纹理换成 34×86 的新四张（meter_0..3），默认缩放 0.7、默认不透明度 75%。</p>
  */
 final class ShieldIndicatorHud implements HudElement {
 
-    /** 新纹理：36×106。 */
-    static final int TEX_W = 36;
-    static final int TEX_H = 106;
+    /** 新纹理：34×86（1.20.26 换图）。 */
+    static final int TEX_W = 34;
+    static final int TEX_H = 86;
+
+    /** 默认位置：指示器**底边**距屏幕底部的像素数。 */
+    static final int DEFAULT_BOTTOM_MARGIN = 76;
+    /** 默认位置：副手物品格中心距屏幕水平中心的像素数（原版快捷栏 182 宽，物品格中心在 center∓109）。 */
+    static final int OFFHAND_CENTER_OFFSET = 109;
 
     private static final Identifier[] METER = {
             Identifier.fromNamespaceAndPath(CttEnemyHudClient.MOD_ID, "textures/gui/meter_0.png"),
@@ -57,7 +67,28 @@ final class ShieldIndicatorHud implements HudElement {
     }
 
     /**
-     * 把整张纹理等比缩放到目标框：源区 {(0,0) → (36,106)}，目标 {@code w×h}。
+     * 默认水平位置（左上角 x）：对准副手物品格中心。
+     *
+     * @param offhandOnLeft {@code true} = 副手在快捷栏左侧（右手玩家，绝大多数情况）
+     */
+    static int defaultX(boolean offhandOnLeft, int guiWidth, int width) {
+        int center = Math.round(guiWidth / 2.0f
+                + (offhandOnLeft ? -OFFHAND_CENTER_OFFSET : OFFHAND_CENTER_OFFSET));
+        return center - width / 2;
+    }
+
+    /** 默认垂直位置（左上角 y）：底边距屏幕底部 {@link #DEFAULT_BOTTOM_MARGIN} px。 */
+    static int defaultY(int guiHeight, int height) {
+        return guiHeight - DEFAULT_BOTTOM_MARGIN - height;
+    }
+
+    /** 把指示器夹进屏幕（整块可见）。 */
+    static int clampInto(int pos, int size, int screen) {
+        return Math.max(0, Math.min(Math.max(0, screen - Math.max(1, size)), pos));
+    }
+
+    /**
+     * 把整张纹理等比缩放到目标框：源区 {(0,0) → (TEX_W,TEX_H)}，目标 {@code w×h}。
      *
      * <p>10 参数的 {@code blit} 会把宽高同时当源区用（放大 = 平铺），所以这里必须用
      * 13 参数重载：{@code (x, y, u, v, 目标宽, 目标高, 源宽, 源高, 纹理宽, 纹理高, 颜色)}。</p>
@@ -95,13 +126,12 @@ final class ShieldIndicatorHud implements HudElement {
         int x = cfg.shieldX;
         int y = cfg.shieldY;
         if (x < 0 || y < 0) {
-            HumanoidArm arm = mc.player.getMainArm().getOpposite();
-            x = Math.round(arm == HumanoidArm.LEFT ? guiW / 2.0f - 109.0f - w / 2.0f
-                    : guiW / 2.0f + 109.0f - w / 2.0f);
-            y = guiH - 76 - h;
+            boolean offhandOnLeft = mc.player.getMainArm().getOpposite() == HumanoidArm.LEFT;
+            x = defaultX(offhandOnLeft, guiW, w);
+            y = defaultY(guiH, h);
         }
-        x = Math.max(0, Math.min(guiW - w, x));
-        y = Math.max(0, Math.min(guiH - h, y));
+        x = clampInto(x, w, guiW);
+        y = clampInto(y, h, guiH);
 
         blitScaled(graphics, METER[stage], x, y, cfg.shieldScale, cfg.shieldOpacity);
     }

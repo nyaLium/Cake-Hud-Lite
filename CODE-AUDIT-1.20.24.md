@@ -82,7 +82,7 @@
 | `SelfStatsKind` | 139 | 一行内容的归类（60 个可过滤类 + HINT） | `FILTERABLE`、`byId` | 面板 / 过滤页 |
 | `SelfStatsPanel` | 239 | 面板绘制（1~3 列、缩放、透明度、容器 hover） | `ROW_HEIGHT=10`、`COLUMN_GAP=8`、示例行 `demoLines()` | HUD 元素 / mixin |
 | `SelfStatsPanelAccess` | 18 | 给 mixin 的公开桥 | — | ContainerPanelMixin |
-| `ShieldIndicatorHud` | 112 | 盾牌计量条（判定 `custom_data.shield/shieldAbility`、耐久四档） | 纹理 36×106、缩放 0.5~1.5 | HUD 元素 |
+| `ShieldIndicatorHud` | 116 | 盾牌计量条（判定 `custom_data.shield/shieldAbility`、耐久四档） | 纹理 **34×86**（1.20.26）、缩放 0.5~1.5（默认 0.7）、默认位置 `guiW/2∓109` + 底边 76 px | HUD 元素 |
 | `ShieldIndicatorSettingsScreen` | 125 | 盾牌设置：开关 / 缩放 / 不透明度 / 移动 | — | 外层菜单 |
 | `ShieldLayoutScreen` | 183 | 「移动盾牌指示器」：绝对拖动 + 方向键 | `-1` = 跟随副手槽 | 盾牌设置 |
 | `ModMenuIntegration` | 16 | Mod Menu 入口（可选依赖） | — | modmenu entrypoint |

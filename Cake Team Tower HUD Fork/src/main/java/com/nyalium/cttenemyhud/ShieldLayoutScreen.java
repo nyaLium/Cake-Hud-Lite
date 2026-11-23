@@ -75,18 +75,23 @@ public final class ShieldLayoutScreen extends Screen {
         g.fill(x + w, y, x + w + 1, y + h, color);
     }
 
-    /** 当前显示位置；未设置（-1）时按副手槽/屏幕中心算一个默认预览位置。 */
+    /**
+     * 当前显示位置；未设置（-1）时用 {@link ShieldIndicatorHud#defaultX}/{@link ShieldIndicatorHud#defaultY}
+     * 的同一套默认位置（跟着副手槽那一侧，底边距屏幕底 76 px），保证预览和 HUD 完全一致。
+     */
     private int[] position(EnemyHudConfig.Cfg cfg) {
         int w = ShieldIndicatorHud.scaledWidth(cfg.shieldScale);
         int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
         int x = cfg.shieldX;
         int y = cfg.shieldY;
         if (x < 0 || y < 0) {
-            x = this.width / 2 + 109 - w / 2;
-            y = this.height - 76 - h;
+            boolean offhandOnLeft = this.minecraft.player == null
+                    || this.minecraft.player.getMainArm().getOpposite() == net.minecraft.world.entity.HumanoidArm.LEFT;
+            x = ShieldIndicatorHud.defaultX(offhandOnLeft, this.width, w);
+            y = ShieldIndicatorHud.defaultY(this.height, h);
         }
-        x = Math.max(0, Math.min(this.width - w, x));
-        y = Math.max(0, Math.min(this.height - h, y));
+        x = ShieldIndicatorHud.clampInto(x, w, this.width);
+        y = ShieldIndicatorHud.clampInto(y, h, this.height);
         return new int[]{x, y};
     }
 
@@ -160,8 +165,8 @@ public final class ShieldLayoutScreen extends Screen {
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         int w = ShieldIndicatorHud.scaledWidth(cfg.shieldScale);
         int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
-        cfg.shieldX = SelfStatsPanel.fitInScreen(x, w, this.width);
-        cfg.shieldY = SelfStatsPanel.fitInScreen(y, h, this.height);
+        cfg.shieldX = ShieldIndicatorHud.clampInto(x, w, this.width);
+        cfg.shieldY = ShieldIndicatorHud.clampInto(y, h, this.height);
     }
 
     private static boolean accept(MouseButtonEvent event) {

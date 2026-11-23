@@ -126,13 +126,16 @@ public final class EnemyHudConfig {
 
         /** 盾牌指示器（1.20.19 合并自 CTT Shield Indicator）。 */
         public boolean shieldEnabled = true;
-        /** 屏幕 GUI 坐标（左上角）；-1 = 未设置，默认副手槽上方。 */
+        /**
+         * 屏幕 GUI 坐标（左上角）；{@code -1} = 未设置 → 默认位置：
+         * 水平对准副手物品格中心（右手玩家 = 快捷栏左侧 {@code guiW/2 - 109}），底边距屏幕底 76 px。
+         */
         public int shieldX = -1;
         public int shieldY = -1;
-        /** 缩放倍率（1.0 = 36×106 原尺寸；1.20.22 起允许 0.5~1.5 的小数倍）。 */
-        public double shieldScale = 1.0;
-        /** 不透明度 0.1~1.0。 */
-        public double shieldOpacity = 1.0;
+        /** 缩放倍率（1.0 = 纹理原尺寸 34×86；1.20.22 起允许 0.5~1.5 的小数倍；1.20.26 起默认 0.7）。 */
+        public double shieldScale = 0.7;
+        /** 不透明度 0.1~1.0（1.20.26 起默认 0.75）。 */
+        public double shieldOpacity = 0.75;
     }
 
     /**
@@ -166,7 +169,7 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 12;
+    public static final int CURRENT_VERSION = 13;
 
     /** 盾牌指示器的缩放范围（倍）。1.20.22 起是小数倍，纹理整张等比缩放。 */
     public static final double SHIELD_SCALE_MIN = 0.5;
@@ -453,6 +456,12 @@ public final class EnemyHudConfig {
         if (version < 12) {
             // 1.20.25：删掉了从未被读取的 hideBehindEntities 字段；旧文件里的这个键读取时直接忽略，
             // 下次写盘就不再出现。这里只保证版本号被写上。
+        }
+        if (version < 13) {
+            // 1.20.26：盾牌换成 34×86 的新纹理，默认缩放 0.7、默认不透明度 75%。
+            // 沿用本文件的惯例：**只有仍停在旧默认值 1.0 时才跟着改**，自己调过的不覆盖。
+            if (cfg.shieldScale == 1.0) cfg.shieldScale = 0.7;
+            if (cfg.shieldOpacity == 1.0) cfg.shieldOpacity = 0.75;
         }
         if (version < 9) {
             // 模式 2 的容器那套从「模式 2 的 HUD 那套」复制。

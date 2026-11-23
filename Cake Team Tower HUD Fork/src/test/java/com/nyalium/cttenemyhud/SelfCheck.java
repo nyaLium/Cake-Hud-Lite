@@ -378,14 +378,48 @@ public final class SelfCheck {
         check(ShieldIndicatorHud.clampScale(Double.NaN) == 1.0, "NaN 倍率应回落 1.0");
         check(ShieldIndicatorHud.clampScale(9.0) == 1.5, "9 倍应夹到 1.5");
         check(ShieldIndicatorHud.clampScale(0.1) == 0.5, "0.1 倍应夹到 0.5");
+        // 1.20.26：盾牌默认值（0.7 倍 / 75%）+ 默认位置公式 + 纹理尺寸
+        EnemyHudConfig.Cfg shieldDefaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
+        check(Math.abs(shieldDefaults.shieldScale - 0.7) < 1e-9, "盾牌默认缩放应为 0.7 倍");
+        check(Math.abs(shieldDefaults.shieldOpacity - 0.75) < 1e-9, "盾牌默认不透明度应为 75%");
+        check(ShieldIndicatorHud.TEX_W == 34 && ShieldIndicatorHud.TEX_H == 86,
+                "盾牌纹理应为 34×86（1.20.26 换图）");
+        // 默认位置：右手玩家在快捷栏左侧副手槽（guiW/2 - 109），底边距屏幕底 76 px
+        check(ShieldIndicatorHud.defaultX(true, 853, 24) == Math.round(853 / 2.0f - 109) - 12,
+                "默认水平位置应对准左侧副手槽");
+        check(ShieldIndicatorHud.defaultX(false, 853, 24) == Math.round(853 / 2.0f + 109) - 12,
+                "左手玩家应镜像到右侧");
+        check(ShieldIndicatorHud.defaultY(480, 60) == 480 - 76 - 60,
+                "默认垂直位置：底边距屏幕底 76 px");
+        check(ShieldIndicatorHud.clampInto(-5, 24, 853) == 0, "越界应夹到 0");
+        check(ShieldIndicatorHud.clampInto(900, 24, 853) == 829, "右边越界应夹到 屏幕-宽");
+
+        // 迁移：停在旧默认 1.0 / 1.0 的配置跟到 0.7 / 75%；自己调过的不动
+        EnemyHudConfig.Cfg oldShield = new EnemyHudConfig.Cfg();
+        oldShield.configVersion = 12;
+        oldShield.shieldScale = 1.0;
+        oldShield.shieldOpacity = 1.0;
+        EnemyHudConfig.migrate("{\"configVersion\":12}", oldShield);
+        check(Math.abs(oldShield.shieldScale - 0.7) < 1e-9
+                && Math.abs(oldShield.shieldOpacity - 0.75) < 1e-9,
+                "v12 旧默认值应迁移成 0.7 / 75%");
+        EnemyHudConfig.Cfg customShield = new EnemyHudConfig.Cfg();
+        customShield.configVersion = 12;
+        customShield.shieldScale = 1.2;
+        customShield.shieldOpacity = 0.4;
+        EnemyHudConfig.migrate("{\"configVersion\":12}", customShield);
+        check(Math.abs(customShield.shieldScale - 1.2) < 1e-9
+                && Math.abs(customShield.shieldOpacity - 0.4) < 1e-9,
+                "迁移不该覆盖自己调过的盾牌参数");
+
         check(ShieldIndicatorHud.scaledWidth(1.0) == ShieldIndicatorHud.TEX_W, "1.0 倍宽 = 原纹理宽");
         check(ShieldIndicatorHud.scaledHeight(1.0) == ShieldIndicatorHud.TEX_H, "1.0 倍高 = 原纹理高");
-        check(ShieldIndicatorHud.scaledWidth(0.5) == 18, "0.5 倍宽应为 18");
-        check(ShieldIndicatorHud.scaledHeight(0.5) == 53, "0.5 倍高应为 53");
-        check(ShieldIndicatorHud.scaledWidth(1.5) == 54, "1.5 倍宽应为 54");
-        check(ShieldIndicatorHud.scaledHeight(1.5) == 159, "1.5 倍高应为 159");
-        check(ShieldIndicatorHud.scaledWidth(1.2) == 43, "1.2 倍宽应为 43");
-        check(ShieldIndicatorHud.scaledWidth(99.0) == 54, "越界倍率应按 1.5 算宽");
+        check(ShieldIndicatorHud.scaledWidth(0.5) == 17, "0.5 倍宽应为 17（34×0.5）");
+        check(ShieldIndicatorHud.scaledHeight(0.5) == 43, "0.5 倍高应为 43（86×0.5）");
+        check(ShieldIndicatorHud.scaledWidth(1.5) == 51, "1.5 倍宽应为 51（34×1.5）");
+        check(ShieldIndicatorHud.scaledHeight(1.5) == 129, "1.5 倍高应为 129（86×1.5）");
+        check(ShieldIndicatorHud.scaledWidth(1.2) == 41, "1.2 倍宽应为 41（34×1.2）");
+        check(ShieldIndicatorHud.scaledWidth(99.0) == 51, "越界倍率应按 1.5 算宽");
     }
 
     // ── 2. 血条长度 ──
@@ -1381,7 +1415,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(EnemyHudConfig.CURRENT_VERSION == 12, "配置版本应为 12");
+        check(EnemyHudConfig.CURRENT_VERSION == 13, "配置版本应为 13");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1390,7 +1424,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 12, "v3 → v12 应升版本号");
+        check(v3.configVersion == 13, "v3 → v13 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1526,7 +1560,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
-        check(EnemyHudConfig.CURRENT_VERSION == 12, "配置版本应为 12");
+        check(EnemyHudConfig.CURRENT_VERSION == 13, "配置版本应为 13");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1549,7 +1583,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 12, "v4 → v12 应升版本号");
+        check(v4.configVersion == 13, "v4 → v13 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板
