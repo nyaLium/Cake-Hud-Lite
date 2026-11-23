@@ -127,5 +127,6 @@
   "ctt_enemy_hud.config.shieldPosition.center": "屏幕中心",
   "ctt_enemy_hud.config.shieldOpacity": "不透明度：%s",
   "ctt_enemy_hud.config.shieldMove": "移动指示器",
-  "ctt_enemy_hud.config.selfStatsMove.dragHint": "按住拖动；也可用方向键微调（按住 Shift 每次 16 px）"
+  "ctt_enemy_hud.config.selfStatsMove.dragHint": "按住拖动；也可用方向键微调（按住 Shift 每次 16 px）",
+  "key.category.ctt-hud-fork.main": "CTT HUD - Fork"
 }

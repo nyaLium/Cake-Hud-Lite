@@ -2,18 +2,18 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.20.29**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.20.30**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/字号/透明度，
 > 60 个属性逐项开关（**双列按钮 + 滚动**），快捷键 `F8` 打开设置。
 
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.20.29` |
+| 版本 | `1.20.30` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/cake_team_tower_hud_fork-1.20.29.jar` |
+| 产物 | `build/libs/cake_team_tower_hud_fork-1.20.30.jar` |
 
 ## 绘制方式（1.15.0 起）
 
@@ -490,7 +490,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/cake_team_tower_hud_fork-1.20.29.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/cake_team_tower_hud_fork-1.20.30.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革

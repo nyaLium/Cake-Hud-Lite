@@ -9,7 +9,8 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
-| **1.20.29** | 两个拖动界面把「按住拖动 / 方向键微调（Shift 16 px）」写进界面提示 | `versions/v1.20.29/` |
+| **1.20.30** | `F8` 从「杂项」挪到独立按键分类「CTT HUD - Fork」（绑定本来就有，只是不好找） | `versions/v1.20.30/` |
+| 1.20.29 | 两个拖动界面把「按住拖动 / 方向键微调（Shift 16 px）」写进界面提示 | `versions/v1.20.29/` |
 | 1.20.28 | 拖动界面改成「必须真拖」：只在面板上按下、位移 ≥2 px 才写位置，点一下不再挪动 | `versions/v1.20.28/` |
 | 1.20.27 | 两个「移动面板 / 移动指示器」界面关掉背景模糊，方便对着真实画面拖位置 | `versions/v1.20.27/` |
 | 1.20.26 | 盾牌换 34×86 新纹理；默认缩放 0.7 / 不透明度 75%；默认位置统一（预览不再镜像到右侧）；mod 图标换成 pack.png | `versions/v1.20.26/` |
@@ -73,7 +74,19 @@
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
 
-## 1.20.29（当前）
+## 1.20.30（当前）
+
+- **F8 键位本来就在「按键控制」里**：`KeyMappingHelper.registerKeyMapping` 把
+  `key.ctt_enemy_hud.open_config`（默认 F8）注册进 `Options.keyMappings`，证据是
+  `options.txt` 里有 `key_key.ctt_enemy_hud.open_config:key.keyboard.f8`（这一行只有注册过的绑定才会被写出）；
+  之前它挂在 `KeyMapping.Category.MISC`（杂项），跟一堆调试键混在一起不好找。
+- **改成独立分类**：`KeyMapping.Category.register(ctt-hud-fork:main)`，显示名走
+  `key.category.ctt-hud-fork.main`（中英都补了）→ 现在「按键控制」里会看到一栏「CTT HUD - Fork」。
+- 自检：`checks=5198 failures=0`（键位注册不参与自检）。
+- 已验证：开发客户端能正常启动到标题画面，日志无 `Category ... already registered` 之类的异常；
+  `options.txt` 里该绑定仍在。**「按键控制」界面本身没截图**（要进游戏一路点进去，按你说的没测 UI）。
+
+## 1.20.29
 
 - 拖动界面的操作方式写进界面提示（`ctt_enemy_hud.config.selfStatsMove.dragHint`）：
   中文「按住拖动；也可用方向键微调（按住 Shift 每次 16 px）」/ 英文「Drag to move; arrow keys nudge (Shift = 16 px per press)」。

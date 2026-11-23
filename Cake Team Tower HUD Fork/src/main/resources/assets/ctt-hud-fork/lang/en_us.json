@@ -127,5 +127,6 @@
   "ctt_enemy_hud.config.shieldPosition.center": "Screen center",
   "ctt_enemy_hud.config.shieldOpacity": "Opacity: %s",
   "ctt_enemy_hud.config.shieldMove": "Move indicator",
-  "ctt_enemy_hud.config.selfStatsMove.dragHint": "Drag to move; arrow keys nudge (Shift = 16 px per press)"
+  "ctt_enemy_hud.config.selfStatsMove.dragHint": "Drag to move; arrow keys nudge (Shift = 16 px per press)",
+  "key.category.ctt-hud-fork.main": "CTT HUD - Fork"
 }

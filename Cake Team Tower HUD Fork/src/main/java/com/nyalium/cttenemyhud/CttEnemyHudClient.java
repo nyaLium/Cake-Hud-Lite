@@ -28,6 +28,18 @@ public final class CttEnemyHudClient implements ClientModInitializer {
 
     public static final String MOD_ID = "ctt-hud-fork";
 
+    /**
+     * 按键分类（1.20.30 起单独一组）。
+     *
+     * <p>之前用 {@link KeyMapping.Category#MISC}：绑定确实注册了（{@code options.txt} 里能看到
+     * {@code key_key.ctt_enemy_hud.open_config}），但混在又长又杂的「杂项」里不好找。
+     * 26.3 的分类是带 {@code Identifier} 的记录，{@code label()} 走
+     * {@code key.category.<namespace>.<path>} 翻译键，所以这里自己注册一个
+     * {@code ctt-hud-fork:main} → 「CTT HUD - Fork」。</p>
+     */
+    public static final KeyMapping.Category KEY_CATEGORY =
+            KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"));
+
     /** 游戏内打开设置界面的快捷键（默认 F8；没装 Mod Menu 也能用）。 */
     private static KeyMapping openConfig;
 
@@ -53,7 +65,7 @@ public final class CttEnemyHudClient implements ClientModInitializer {
                 "key.ctt_enemy_hud.open_config",
                 InputConstants.Type.KEYBOARD,
                 InputConstants.KEY_F8,
-                KeyMapping.Category.MISC));
+                KEY_CATEGORY));
         // 聊天过滤：
         // ① 本 Mod 自发 /trigger 的回显（成功回显 + 「无法触发该计分项」）→ 吞掉；
         // ② 本次 ViewStats 的属性行 → 吞掉（不进聊天栏，只进面板）。
