@@ -544,7 +544,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/ctt-hud-fork-1.20.38.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/ctt-hud-fork-1.20.39.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革
