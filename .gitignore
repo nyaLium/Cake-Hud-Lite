@@ -17,5 +17,8 @@ Thumbs.db
 desktop.ini
 .DS_Store
 
+# 发布前的测试版只在本地归档，不上传（见 versions/VERSIONING.md）
+/versions/pre-release/
+
 # 本机环境
 /mod/local.properties

@@ -11,7 +11,7 @@
 >
 > **客户端必装、服务端选装**：服务端只装 Fabric API 也能用完整功能。
 >
-> 当前正式版 **1.0.1**；发布前的 67 个测试版归档在 `versions/pre-release/`。
+> 当前正式版 **1.0.1**。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
 
 ## 功能
 
@@ -31,19 +31,19 @@
 | --- | --- | --- |
 | **1.0.1**（正式版 · 最新） | [`versions/v1.0.1/ctt-hud-fork-1.0.1.jar`](versions/v1.0.1/ctt-hud-fork-1.0.1.jar) | 客户端必装；同一个 jar 放服务端即启用权威数据推送（选装） |
 | 1.0.0 | [`versions/v1.0.0/ctt-hud-fork-1.0.0.jar`](versions/v1.0.0/ctt-hud-fork-1.0.0.jar) | 首个正式版 |
-| 测试版（1.10.0 – 1.20.42） | [`versions/pre-release/INDEX.md`](versions/pre-release/INDEX.md) | 开发过程归档，**不推荐**日常使用 |
 
 依赖：Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；Mod Menu 可选（装了就有设置入口）。
 配置：`config/ctt-hud-fork.json`；旧的 `ctt-enemy-hud.json` 会自动复制迁移。
 
 ## 截图
 
-> 来自 **1.20.x 测试版**：1.0.0 改过部分文案（「移动面板」→「调整位置…」、「内容过滤」→「显示内容过滤…」、
-> 「实体血条设置」→「血条设置」），布局与观感一致，按钮名字以外没有差别。
+> 截图来自 **1.20.x 测试版**并已压缩（原图在本地归档里）。1.0.0 改过部分文案
+> （「移动面板」→「调整位置…」、「内容过滤」→「显示内容过滤…」、「实体血条设置」→「血条设置」），
+> 布局与观感一致，按钮名字以外没有差别。
 
 | 属性面板 | 调整位置 | 盾牌指示器 |
 | --- | --- | --- |
-| ![属性面板](versions/pre-release/v1.20.5/panel-default.png) | ![调整位置](versions/pre-release/v1.20.24/layout-no-hint.png) | ![盾牌指示器](versions/pre-release/v1.20.26/shield-default-position.png) |
+| ![属性面板](docs/screenshots/panel.png) | ![调整位置](docs/screenshots/layout.png) | ![盾牌指示器](docs/screenshots/shield.png) |
 
 ## 安装
 
@@ -65,8 +65,7 @@ cd mod
 | 路径 | 内容 |
 | --- | --- |
 | `mod/` | 源码工程（Gradle + Loom，Minecraft 26.3 / Fabric） |
-| `versions/vX.Y.Z/` | **正式版的归档**（当前 v1.0.0 / v1.0.1）：jar、sources、README、RELEASE |
-| `versions/pre-release/` | **发布前测试版的归档**（1.10.0 – 1.20.42，共 67 个）：同一套内容；清单见 `versions/pre-release/INDEX.md` |
+| `versions/vX.Y.Z/` | **正式版的归档**（当前 v1.0.0 / v1.0.1）：jar、sources、README、RELEASE；发布前的测试版（1.10.0 – 1.20.42）**只在本地**，已被 `.gitignore` 排除 |
 | `versions/ARCHIVE.md` | 全部版本的清单（大小 / SHA-256 / 内嵌版本号 / git 标签） |
 | `versions/VERSIONING.md` | 版本保留规则（每版必留档，不覆盖、不删除）与上传流程 |
 | `versions/tools/archive_audit.py` | 归档审计：重新生成 `ARCHIVE.md` 并校验 |
@@ -75,7 +74,7 @@ cd mod
 
 ## 归档规则
 
-- 每个版本都必须有归档目录，**不覆盖、不删除**：正式版在 `versions/v1.0.x/`，测试版在 `versions/pre-release/vX.Y.Z/`（清单 `versions/pre-release/INDEX.md`）；
+- 每个版本都必须有归档目录，**不覆盖、不删除**：**正式版**在 `versions/v1.0.x/` 并随仓库上传；**发布前的测试版**在本地 `versions/pre-release/vX.Y.Z/`（不进仓库）；
 - 归档内容：jar + sources + README + RELEASE（+ 实机截图）；
 - 每次发版后运行 `python versions/tools/archive_audit.py`，刷新 `versions/ARCHIVE.md`；
 - 根目录只保留**最新一版**的 jar，历史 jar 全部在 `versions/` 里。
