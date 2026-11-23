@@ -272,8 +272,9 @@ CTT HUD - Fork 设置（F8 或 Mod Menu 打开）
 
 1.20.38 起补上「迟到的那趟」：世界载入时服务端可能隔好几秒才回，而一趟采集 3 s 就超时收尾了，
 于是迟到的那批会被误判成「玩家手动触发」、整批刷进聊天栏（**只在进存档那一刻出现**）。
-现在发 trigger 时记一笔（`noteAutoTriggerSent`），20 s 认领窗口（`OWN_RESPONSE_WINDOW_MS`）内的
-ViewStats 输出一律算我们那趟 —— 标题行怎么认、标题丢了怎么按载荷认，见
+现在发 trigger 时记一笔欠账（`noteAutoTriggerSent` → `ownTriggersOutstanding`，上限 6），
+20 s 认领窗口（`OWN_RESPONSE_WINDOW_MS`）内到达的 ViewStats 输出一律算我们那趟 ——
+标题行怎么认、标题丢了怎么按载荷认，见
 [属性面板](#自身属性面板1203纯客户端) 那节的「防刷屏」。
 
 ## 血条纹理（敌人 / 队友同一条路径）
@@ -331,7 +332,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | --- | --- |
 | 触发 | `ClientTickEvents` 到点发 `/trigger ViewStats`；`selfStatsSeconds=0` 关闭自动刷新 |
 | 采集 | 触发后 3 s 收尾（等不到计时行才用它），单次上限 8 s；只收「带 `Misc_View_Stats_*` 键 / 数字 + 图形（🗡🏹🛡❤…）/ 草方块 `□`」的行（1.20.23 起改用这条窄判据，不再「数字开头就算」） |
-| 防刷屏 | 收下的行**不显示**在聊天栏（和上游一样）；1.20.38 起「我们发过 trigger 但还没收到输出」的状态会跨过 3 s 超时保留，迟到的那批照样吞（认领窗口 20 s） |
+| 防刷屏 | 收下的行**不显示**在聊天栏（和上游一样）；1.20.38 起「我们发过 trigger 但还没收到输出」用**欠账计数**跨过 3 s 超时保留（上限 6 批），迟到的那批照样吞（认领窗口 20 s） |
 | 解析 | `heartKindOf(字形, 颜色)`：❤+红/黄/黑/蓝 → 红/魂/黑/蓝；私有区字形 + 暗红/亮紫 → 碎/粉；`amountBefore` 取字形前紧邻的数字 |
 | 面板 | 列优先排版，列数 1~3，位置 `selfStatsX/Y`（**GUI 像素**，界面上用「移动面板」拖动），支持字号/透明度 |
 | 门控 | 地图回「Game not started」时整块不画（1.20.36 的「选过职业」门控已在 1.20.37 回退） |
@@ -512,7 +513,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | `ECHO_WINDOW_MS` / `MUTED_TRIGGERS` | `ChatTriggerFilter` | 3 s / {`TogglePartyBossbar`,`ViewStats`} | 自己发的 trigger 回显多久内吞掉 |
 | `COOLDOWN_MS` / `MAX_ATTEMPTS` / `FAILSAFE_MS` / `REOPEN_DELAY_MS` / `MAX_SENDS` | `PartyBossbarAutoToggle` | 3 s / 5 / 10 min / 10 s / 20 | 自动开队伍条的全部阈值 |
 | `ROW_HEIGHT` / `COLUMN_GAP` | `SelfStatsPanel` | 10 / 8 | 面板行高 / 列间距 |
-| `CAPTURE_TIMEOUT_MS` / `CAPTURE_HARD_MS` / `OWN_RESPONSE_WINDOW_MS` | `SelfStats` | 3 s / 8 s / 20 s | 一趟采集的超时与硬上限 / 「迟到的那批仍算我们触发」的认领窗口（1.20.38） |
+| `CAPTURE_TIMEOUT_MS` / `CAPTURE_HARD_MS` / `OWN_RESPONSE_WINDOW_MS` / `MAX_OUTSTANDING_AUTO` | `SelfStats` | 3 s / 8 s / 20 s / 6 | 一趟采集的超时与硬上限 / 「迟到的那批仍算我们触发」的认领窗口 / 未回趟数的上限（1.20.38） |
 | `COLUMNS` / `STEP` | `SelfStatsFilterScreen` | 2 / 25 | 过滤列表两列 / 行距（分组标题也占一行，行高 20 + 间距 5） |
 | `BAR_WIDTH` / `BAR_HIT_PAD` | `ScrollPane` | 4 / 5 | 滚动条宽度 / 命中容差（鼠标点、拖都靠它；1.20.33 从 3 放宽到 5） |
 | `TOP` / `BOTTOM_PAD` | 各滚动页 | 52~58 / 40~56 | 可视区上下边界（每页略有差异，见各文件） |
@@ -524,13 +525,13 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**5359 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**5371 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
 护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）、
 属性面板（心数解析、88 项属性识别、提示键识别、过滤表清洗与粗类展开、三节 47 行的行结构、计时行/草方块上屏、
 滚动条拖拽的滑块高度/偏移/反解/命中容差、缩放/位置夹取、滚动列表的可见行/最大滚动/滚轮换算/列宽、
-**迟到输出认领**的窗口真值表 / 载荷识别 / 「发了 trigger、5 s 后才回」的端到端时序）、
+**迟到输出认领**的窗口真值表 / 载荷识别 / 「发了 trigger、5 s 后才回」的端到端时序 / 欠账计数与连回多批）、
 局部设置独立性（「显示血条」整块开关的四个 flag、四套面板位置列数字号、两种文字阴影互不串改）、
 
 ## 构建

@@ -114,12 +114,15 @@ public final class SelfStats {
      */
     private static long lastAutoTriggerMs;
     /**
-     * true = 发过 trigger、但那一趟的输出还没收到。
+     * 我们自己发了几趟 {@code /trigger ViewStats}、还没收到输出（每收到一趟自己的输出减 1）。
      *
-     * <p>超时收尾时<b>不清</b>：进存档那种「服务端隔几秒才回」的情况，靠它在迟到的那批行
-     * 到达时重新开一趟并按「自己的」吞掉。</p>
+     * <p>为什么是计数不是布尔：进存档时可能连着发了好几趟、服务端随后连回好几批
+     * （一批答一趟），只用一个布尔的话，第一批一到就被清掉，第二批又会漏进聊天栏。
+     * 超时收尾时<b>不减</b>：还在路上。</p>
      */
-    private static boolean awaitingOwnResponse;
+    private static int ownTriggersOutstanding;
+    /** 计数器上限：地图一直不回时别无限累积。 */
+    static final int MAX_OUTSTANDING_AUTO = 6;
     /** 这一趟开始的时间（毫秒），用于超时收尾。 */
     private static long captureStartMs;
 
@@ -193,7 +196,7 @@ public final class SelfStats {
                 capturing = false;
                 selfTriggered = false;
             }
-            awaitingOwnResponse = false;               // 没开局就不会有输出在路上了
+            ownTriggersOutstanding = 0;                // 没开局就不会有输出在路上了
             nextTriggerMs = now + GATE_RECHECK_MS;
             return;
         }
@@ -310,12 +313,18 @@ public final class SelfStats {
      */
     static void noteAutoTriggerSent(long nowMs) {
         lastAutoTriggerMs = nowMs;
-        awaitingOwnResponse = true;
+        if (ownTriggersOutstanding < MAX_OUTSTANDING_AUTO) ownTriggersOutstanding++;
+    }
+
+    /** 还欠几趟自己的输出（自检 / 调试用）。 */
+    static int outstandingAutoTriggers() {
+        return ownTriggersOutstanding;
     }
 
     /** 迟到的 ViewStats 输出能不能算「我们自己触发的那趟」—— 读当前状态。 */
     private static boolean claimedAsOwn(long nowMs) {
-        return claimedAsOwn(awaitingOwnResponse, nowMs, lastAutoTriggerMs, OWN_RESPONSE_WINDOW_MS);
+        return claimedAsOwn(ownTriggersOutstanding > 0, nowMs, lastAutoTriggerMs,
+                OWN_RESPONSE_WINDOW_MS);
     }
 
     /**
@@ -348,7 +357,7 @@ public final class SelfStats {
         selfTriggered = false;
         if (PENDING.isEmpty()) {
             pendingTimeText = null;
-            // 自己的那趟还一行都没收到（进存档时服务端可能还没回）：保持 awaitingOwnResponse，
+            // 自己的那趟还一行都没收到（进存档时服务端可能还没回）：**不减**欠账，
             // 让迟到的那批仍被认作我们的输出（1.20.38）。
             if (++emptyCaptures >= MAX_EMPTY_CAPTURES) {
                 SHOWN.clear();
@@ -356,7 +365,8 @@ public final class SelfStats {
             }
             return;
         }
-        if (own) awaitingOwnResponse = false;
+        // 收到一趟我们自己的输出：欠账减一（进存档时可能连发了好几趟、随后连回好几批）。
+        if (own && ownTriggersOutstanding > 0) ownTriggersOutstanding--;
         emptyCaptures = 0;
         SHOWN.clear();
         // 去重：同一行文字只保留第一次出现，避免「多重显示」。
@@ -427,7 +437,7 @@ public final class SelfStats {
         nextTriggerMs = 0L;
         notStarted = false;
         lastAutoTriggerMs = 0L;
-        awaitingOwnResponse = false;
+        ownTriggersOutstanding = 0;
         lastTimeText = null;
         pendingTimeText = null;
         sameTimeRounds = 0;
@@ -458,7 +468,7 @@ public final class SelfStats {
             notStarted = true;
             capturing = false;
             selfTriggered = false;
-            awaitingOwnResponse = false;   // 服务端已经答过了，迟到的那批不存在了
+            ownTriggersOutstanding = 0;    // 服务端已经答过了，迟到的那批不存在了
             SHOWN.clear();                 // 地图明确说「没开局」：清空，别留上一局的数字
             java.util.Arrays.fill(HEARTS, 0);
             return hide;
@@ -470,7 +480,7 @@ public final class SelfStats {
             notStarted = true;
             capturing = false;
             selfTriggered = false;
-            awaitingOwnResponse = false;
+            ownTriggersOutstanding = 0;
             SHOWN.clear();
             PENDING.clear();
             java.util.Arrays.fill(HEARTS, 0);

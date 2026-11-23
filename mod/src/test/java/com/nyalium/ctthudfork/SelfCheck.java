@@ -1438,6 +1438,38 @@ public final class SelfCheck {
         // 所以这里只剩属性行那一条；关键是它确实进了面板缓冲。
         check(SelfStats.storedLineCount() == 1,
                 "迟到的属性行要照样进面板，实际 " + SelfStats.storedLineCount() + " 行");
+        check(SelfStats.outstandingAutoTriggers() == 0,
+                "收到我们自己那趟输出后欠账应清零，实际 " + SelfStats.outstandingAutoTriggers());
+
+        // ③.7 进存档时连发好几趟、服务端随后连回好几批：每一批都要吞
+        SelfStats.reset();
+        SelfStats.beginCapture(1_000L, true);
+        SelfStats.noteAutoTriggerSent(1_000L);
+        SelfStats.beginCapture(4_000L, true);
+        SelfStats.noteAutoTriggerSent(4_000L);
+        check(SelfStats.outstandingAutoTriggers() == 2, "两趟都没回 → 欠 2 批，实际 "
+                + SelfStats.outstandingAutoTriggers());
+        check(SelfStats.onGameMessage(lateTitle.copy(), false, 9_000L), "第一批标题要吞");
+        check(SelfStats.onGameMessage(lateStat.copy(), false, 9_010L), "第一批属性行要吞");
+        check(SelfStats.onGameMessage(lateTimer.copy(), false, 9_050L), "第一批计时行要吞");
+        check(SelfStats.outstandingAutoTriggers() == 1,
+                "第一批收完应还剩 1 批欠账，实际 " + SelfStats.outstandingAutoTriggers());
+        check(SelfStats.onGameMessage(lateTitle.copy(), false, 9_200L), "第二批标题也要吞");
+        check(SelfStats.onGameMessage(lateStat.copy(), false, 9_210L), "第二批属性行也要吞");
+        check(SelfStats.onGameMessage(lateTimer.copy(), false, 9_250L), "第二批计时行也要吞");
+        check(SelfStats.outstandingAutoTriggers() == 0,
+                "两批都收完欠账应清零，实际 " + SelfStats.outstandingAutoTriggers());
+        check(!SelfStats.onGameMessage(lateTitle.copy(), false, 20_000L),
+                "欠账清零后的手动触发不再吞（1.20.24 保住）");
+
+        // 欠账上限：地图一直不回也不会无限累积
+        SelfStats.reset();
+        for (int i = 0; i < SelfStats.MAX_OUTSTANDING_AUTO + 5; i++) {
+            SelfStats.noteAutoTriggerSent(1_000L + i);
+        }
+        check(SelfStats.outstandingAutoTriggers() == SelfStats.MAX_OUTSTANDING_AUTO,
+                "欠账应夹在上限 " + SelfStats.MAX_OUTSTANDING_AUTO + "，实际 "
+                        + SelfStats.outstandingAutoTriggers());
 
         // 窗口之外（玩家自己手动敲的 /trigger）：照旧显示在聊天栏
         SelfStats.reset();
