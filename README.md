@@ -27,10 +27,14 @@
 
 ## 下载
 
-| 版本 | 文件 | 说明 |
+jar 在 **GitHub Releases** 里：<https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases>
+
+| 版本 | 附件 | 说明 |
 | --- | --- | --- |
-| **1.0.3**（正式版 · 最新） | [`versions/v1.0.3/ctt-hud-fork-1.0.3.jar`](versions/v1.0.3/ctt-hud-fork-1.0.3.jar) | 客户端必装；同一个 jar 放服务端即启用权威数据推送（选装）。jar 里带上了本仓库地址（Mod Menu 的 Homepage / Source / Issues 会显示） |
-| 1.0.2 | [`versions/v1.0.2/ctt-hud-fork-1.0.2.jar`](versions/v1.0.2/ctt-hud-fork-1.0.2.jar) | 上一版，除联系方式外功能相同 |
+| **1.0.3**（最新） | `ctt-hud-fork-1.0.3.jar` + `-sources.jar` | 客户端必装；同一个 jar 放服务端即启用权威数据推送（选装）。jar 里带仓库地址（Mod Menu 的 Homepage / Source / Issues 会显示） |
+| 1.0.2 | `ctt-hud-fork-1.0.2.jar` + `-sources.jar` | 上一版，除联系方式外功能相同 |
+
+仓库里**不保存**任何 jar 或历史归档：完整版本索引见 [`RELEASES.md`](RELEASES.md)。
 
 > **1.0.0 / 1.0.1 已撤回**：这两个版本的 `LICENSE` 把上游版权人写成了仓库账号名（实际为 `Copyright (c) 2026 Kirin0321 (麒麟)`）。为免分发署名错误的产物，它们的 jar、归档与 tag 已从本仓库移除，**请只使用 1.0.2**。
 
@@ -59,7 +63,7 @@
 ```bash
 cd mod
 ./gradlew build        # 需要 JDK 25；会自动跑 selfCheck（4786 条断言）
-# 产物：mod/build/libs/ctt-hud-fork-1.0.3.jar
+# 产物：mod/build/libs/ctt-hud-fork-1.0.3.jar（本地构建用；正式包见 Releases）
 ```
 
 ## 目录结构
@@ -67,26 +71,23 @@ cd mod
 | 路径 | 内容 |
 | --- | --- |
 | `mod/` | 源码工程（Gradle + Loom，Minecraft 26.3 / Fabric） |
-| `versions/vX.Y.Z/` | **正式版的归档**（当前 v1.0.2 / v1.0.3）：jar、sources、README、RELEASE；发布前的测试版（1.10.0 – 1.20.42）**只在本地**，已被 `.gitignore` 排除 |
-| `versions/ARCHIVE.md` | 全部版本的清单（大小 / SHA-256 / 内嵌版本号 / git 标签） |
-| `versions/VERSIONING.md` | 版本保留规则（每版必留档，不覆盖、不删除）与上传流程 |
-| `versions/tools/archive_audit.py` | 归档审计：重新生成 `ARCHIVE.md` 并校验 |
-| `ctt-hud-fork-1.0.3.jar` | 最新版 jar（与 `versions/v1.0.3/` 中的字节一致） |
+| `RELEASES.md` | 正式版清单（版本 / 大小 / SHA-256 / Release 链接） |
+| `tools/archive_audit.py` | 归档审计：维护者本地校验 jar 与生成清单（`versions/` 不入库） |
 | `LICENSE` / `NOTICE.md` | MIT 许可（含上游 Fork 声明）/ 来源与第三方说明 |
 
-## 归档规则
+## 发布规则
 
-- 每个版本都必须有归档目录，**不覆盖、不删除**：**正式版**在 `versions/v1.0.x/` 并随仓库上传；**发布前的测试版**在本地 `versions/pre-release/vX.Y.Z/`（不进仓库）；
-- 归档内容：jar + sources + README + RELEASE（+ 实机截图）；
-- 每次发版后运行 `python versions/tools/archive_audit.py`，刷新 `versions/ARCHIVE.md`；
-- 根目录只保留**最新一版**的 jar，历史 jar 全部在 `versions/` 里。
+- **仓库里不放 jar**：正式版的 jar / sources / RELEASE 都作为 **GitHub Release 附件**发布；
+- 每个版本都要有归档，**不覆盖、不删除**（维护者本地 `versions/vX.Y.Z/`，已 `.gitignore` 排除）；
+- 测试版（1.10.0 – 1.20.42）只在本地 `versions/pre-release/`，不公开；
+- 维护者发版后运行 `python tools/archive_audit.py` 校验并刷新 `RELEASES.md`。
 
 ## 主要文档
 
 - 功能与配置详解：[`mod/README.md`](mod/README.md)（代码导览、配置字段表、界面文案 ↔ 字段对照）
 - 版本沿革：[`CHANGELOG.md`](CHANGELOG.md)
 - 最新版说明：[`versions/v1.0.3/RELEASE.md`](versions/v1.0.3/RELEASE.md)
-- 归档清单：[`versions/ARCHIVE.md`](versions/ARCHIVE.md)
+- 发布清单：[`RELEASES.md`](RELEASES.md)
 
 ## 许可
 
