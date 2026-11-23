@@ -11,7 +11,7 @@
 >
 > **客户端必装、服务端选装**：服务端只装 Fabric API 也能用完整功能。
 >
-> 当前正式版 **1.0.2**。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
+> 当前正式版 **1.0.3**。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
 
 ## 功能
 
@@ -29,7 +29,8 @@
 
 | 版本 | 文件 | 说明 |
 | --- | --- | --- |
-| **1.0.2**（正式版 · 唯一可用） | [`versions/v1.0.2/ctt-hud-fork-1.0.2.jar`](versions/v1.0.2/ctt-hud-fork-1.0.2.jar) | 客户端必装；同一个 jar 放服务端即启用权威数据推送（选装） |
+| **1.0.3**（正式版 · 最新） | [`versions/v1.0.3/ctt-hud-fork-1.0.3.jar`](versions/v1.0.3/ctt-hud-fork-1.0.3.jar) | 客户端必装；同一个 jar 放服务端即启用权威数据推送（选装）。jar 里带上了本仓库地址（Mod Menu 的 Homepage / Source / Issues 会显示） |
+| 1.0.2 | [`versions/v1.0.2/ctt-hud-fork-1.0.2.jar`](versions/v1.0.2/ctt-hud-fork-1.0.2.jar) | 上一版，除联系方式外功能相同 |
 
 > **1.0.0 / 1.0.1 已撤回**：这两个版本的 `LICENSE` 把上游版权人写成了仓库账号名（实际为 `Copyright (c) 2026 Kirin0321 (麒麟)`）。为免分发署名错误的产物，它们的 jar、归档与 tag 已从本仓库移除，**请只使用 1.0.2**。
 
@@ -58,7 +59,7 @@
 ```bash
 cd mod
 ./gradlew build        # 需要 JDK 25；会自动跑 selfCheck（4786 条断言）
-# 产物：mod/build/libs/ctt-hud-fork-1.0.2.jar
+# 产物：mod/build/libs/ctt-hud-fork-1.0.3.jar
 ```
 
 ## 目录结构
@@ -66,11 +67,11 @@ cd mod
 | 路径 | 内容 |
 | --- | --- |
 | `mod/` | 源码工程（Gradle + Loom，Minecraft 26.3 / Fabric） |
-| `versions/vX.Y.Z/` | **正式版的归档**（当前只有 v1.0.2）：jar、sources、README、RELEASE；发布前的测试版（1.10.0 – 1.20.42）**只在本地**，已被 `.gitignore` 排除 |
+| `versions/vX.Y.Z/` | **正式版的归档**（当前 v1.0.2 / v1.0.3）：jar、sources、README、RELEASE；发布前的测试版（1.10.0 – 1.20.42）**只在本地**，已被 `.gitignore` 排除 |
 | `versions/ARCHIVE.md` | 全部版本的清单（大小 / SHA-256 / 内嵌版本号 / git 标签） |
 | `versions/VERSIONING.md` | 版本保留规则（每版必留档，不覆盖、不删除）与上传流程 |
 | `versions/tools/archive_audit.py` | 归档审计：重新生成 `ARCHIVE.md` 并校验 |
-| `ctt-hud-fork-1.0.2.jar` | 最新版 jar（与 `versions/v1.0.2/` 中的字节一致） |
+| `ctt-hud-fork-1.0.3.jar` | 最新版 jar（与 `versions/v1.0.3/` 中的字节一致） |
 | `LICENSE` / `NOTICE.md` | MIT 许可（含上游 Fork 声明）/ 来源与第三方说明 |
 
 ## 归档规则
@@ -84,7 +85,7 @@ cd mod
 
 - 功能与配置详解：[`mod/README.md`](mod/README.md)（代码导览、配置字段表、界面文案 ↔ 字段对照）
 - 版本沿革：[`CHANGELOG.md`](CHANGELOG.md)
-- 最新版说明：[`versions/v1.0.2/RELEASE.md`](versions/v1.0.2/RELEASE.md)
+- 最新版说明：[`versions/v1.0.3/RELEASE.md`](versions/v1.0.3/RELEASE.md)
 - 归档清单：[`versions/ARCHIVE.md`](versions/ARCHIVE.md)
 
 ## 许可

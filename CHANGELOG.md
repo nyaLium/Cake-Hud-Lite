@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.0.3** | `fabric.mod.json` 增加 `contact`（homepage / sources / issues 指向 [nyaLium/CTT-HUD-Mod-Fork-Version](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version)），Mod Menu 的模组页会显示这三个链接；无代码改动 | `versions/v1.0.3/` |
 | **1.0.2** | 修正 LICENSE 里的上游版权署名：上游 Cake-Hud 的 LICENSE 写的是 `Copyright (c) 2026 Kirin0321 (麒麟)`（不是仓库账号名），根 `LICENSE` / `NOTICE.md` / `mod/LICENSE`（内嵌进 jar）与 `fabric.mod.json` 的 authors 一并更正；无代码改动 | `versions/v1.0.2/` |
 | ~~1.0.1~~ | 注释与文档岗位（无行为变化）—— **已撤回**（许可署名错误），归档从仓库移除 | — |
 | ~~1.0.0（正式版）~~ | 界面文案统一、删除面板「文字大小」与血条「垂直偏移」、显示方式默认 HUD + 容器界面、盾牌缩放步进 0.05、配置 v22、清理死代码 —— **已撤回**（许可署名错误），归档从仓库移除 | — |
@@ -94,6 +95,26 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.0.3
+
+### ① 内容
+
+| 文件 | 改动 |
+| --- | --- |
+| `fabric.mod.json` | 新增 `contact` 块：`homepage` / `sources` → `https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version`，`issues` → `…/issues`。Mod Menu 的模组详情页会显示这三个链接（之前没有联系方式） |
+| `gradle.properties` | `mod_version=1.0.3` |
+
+**无代码改动**：`checks=4786 failures=0`，行为与 1.0.2 完全一致。
+
+### ② 为什么单独发一版
+
+`fabric.mod.json` 会被打进 jar，加上 `contact` 后 jar 字节必然变化；按仓库规则「jar 与源码成对保留」，
+所以作为 1.0.3 归档，而不是覆盖 1.0.2 的产物。
+
+### ③ 配置
+
+不变（schema 22）。
 
 ## 1.0.2
 
