@@ -80,19 +80,11 @@ public final class SelfStatsLayoutScreen extends Screen {
                         : "ctt_hud_fork.config.selfStatsTarget.hud"));
     }
 
-    /** 「回到初始位置」：只重置当前这一套（1.20.41 起 HUD 那套回到「屏幕高 ÷ 3」）。 */
+    /** 「回到初始位置」：只重置当前这一套（1.20.41 起回到「屏幕高 ÷ 3」，容器那套自 1.20.42 起一样）。 */
     private void resetPosition() {
         HudConfig.resetPanelPosition(HudConfig.get().selfStatsMode, this.containerConfig);
         this.dragging = false;
         this.rebuildWidgets();
-    }
-
-    /** 面板位置的出厂值：HUD 那套是「x=4、y = 屏幕高 ÷ 3」，容器界面那套空在 y=20。 */
-    static final int DEFAULT_Y_CONTAINER = 20;
-
-    /** 纯函数（selfCheck 直接打）：当前对象对应的默认 y。 */
-    static int defaultY(boolean container, int guiH) {
-        return container ? DEFAULT_Y_CONTAINER : HudConfig.defaultPanelY(guiH);
     }
 
     private void back() {

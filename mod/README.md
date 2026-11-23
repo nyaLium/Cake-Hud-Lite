@@ -2,10 +2,10 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.20.41**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.20.42**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/字号/透明度，
 > 88 个属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
-> 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」（进服后先静默 3 s 再问）；1.20.40 把面板/盾牌的位置改成**相对位置**，窗口大小或 GUI 缩放变化后不再错位；1.20.41 面板默认位置改到**左侧偏上（y = 屏幕高 ÷ 3）**。
+> 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」（进服后先静默 3 s 再问）；1.20.40 把面板/盾牌的位置改成**相对位置**，窗口大小或 GUI 缩放变化后不再错位；1.20.41 面板默认位置改到**左侧偏上（y = 屏幕高 ÷ 3）**；1.20.42 容器界面那两套的默认位置也一样。
 >
 > **1.20.37 起彻底改名**：仓库 `CTT HUD - Fork`、Gradle 工程 `mod/`、包名 `com.nyalium.ctthudfork`、
 > 入口类 `CttHudForkClient` / `CttHudForkServer`、配置类 `HudConfig`、布局类 `HudLayout`、
@@ -15,11 +15,11 @@
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.20.41` |
+| 版本 | `1.20.42` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/ctt-hud-fork-1.20.41.jar` |
+| 产物 | `build/libs/ctt-hud-fork-1.20.42.jar` |
 
 ## 绘制方式（1.15.0 起）
 
@@ -397,7 +397,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 
 ```json
 {
-  "configVersion": 20,
+  "configVersion": 21,
   "enabled": true,
   "opacity": 0.75,
   "textShadow": false,
@@ -453,7 +453,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | `selfStatsMode` | 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，2 = HUD + 容器都显示；共 4 套配置（`selfStats*` / `container*` / `both*` / `bothContainer*`） | 0~2 |
 | `containerX/Y/Columns/Scale/Opacity` | 「在容器界面显示」那一套独立的位置/列数/字号/不透明度 | 0~4000 / 1~3 / 1.0~2.0 / 0.2~1.0 |
 | `hideBehindWalls` / `hideBehindEntities` / `autoPartyBossbar` | **写死**：前两项恒为 false、第三项恒为 true（1.20.15 起 normalize 强制，JSON 改了也无效） | — |
-| `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，1=立即，默认 3）/ 列数 / 左上角坐标（1.20.9 起界面上只能拖动，JSON 仍生效；**1.20.40 起是「量在 `layoutGuiW × layoutGuiH` 下」的相对位置**）；进他人服务器时强制 3 s 且不改这里；selfStatsY/bothY 的 **-1 = 动态默认**（屏幕高 ÷ 3，1.20.41） | 1~5 / 1~3 / 0~4000（y 可为 -1） |
+| `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，1=立即，默认 3）/ 列数 / 左上角坐标（1.20.9 起界面上只能拖动，JSON 仍生效；**1.20.40 起是「量在 `layoutGuiW × layoutGuiH` 下」的相对位置**）；进他人服务器时强制 3 s 且不改这里；自身与容器的四套 `*Y` 字段 **-1 = 动态默认**（屏幕高 ÷ 3；HUD 那两套 1.20.41、容器那两套 1.20.42） | 1~5 / 1~3 / 0~4000（y 可为 -1） |
 | `layoutGuiW` / `layoutGuiH` | 1.20.40：这些像素坐标是量在多大的 GUI 上的（`0` = 还不知道，第一次绘制时用当时尺寸补上）；窗口大小或 GUI 缩放变化后按比例换算，面板/盾牌不会错位 | 0~10000 |
 | `selfStatsScale` / `selfStatsOpacity` | 属性面板文字大小 / 不透明度 | 0.50~2.00（默认 1.0）/ 0.20~1.00（默认 1.0） |
 | `selfStatsHidden` | 要隐藏的属性（如 `["heart_red", "mana_recharge"]`）；共 88 项（属性 56 + 状态效果 28 + 其它 4），见 `SelfStatsKind`；旧配置里的粗类（`health`/`attack`/`status`/`misc`/…）会自动展开成细项 | — |
@@ -474,6 +474,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 > 老文件里没有这两个键 → 0 = 未知，第一次绘制时用当时尺寸补上，坐标值不用改）；
 > **v20 面板默认位置改成 `y = 屏幕高 ÷ 3`**（左侧偏上；`selfStatsY`/`bothY` 的 `-1` = 动态默认），
 > 只有仍停在旧默认 40 的才跟着改，自己拖过的不动；
+> **v21 容器界面那两套也一样**（`containerY`/`bothContainerY` 旧默认 20 → 动态默认），同样只动仍停在 20 的；
 > 只在「值仍等于旧默认值」时才迁移，手工调过的值不动，新字段一律有默认值。
 > 手改坏配置文件（类型不对 / JSON 语法错）时**保留上一份可用配置**并在日志里 warn，不再静默恢复默认。
 
@@ -542,7 +543,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**5392 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**5395 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
 护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）、
@@ -557,7 +558,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/ctt-hud-fork-1.20.41.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/ctt-hud-fork-1.20.42.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革
@@ -627,6 +628,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 | **1.20.39** | 改为「进存档 / 进服后静默 3 s 再自动问 ViewStats」：这之前不发 trigger、这期间来的 ViewStats 输出既不显示也不收进面板；手动触发照旧显示 |
 | **1.20.40** | 属性面板 / 盾牌指示器的位置改成**相对位置**：坐标连同「量它的那套 GUI 尺寸」（`layoutGuiW/H`）一起存，窗口大小或 GUI 缩放变化后按比例换算，不再错位；配置 v19 |
 | **1.20.41** | 面板**默认位置**改成 x=4、y = 屏幕高 ÷ 3（左侧偏上，随窗口走）；「回到初始位置」写回这个动态默认；配置 v20（只有仍停在旧默认 40 的才迁移） |
+| **1.20.42** | **容器界面**那两套面板的默认位置也改成 x=4、y = 屏幕高 ÷ 3（打开箱子/背包时同样在偏上 1/3）；配置 v21（只有仍停在旧默认 20 的才迁移） |
 
 ## 已知限制
 

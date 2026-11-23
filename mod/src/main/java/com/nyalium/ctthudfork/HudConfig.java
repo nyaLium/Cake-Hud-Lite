@@ -112,7 +112,8 @@ public final class HudConfig {
         public int selfStatsMode = 0;
         /** 容器界面那一套配置（模式 1 专用）。 */
         public int containerX = 4;
-        public int containerY = 20;
+        /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}；1.20.42）。 */
+        public int containerY = DEFAULT_Y_SENTINEL;
         public int containerColumns = 2;
         public double containerScale = 1.0;
         public double containerOpacity = 1.0;
@@ -125,7 +126,8 @@ public final class HudConfig {
         public double bothOpacity = 1.0;
         /** 模式 2 在容器界面上的那一套配置（1.20.18 起独立）。 */
         public int bothContainerX = 4;
-        public int bothContainerY = 20;
+        /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}）。 */
+        public int bothContainerY = DEFAULT_Y_SENTINEL;
         public int bothContainerColumns = 2;
         public double bothContainerScale = 1.0;
         public double bothContainerOpacity = 1.0;
@@ -210,7 +212,7 @@ public final class HudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 20;
+    public static final int CURRENT_VERSION = 21;
 
     /** 1.20.41：面板「默认位置」的哨兵值（{@code -1} = 用动态默认，见 {@link #defaultPanelY}）。 */
     public static final int DEFAULT_Y_SENTINEL = -1;
@@ -434,11 +436,11 @@ public final class HudConfig {
             c.selfStatsX = scalePos(c.selfStatsX, oldW, guiW);
             if (c.selfStatsY >= 0) c.selfStatsY = scalePos(c.selfStatsY, oldH, guiH);
             c.containerX = scalePos(c.containerX, oldW, guiW);
-            c.containerY = scalePos(c.containerY, oldH, guiH);
+            if (c.containerY >= 0) c.containerY = scalePos(c.containerY, oldH, guiH);
             c.bothX = scalePos(c.bothX, oldW, guiW);
             if (c.bothY >= 0) c.bothY = scalePos(c.bothY, oldH, guiH);
             c.bothContainerX = scalePos(c.bothContainerX, oldW, guiW);
-            c.bothContainerY = scalePos(c.bothContainerY, oldH, guiH);
+            if (c.bothContainerY >= 0) c.bothContainerY = scalePos(c.bothContainerY, oldH, guiH);
             if (c.shieldX >= 0) c.shieldX = scalePos(c.shieldX, oldW, guiW);
             if (c.shieldY >= 0) c.shieldY = scalePos(c.shieldY, oldH, guiH);
         }
@@ -471,14 +473,13 @@ public final class HudConfig {
         Cfg c = get();
         switch (mode) {
             case 1 -> {
-                // 容器界面那套的默认位置没变（贴着屏幕顶部 y=20）。
-                c.containerX = 4;
-                c.containerY = 20;
+                c.containerX = DEFAULT_X;
+                c.containerY = DEFAULT_Y_SENTINEL;
             }
             case 2 -> {
                 if (container) {
-                    c.bothContainerX = 4;
-                    c.bothContainerY = 20;
+                    c.bothContainerX = DEFAULT_X;
+                    c.bothContainerY = DEFAULT_Y_SENTINEL;
                 } else {
                     c.bothX = DEFAULT_X;
                     c.bothY = DEFAULT_Y_SENTINEL;
@@ -724,6 +725,12 @@ public final class HudConfig {
             if (cfg.selfStatsY == 40) cfg.selfStatsY = DEFAULT_Y_SENTINEL;
             if (cfg.bothY == 40) cfg.bothY = DEFAULT_Y_SENTINEL;
         }
+        if (version < 21) {
+            // 1.20.42：容器界面那两套的默认位置也改成「屏幕高 ÷ 3」（原来是贴着顶部的 y=20）。
+            // 同样只动仍停在旧默认 20 的那两套。
+            if (cfg.containerY == 20) cfg.containerY = DEFAULT_Y_SENTINEL;
+            if (cfg.bothContainerY == 20) cfg.bothContainerY = DEFAULT_Y_SENTINEL;
+        }
         cfg.configVersion = CURRENT_VERSION;
     }
 
@@ -762,7 +769,7 @@ public final class HudConfig {
         read.selfStatsMode = (int) clamp(read.selfStatsMode, 0.0, 2.0);
         read.containerColumns = (int) clamp(read.containerColumns, 1.0, 3.0);
         read.containerX = (int) clamp(read.containerX, 0.0, 4000.0);
-        read.containerY = (int) clamp(read.containerY, 0.0, 4000.0);
+        read.containerY = (int) clamp(read.containerY, -1.0, 4000.0);
         read.containerScale = clamp(read.containerScale, 1.0, 2.0);
         read.containerOpacity = clamp(read.containerOpacity, 0.2, 1.0);
         read.bothColumns = (int) clamp(read.bothColumns, 1.0, 3.0);
@@ -772,7 +779,7 @@ public final class HudConfig {
         read.bothOpacity = clamp(read.bothOpacity, 0.2, 1.0);
         read.bothContainerColumns = (int) clamp(read.bothContainerColumns, 1.0, 3.0);
         read.bothContainerX = (int) clamp(read.bothContainerX, 0.0, 4000.0);
-        read.bothContainerY = (int) clamp(read.bothContainerY, 0.0, 4000.0);
+        read.bothContainerY = (int) clamp(read.bothContainerY, -1.0, 4000.0);
         read.bothContainerScale = clamp(read.bothContainerScale, 1.0, 2.0);
         read.bothContainerOpacity = clamp(read.bothContainerOpacity, 0.2, 1.0);
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
