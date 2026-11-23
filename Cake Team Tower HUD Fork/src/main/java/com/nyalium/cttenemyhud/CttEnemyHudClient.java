@@ -18,7 +18,7 @@ import net.minecraft.resources.Identifier;
  * <p><b>客户端必装、服务端选装</b>：所有基础数据都从客户端可见的渠道取
  * （计分板展示槽、原版 Boss 栏标题 / 颜色 / 进度、实体、玩家列表），服务端<b>不需要</b>安装任何东西。
  * 服务端若额外装了本 Mod，会通过 {@link MobHealthPayload} 推来按 UUID 的权威数据，
- * 本端自动优先使用（{@code useServerData}）。</p>
+ * 本端自动优先使用（写死，1.20.35 起没有开关）。</p>
  *
  * <p>1.20.3 起多了<b>自身属性面板</b>（{@link SelfStats}）：它同样纯客户端——
  * 定时 {@code /trigger ViewStats} 问地图，再把地图回的属性行画成面板。

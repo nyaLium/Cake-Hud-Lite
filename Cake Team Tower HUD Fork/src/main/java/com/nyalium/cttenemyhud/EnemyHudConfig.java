@@ -21,7 +21,8 @@ import java.nio.file.Path;
  *   <li>自身属性面板的 4 套参数：模式 0 用 `selfStats*`、模式 1 用 `container*`、
  *       模式 2 分 `both*`（HUD）/ `bothContainer*`（容器界面）；</li>
  *   <li>盾牌指示器：`shield*`（`shieldX/Y = -1` = 跟随副手槽）；</li>
- *   <li>3 个写死的开关（见各自注释）：`autoPartyBossbar` / `hideBehindWalls`。</li>
+ *   <li>2 个写死的开关（见各自注释）：`autoPartyBossbar` / `hideBehindWalls`。
+ *       「优先使用服务端数据」1.20.35 起也写死开启，字段已删除。</li>
  * </ul>
  */
 public final class EnemyHudConfig {
@@ -52,11 +53,8 @@ public final class EnemyHudConfig {
          */
         public boolean showBar = true;
         /**
-         * 优先使用服务端选装组件推来的权威数据（{@link MobHealthPayload}）。
-         * 服务端没装本 Mod 时这一项无影响，自动回落到客户端 Boss 栏 + HealthPercent。
+         * 隐藏实体名称下方那条计分板分数（数据包的 HealthPercent 显示）。
          */
-        public boolean useServerData = true;
-        /** 隐藏实体名称下方那条计分板分数（数据包的 HealthPercent 显示）。 */
         public boolean hideBelowNameScore = true;
         /** 隐藏上方 Boss 栏里「最近敌人的信息」那一条（头顶已经画过了）。 */
         public boolean hideEnemyBossBar = true;
@@ -193,7 +191,7 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 17;
+    public static final int CURRENT_VERSION = 18;
 
     /** 盾牌指示器的缩放范围（倍）。1.20.22 起是小数倍，纹理整张等比缩放。 */
     public static final double SHIELD_SCALE_MIN = 0.5;
@@ -491,6 +489,11 @@ public final class EnemyHudConfig {
             // 沿用本文件的惯例：**只有仍停在旧默认值 1.0 时才跟着改**，自己调过的不覆盖。
             if (cfg.shieldScale == 1.0) cfg.shieldScale = 0.7;
             if (cfg.shieldOpacity == 1.0) cfg.shieldOpacity = 0.75;
+        }
+        if (version < 18) {
+            // 1.20.35：删掉 useServerData 字段 —— 服务端组件推来的权威数据写死优先
+            // （服务端没装本 Mod 时本来就会回落到客户端 Boss 栏 / HealthPercent）。
+            // 旧文件里的这个键读取时直接忽略。
         }
         if (version < 17) {
             // 1.20.34：删掉 1.20.33 短暂存在的 teamShowBar —— 队友整块由 showTeammates 管，

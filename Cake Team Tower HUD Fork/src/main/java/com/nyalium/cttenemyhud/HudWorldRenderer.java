@@ -79,7 +79,7 @@ public final class HudWorldRenderer {
         if (!HudTarget.visible(mc, entity)) return;
 
         boolean teammate = entity instanceof Player;
-        EnemyData.Snapshot data = resolveData(mc, entity, cfg, teammate);
+        EnemyData.Snapshot data = resolveData(mc, entity, teammate);
         if (data == null) return;
 
         EnemyHudLayout.Options options = teammate ? teamOptions(cfg) : options(cfg);
@@ -194,13 +194,13 @@ public final class HudWorldRenderer {
 
     // ── 数据 ──
 
-    private static EnemyData.Snapshot resolveData(Minecraft mc, Entity entity,
-                                                  EnemyHudConfig.Cfg cfg, boolean teammate) {
+    private static EnemyData.Snapshot resolveData(Minecraft mc, Entity entity, boolean teammate) {
         UUID id = entity.getUUID();
 
-        // 服务端选装组件优先：玩家和怪一样有 uuid/hp/四色心/碎心/粉心，
+        // 服务端选装组件写死优先（1.20.35 起没有开关）：玩家和怪一样有 uuid/hp/四色心/碎心/粉心，
         // 队友那一行因此也能画心数（没有 payload 时下面的回退只有 AllHearts/MaxHP）。
-        MobHealthPayload.Entry pushed = cfg.useServerData ? ClientMobHealthCache.lookup(id) : null;
+        // 服务端没装本 Mod 时 ClientMobHealthCache 里没有条目（或 5 s 后失鲜），自然回落到客户端通道。
+        MobHealthPayload.Entry pushed = ClientMobHealthCache.lookup(id);
         if (pushed != null) {
             // 玩家头顶是那条**绿条**：进度按 红心 ÷ MaxHP 填，不跟当前心类分层
             // （分层进度换色换满格，放在单色绿条上读不出来）。敌人仍按数据包口径。

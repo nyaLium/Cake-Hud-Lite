@@ -17,7 +17,6 @@
   "ctt_enemy_hud.config.hideEnemyBossBar": "隐藏上方Boss栏 - 最近敌人的信息",
   "ctt_enemy_hud.config.hideTeamBossBar": "隐藏上方Boss栏 - 队伍血量",
   "ctt_enemy_hud.config.showBar": "显示血条",
-  "ctt_enemy_hud.config.useServerData": "优先使用服务端数据",
   "ctt_enemy_hud.config.showTeammates": "显示血条",
   "ctt_enemy_hud.config.autoPartyBossbar": "自动开启队伍血量条",
   "ctt_enemy_hud.config.barWidth": "血条长度：%s",

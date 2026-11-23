@@ -93,8 +93,7 @@ public final class EntityHudSettingsScreen extends Screen {
         y = slider("verticalOffset", y, -30, 0, 1, () -> EnemyHudConfig.get().verticalOffset,
                 v -> key("verticalOffset", signed((int) Math.round(v))),
                 v -> EnemyHudConfig.get().verticalOffset = (int) Math.round(v), 1);
-        y = toggle("useServerData", y, 0, () -> EnemyHudConfig.get().useServerData,
-                v -> EnemyHudConfig.get().useServerData = v);
+        // 1.20.35：「优先使用服务端数据」写死开启，界面不再提供开关。
         y = header("ctt_enemy_hud.config.header.player", y);
         // 1.20.34：玩家那边只有一个「显示血条」＝整块开关（关掉后血条和文字都不画）。
         y = toggle("showTeammates", y, 0, () -> EnemyHudConfig.get().showTeammates,

@@ -17,7 +17,6 @@
   "ctt_enemy_hud.config.hideEnemyBossBar": "Hide top boss bar - nearest enemy info",
   "ctt_enemy_hud.config.hideTeamBossBar": "Hide top boss bar - party health",
   "ctt_enemy_hud.config.showBar": "Show bar",
-  "ctt_enemy_hud.config.useServerData": "Prefer server data",
   "ctt_enemy_hud.config.showTeammates": "Show bar",
   "ctt_enemy_hud.config.autoPartyBossbar": "Auto-enable party health bar",
   "ctt_enemy_hud.config.barWidth": "Bar length: %s",
