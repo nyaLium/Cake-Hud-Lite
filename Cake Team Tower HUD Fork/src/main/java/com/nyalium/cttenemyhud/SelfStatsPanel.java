@@ -186,6 +186,24 @@ final class SelfStatsPanel implements HudElement {
         return Math.max(0, Math.min(Math.max(0, screen - Math.max(1, size)), pos));
     }
 
+    /**
+     * 抓取判定（1.20.28）：点落在面板外 {@code margin} px 以内才算抓住。
+     *
+     * <p>拖动界面只认这个判定——点空白处不再改动位置，避免误触把面板/指示器挪走。</p>
+     */
+    static boolean grabHit(int[] bounds, int margin, double x, double y) {
+        if (bounds == null) return false;
+        int m = Math.max(0, margin);
+        return x >= bounds[0] - m && x <= bounds[0] + bounds[2] + m
+                && y >= bounds[1] - m && y <= bounds[1] + bounds[3] + m;
+    }
+
+    /** 拖动阈值（1.20.28）：按下后位移不到 {@code threshold} px 就当成「点了一下」，不写位置。 */
+    static boolean dragExceeds(double dx, double dy, int threshold) {
+        double t = Math.max(1, threshold);
+        return dx * dx + dy * dy >= t * t;
+    }
+
     /** 没有实时数据时，用这几行示例撑起预览（界面里不会显示假数据到 HUD）。 */
     static List<Component> demoLines() {
         List<Component> out = new ArrayList<>();

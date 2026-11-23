@@ -21,8 +21,8 @@ import java.util.List;
  *
  * <p>另外三条一起改：</p>
  * <ul>
- *   <li><b>整屏可抓</b>：按在面板上按偏移移动；按在空白处则把面板中心吸附到光标再开始拖，
- *       不会出现「明明看到了却抓不住」；</li>
+ *   <li><b>只在面板上按下 + 真的拖动才移动</b>（1.20.28）：点一下空白处、或按下后手抖 1 px
+ *       都不会改变坐标；想挪位置就按住面板拖；</li>
  *   <li><b>方向键微调</b>：←→↑↓ 每次 4 px，Shift 加速到 16 px（鼠标不好使时的兜底）；</li>
  *   <li><b>就地切换对象</b>：模式 2 下多一个「对象：HUD / 容器界面」按钮，
  *       不用退回上一页就能确认自己在拖哪一套。</li>
@@ -142,35 +142,51 @@ public final class SelfStatsLayoutScreen extends Screen {
     }
 
     // ── 拖拽（26.3 的输入事件是 MouseButtonEvent） ──
+    //
+    // 1.20.28：改成「必须真的拖」才移动 —— 只在面板上按下 → 拖动超过阈值才写位置；
+    // 点一下空白处或手抖 1 px 都不会改变坐标（之前是「整屏可抓 + 按下即吸附」，太容易误操作）。
+
+    /** 面板外这么多像素以内也算抓住（盾牌指示器只有 24×60，给它一点余量）。 */
+    private static final int GRAB_MARGIN = 4;
+    /** 按下后要移动这么多像素才算拖动。 */
+    private static final int DRAG_THRESHOLD = 2;
+
+    /** 按下点（GUI 坐标），用来判拖动阈值。 */
+    private double pressX;
+    private double pressY;
+    /** 本次按下之后是否已经真正开始拖动（超过阈值才置位）。 */
+    private boolean moved;
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
         // 先让按钮/滑块吃事件，别把「返回」「回到初始位置」的点击吞成拖动。
         if (super.mouseClicked(event, doubled)) return true;
-        if (acceptButton(event)) {
-            int[] bounds = currentBounds();
-            double[] gui = toGui(event);
-            if (inside(bounds, gui[0], gui[1])) {
-                // 抓在面板上：保留「按下的那一点」相对面板左上角的偏移，拖起来不跳。
-                this.dragOffsetX = gui[0] - bounds[0];
-                this.dragOffsetY = gui[1] - bounds[1];
-            } else {
-                // 按在空白处：把面板中心吸附到光标再开始拖（整屏可抓，不会出现「抓不住」）。
-                this.dragOffsetX = bounds[2] / 2.0;
-                this.dragOffsetY = bounds[3] / 2.0;
-            }
-            this.dragging = true;
-            applyDrag(gui[0], gui[1]);
-            return true;
-        }
-        return false;
+        if (!acceptButton(event)) return false;
+        int[] bounds = currentBounds();
+        double[] gui = toGui(event);
+        // 只允许在面板（含 4 px 余量）上按下开始抓；点空白处什么都不做。
+        if (!SelfStatsPanel.grabHit(bounds, GRAB_MARGIN, gui[0], gui[1])) return false;
+        this.dragOffsetX = gui[0] - bounds[0];
+        this.dragOffsetY = gui[1] - bounds[1];
+        this.pressX = gui[0];
+        this.pressY = gui[1];
+        this.moved = false;
+        this.dragging = true;
+        return true;
     }
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
         if (this.dragging) {
-            // 绝对定位：不用 dragX/dragY（某些后端给 0，累加式就永远拖不动）。
             double[] gui = toGui(event);
+            if (!this.moved) {
+                // 还没超过阈值：这次拖动可能是手抖，不写位置。
+                if (!SelfStatsPanel.dragExceeds(gui[0] - this.pressX, gui[1] - this.pressY, DRAG_THRESHOLD)) {
+                    return true;
+                }
+                this.moved = true;
+            }
+            // 绝对定位：不用 dragX/dragY（某些后端给 0，累加式就永远拖不动）。
             applyDrag(gui[0], gui[1]);
             return true;
         }
@@ -246,11 +262,6 @@ public final class SelfStatsLayoutScreen extends Screen {
     private List<Component> currentLines() {
         List<Component> lines = SelfStats.lines();
         return lines.isEmpty() ? SelfStatsPanel.demoLines() : lines;
-    }
-
-    private static boolean inside(int[] bounds, double x, double y) {
-        return x >= bounds[0] && x <= bounds[0] + bounds[2]
-                && y >= bounds[1] && y <= bounds[1] + bounds[3];
     }
 
     @Override

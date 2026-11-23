@@ -13,10 +13,11 @@ import net.minecraft.resources.Identifier;
  * <p>1.20.23：拖动方式改成上游 Cake-Hud 那种<b>绝对定位</b> —— 按下时记
  * 「鼠标 ↔ 指示器左上角」的偏移，移动时直接 {@code 鼠标位置 - 偏移}，
  * 不累加每帧增量（增量在某些输入后端是 0，累加式会「拖不动」）。
- * 另外支持方向键微调（4 px，Shift 16 px）。</p>
+ * 1.20.28 起只在指示器上按住并拖动才移动，点一下空白处不会挪位置。另外支持方向键微调（4 px，Shift 16 px）。</p>
  *
  * <p>预览用 {@code meter_0.png}，按当前 {@code shieldScale} 与 {@code shieldOpacity} 画；
- * 坐标存 {@code shieldX/shieldY}（GUI 像素，左上角；{@code -1} = 自动贴副手槽上方）。</p>
+ * 坐标存 {@code shieldX/shieldY}（GUI 像素，左上角；{@code -1} = 跟随副手槽的默认位置，见
+ * {@link ShieldIndicatorHud#defaultX}/{@link ShieldIndicatorHud#defaultY}）。</p>
  */
 public final class ShieldLayoutScreen extends Screen {
 
@@ -30,6 +31,14 @@ public final class ShieldLayoutScreen extends Screen {
     private boolean dragging;
     private double dragOffsetX;
     private double dragOffsetY;
+    /** 面板外这么多像素以内也算抓住（指示器只有 24×60，给它一点余量）。 */
+    private static final int GRAB_MARGIN = 4;
+    /** 按下后要移动这么多像素才算拖动（1.20.28：点一下不再挪位置）。 */
+    private static final int DRAG_THRESHOLD = 2;
+    /** 按下点（GUI 坐标）与「已经真正拖动」标记。 */
+    private double pressX;
+    private double pressY;
+    private boolean moved;
 
     public ShieldLayoutScreen(ShieldIndicatorSettingsScreen parent) {
         super(Component.translatable("ctt_enemy_hud.config.shieldMove"));
@@ -106,31 +115,33 @@ public final class ShieldLayoutScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
         if (super.mouseClicked(event, doubled)) return true;
-        if (accept(event)) {
-            EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
-            int w = ShieldIndicatorHud.scaledWidth(cfg.shieldScale);
-            int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
-            int[] pos = position(cfg);
-            double[] gui = toGui(event);
-            if (gui[0] >= pos[0] && gui[0] <= pos[0] + w && gui[1] >= pos[1] && gui[1] <= pos[1] + h) {
-                this.dragOffsetX = gui[0] - pos[0];
-                this.dragOffsetY = gui[1] - pos[1];
-            } else {
-                // 按在空白处也接住：把指示器中心吸附到光标，避免「抓不住」。
-                this.dragOffsetX = w / 2.0;
-                this.dragOffsetY = h / 2.0;
-            }
-            this.dragging = true;
-            applyDrag(gui[0], gui[1]);
-            return true;
-        }
-        return false;
+        if (!accept(event)) return false;
+        EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
+        int w = ShieldIndicatorHud.scaledWidth(cfg.shieldScale);
+        int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
+        int[] pos = position(cfg);
+        double[] gui = toGui(event);
+        // 1.20.28：只允许在指示器（含 4 px 余量）上按下开始抓；点空白处不再挪位置。
+        if (!SelfStatsPanel.grabHit(new int[]{pos[0], pos[1], w, h}, GRAB_MARGIN, gui[0], gui[1])) return false;
+        this.dragOffsetX = gui[0] - pos[0];
+        this.dragOffsetY = gui[1] - pos[1];
+        this.pressX = gui[0];
+        this.pressY = gui[1];
+        this.moved = false;
+        this.dragging = true;
+        return true;
     }
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
         if (this.dragging) {
             double[] gui = toGui(event);
+            if (!this.moved) {
+                if (!SelfStatsPanel.dragExceeds(gui[0] - this.pressX, gui[1] - this.pressY, DRAG_THRESHOLD)) {
+                    return true;
+                }
+                this.moved = true;
+            }
             applyDrag(gui[0], gui[1]);
             return true;
         }

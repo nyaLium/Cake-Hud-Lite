@@ -1677,6 +1677,23 @@ public final class SelfCheck {
         check(SelfStatsPanel.fitInScreen(900, 200, 800) == 600, "右下越界应夹到 屏幕-宽");
         check(SelfStatsPanel.fitInScreen(100, 200, 800) == 100, "屏内应保持");
         check(SelfStatsPanel.fitInScreen(300, 2_000, 800) == 0, "面板比屏幕还宽时贴 0");
+
+        // 1.20.28：拖动界面「只许拖、不许点」
+        int[] box = {100, 100, 40, 60};
+        check(SelfStatsPanel.grabHit(box, 4, 100, 100), "左上角内侧应能抓住");
+        check(SelfStatsPanel.grabHit(box, 4, 140, 160), "右下角内侧应能抓住");
+        check(SelfStatsPanel.grabHit(box, 4, 96, 96), "左上 −4 的余量内也应能抓住");
+        check(SelfStatsPanel.grabHit(box, 4, 144, 164), "右下 +4 的余量内也应能抓住");
+        check(!SelfStatsPanel.grabHit(box, 4, 95, 100), "超出余量（左 5 px）不该抓住");
+        check(!SelfStatsPanel.grabHit(box, 4, 100, 165), "超出余量（下 5 px）不该抓住");
+        check(!SelfStatsPanel.grabHit(null, 4, 0, 0), "bounds 为 null 时不该抓住");
+        check(!SelfStatsPanel.dragExceeds(0, 0, 2), "原地不动不算拖动");
+        check(!SelfStatsPanel.dragExceeds(1, 1, 2), "1 px 位移不算拖动（防手抖）");
+        check(SelfStatsPanel.dragExceeds(2, 0, 2), "2 px 位移算拖动");
+        check(SelfStatsPanel.dragExceeds(0, -2, 2), "向上/斜向位移也算拖动");
+        check(!SelfStatsPanel.dragExceeds(0, 0, 0), "阈值 0 会被兜底成 1，原地仍不算");
+        check(SelfStatsPanel.dragExceeds(1, 0, 0), "阈值 0 兜底后 1 px 就算拖动");
+
     }
 
     /**
