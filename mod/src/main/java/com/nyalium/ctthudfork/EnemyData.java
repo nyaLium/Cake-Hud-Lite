@@ -36,6 +36,7 @@ public final class EnemyData {
     public static final String[] ARMOR_OBJECTIVES = {
             "FireArmor", "IceArmor", "DarkArmor", "LightArmor", "TrueArmor", "WaterArmor", "ElectricArmor"
     };
+    /** 元素护甲字形与计分板 objective 的顺序（索引 0..6 对应火/真火/水/电/冰/暗/光）。 */
     public static final String[] ARMOR_ICONS = {
             "\uD83D\uDD25", "\u2603", "\u2620", "\u2600", "\uD83D\uDEE1", "\u2693", "\u26A1"
     };
@@ -57,7 +58,8 @@ public final class EnemyData {
         /** true = 只有百分比（读到的是 HealthPercent），画 "73%" 而不是 "73/120"。 */
         public final boolean percentOnly;
         public final int percent;
-        public final int defence;
+        /** 护甲（{@code 🛡 防御}，数据包 {@code Defence}；0 = 没有）。 */
+    public final int defence;
         /** 7 档元素护甲，0 = 没有。 */
         public final int[] armor;
         /** 各类心的数量；{@link HeartCounts#unknown()} = 拆不出来，界面退回「当前/最大」。 */
@@ -82,7 +84,8 @@ public final class EnemyData {
             this.ratio = Math.max(0.0f, Math.min(1.0f, Float.isNaN(ratio) ? 0.0f : ratio));
         }
 
-        public boolean hasArmor() {
+        /** 有没有要画的护甲段（{@code 🛡 防御} 或任一元素护甲非 0）。 */
+    public boolean hasArmor() {
             if (defence != 0) return true;
             for (int v : armor) {
                 if (v != 0) return true;

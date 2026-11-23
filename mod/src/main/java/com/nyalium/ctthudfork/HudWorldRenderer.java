@@ -115,7 +115,7 @@ public final class HudWorldRenderer {
         }
 
         // ② 文字行：自己用 submitText 提交。
-        //    原版 submitNameTag 把颜色写死成不透明白、缩放写死 0.025，导致「不透明度」和
+        //    原版 submitNameTag 把颜色写死成不透明白、缩放写死 0.025，导致「透明度」和
         //    「缩放」对文字完全无效；自己提交后两者都生效（背景框仍按原版 y-1 ~ y+9 画）。
         int alpha = (int) Math.round(255.0 * cfg.opacity);
         int bgAlpha = (int) Math.round(0x40 * cfg.opacity);   // 原版名牌底色 ≈ 25% 黑
@@ -140,7 +140,7 @@ public final class HudWorldRenderer {
      *       这就是原版名牌那层「透视副本」：隔墙也能隐约看到，挡住时也不会整块消失。</li>
      * </ol>
      *
-     * <p>与原版 {@code submitNameTag} 的差别只有：颜色带 {@code opacity} 的 alpha（不透明度生效）、
+     * <p>与原版 {@code submitNameTag} 的差别只有：颜色带 {@code opacity} 的 alpha（透明度生效）、
      * 缩放可调。字形阴影（{@code textShadow}）两遍都跟着走。</p>
      */
     private static void submitRows(SubmitNodeCollector collector, PoseStack pose,

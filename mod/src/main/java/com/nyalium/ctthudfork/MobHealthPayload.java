@@ -56,6 +56,7 @@ public record MobHealthPayload(byte version, List<Entry> entries) implements Cus
             new CustomPacketPayload.Type<>(
                     Identifier.fromNamespaceAndPath("ctt-hud-fork", "mob_health"));
 
+    /** 线上编解码器：{@code write} / {@code read} 这一对，注册见 {@code CttHudForkServer}。 */
     public static final StreamCodec<RegistryFriendlyByteBuf, MobHealthPayload> CODEC =
             CustomPacketPayload.codec(MobHealthPayload::write, MobHealthPayload::read);
 

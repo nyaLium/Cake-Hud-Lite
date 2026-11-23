@@ -22,10 +22,11 @@ import net.minecraft.resources.Identifier;
  *
  * <p>1.20.3 起多了<b>自身属性面板</b>（{@link SelfStats}）：它同样纯客户端——
  * 定时 {@code /trigger ViewStats} 问地图，再把地图回的属性行画成面板。
- * 1.20.4 起面板支持内容过滤 / 拖动定位，并可用 {@code F8} 直接打开设置。</p>
+ * 1.20.4 起面板支持显示内容过滤（旧名「内容过滤」）/ 调整位置（旧名「移动面板」），并可用 {@code F8} 直接打开设置。</p>
  */
 public final class CttHudForkClient implements ClientModInitializer {
 
+    /** 模组 id：与 {@code fabric.mod.json} 的 {@code id}、资源命名空间一致。 */
     public static final String MOD_ID = "ctt-hud-fork";
 
     /**

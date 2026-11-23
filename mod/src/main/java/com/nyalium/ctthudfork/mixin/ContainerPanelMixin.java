@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <p>属性面板本身是 HUD 元素，打开任何 Screen 时 HUD 就不再绘制；这个 mixin 挂在
  * {@code Screen.extractRenderState} 的末尾，只在 {@link AbstractContainerScreen} 上生效，
- * 并使用<b>容器那一套</b>位置 / 列数 / 缩放 / 不透明度（见 {@code HudConfig.panel(mode, true)}）。</p>
+ * 并使用<b>容器那一套</b>位置 / 列数 / 透明度（见 {@code HudConfig.panel(mode, true, guiW, guiH)}）。</p>
  *
  * <p>仅为客户端 mixin，见 {@code ctt_hud_fork.mixins.json}。</p>
  */

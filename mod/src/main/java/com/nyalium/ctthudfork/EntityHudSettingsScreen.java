@@ -17,9 +17,29 @@ import java.util.function.DoubleFunction;
 import java.util.function.DoubleSupplier;
 
 /**
- * 「实体血条设置」（1.20.19 合并原通用/敌人/玩家；1.20.20 修正滚动并加滚动条）。
+ * 「血条设置」（旧名「实体血条设置」；1.20.19 合并原通用/敌人/玩家；1.20.20 修正滚动并加滚动条）。
  *
  * <p>单列 + 分组标题；内容超出可视区时滚轮滚动，右侧显示滚动条并夹住上下限。</p>
+ *
+ * <h2>行 ↔ 配置字段</h2>
+ * <table>
+ *   <tr><th>组</th><th>行</th><th>字段</th><th>说明</th></tr>
+ *   <tr><td>通用</td><td>文字阴影</td><td>{@code textShadow}</td><td>只管头顶血条；默认关</td></tr>
+ *   <tr><td>通用</td><td>隐藏名称下方分数</td><td>{@code hideBelowNameScore}</td><td>—</td></tr>
+ *   <tr><td>通用</td><td>隐藏上方 Boss 栏（最近敌人）</td><td>{@code hideEnemyBossBar}</td><td>数据照常读取</td></tr>
+ *   <tr><td>通用</td><td>隐藏上方 Boss 栏（队伍血量）</td><td>{@code hideTeamBossBar}</td><td>队友数据源</td></tr>
+ *   <tr><td>通用</td><td>透明度</td><td>{@code opacity}</td><td>0.50~1.00，默认 0.75</td></tr>
+ *   <tr><td>敌人</td><td>显示血条</td><td>{@code showBar}</td><td>整块开关</td></tr>
+ *   <tr><td>敌人</td><td>最远显示距离</td><td>{@code maxDistance}</td><td>4~256 格，默认 48</td></tr>
+ *   <tr><td>敌人</td><td>血条长度</td><td>{@code barWidth}</td><td>50~150，默认 75</td></tr>
+ *   <tr><td>敌人</td><td>缩放比例</td><td>{@code scale}</td><td>0.75~1.50，默认 0.9</td></tr>
+ *   <tr><td>玩家</td><td>显示血条</td><td>{@code showTeammates}</td><td>整块开关；自己永不显示</td></tr>
+ *   <tr><td>玩家</td><td>最远显示距离</td><td>{@code teamMaxDistance}</td><td>4~256 格，默认 48</td></tr>
+ *   <tr><td>玩家</td><td>血条长度</td><td>{@code teamBarWidth}</td><td>50~150，默认 75</td></tr>
+ *   <tr><td>玩家</td><td>缩放比例</td><td>{@code teamScale}</td><td>0.75~1.50，默认 0.9</td></tr>
+ * </table>
+ *
+ * <p>1.0.0 删掉了两处「垂直偏移」（{@code verticalOffset} / {@code teamVerticalOffset}）：布局固定为 {@code TEXT_TOP} / {@code BAR_TOP}。</p>
  */
 public final class EntityHudSettingsScreen extends Screen {
 
@@ -71,34 +91,50 @@ public final class EntityHudSettingsScreen extends Screen {
     private void buildRows() {
         if (!rows.isEmpty()) return;
         int y = 0;
+        // ── 通用 ──
         y = header("ctt_hud_fork.config.header.general", y);
+        // 文字阴影：textShadow（只管头顶血条，默认关；面板有自己的一项）
         y = toggle("textShadow", y, 0, () -> HudConfig.get().textShadow, v -> HudConfig.get().textShadow = v);
+        // 隐藏名称下方分数：hideBelowNameScore（信息已由血条表达）
         y = toggle("hideBelowNameScore", y, 0, () -> HudConfig.get().hideBelowNameScore,
                 v -> HudConfig.get().hideBelowNameScore = v);
+        // 隐藏上方「最近敌人」Boss 栏：hideEnemyBossBar（数据照常读取）
         y = toggle("hideEnemyBossBar", y, 0, () -> HudConfig.get().hideEnemyBossBar,
                 v -> HudConfig.get().hideEnemyBossBar = v);
+        // 隐藏上方「队伍血量」Boss 栏：hideTeamBossBar（队友数据源，读不画）
         y = toggle("hideTeamBossBar", y, 0, () -> HudConfig.get().hideTeamBossBar,
                 v -> HudConfig.get().hideTeamBossBar = v);
+        // 透明度：opacity（界面上是 50~100%，存 0.50~1.00；文字与血条共用）
         y = slider("opacity", y, 50, 100, 1, () -> HudConfig.get().opacity * 100,
                 v -> key("opacity", Math.round(v) + "%"),
                 v -> HudConfig.get().opacity = v / 100.0, 0);
+        // ── 敌人 ──
         y = header("ctt_hud_fork.config.header.enemy", y);
+        // 显示血条：showBar（整块开关：关掉后血条 + 心数/护甲文字都不画，只剩原版名字）
         y = toggle("showBar", y, 0, () -> HudConfig.get().showBar, v -> HudConfig.get().showBar = v);
+        // 最远显示距离：maxDistance（4~128 格，步进 4，默认 48）
         y = slider("maxDistance", y, 4, 128, 4, () -> HudConfig.get().maxDistance,
                 v -> key("maxDistance", (int) Math.round(v)), v -> HudConfig.get().maxDistance = v, 1);
+        // 血条长度：barWidth（50~150 原版名牌像素，默认 75）
         y = slider("barWidth", y, 50, 150, 1, () -> HudConfig.get().barWidth,
                 v -> key("barWidth", (int) Math.round(v)), v -> HudConfig.get().barWidth = v, 1);
+        // 缩放比例：scale（0.75~1.50，默认 0.9；整组 UI 缩放）
         y = slider("scale", y, 0.75, 1.5, 0.05, () -> HudConfig.get().scale,
                 v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> HudConfig.get().scale = v, 1);
         // 1.20.35：「优先使用服务端数据」写死开启，界面不再提供开关。
+        // ── 玩家 ──
         y = header("ctt_hud_fork.config.header.player", y);
         // 1.20.34：玩家那边只有一个「显示血条」＝整块开关（关掉后血条和文字都不画）。
+        // showTeammates：自己永远不显示，只画队友
         y = toggle("showTeammates", y, 0, () -> HudConfig.get().showTeammates,
                 v -> HudConfig.get().showTeammates = v);
+        // 最远显示距离：teamMaxDistance（与敌人同区间，文案共用 maxDistance 那一行）
         y = slider("teamMaxDistance", y, 4, 128, 4, () -> HudConfig.get().teamMaxDistance,
                 v -> key("maxDistance", (int) Math.round(v)), v -> HudConfig.get().teamMaxDistance = v, 2);
+        // 血条长度：teamBarWidth
         y = slider("teamBarWidth", y, 50, 150, 1, () -> HudConfig.get().teamBarWidth,
                 v -> key("barWidth", (int) Math.round(v)), v -> HudConfig.get().teamBarWidth = v, 2);
+        // 缩放比例：teamScale
         y = slider("teamScale", y, 0.75, 1.5, 0.05, () -> HudConfig.get().teamScale,
                 v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> HudConfig.get().teamScale = v, 2);
         lastY = y;

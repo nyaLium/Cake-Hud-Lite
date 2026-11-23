@@ -35,7 +35,7 @@ public final class HudConfig {
         public int configVersion = CURRENT_VERSION;
         /** 总开关：false 时完全不绘制。 */
         public boolean enabled = true;
-        /** 整体不透明度，0.50 ~ 1.00（低于 0.50 会被夹到 0.50）。 */
+        /** 血条 + 文字的透明度，0.50 ~ 1.00（低于 0.50 会被夹到 0.50）。界面上叫「透明度」（1.0.0 起统一）。 */
         public double opacity = 0.75;
         /**
          * 实体血条（名字 / 心数 / 护甲）是否带文字阴影。
@@ -68,9 +68,9 @@ public final class HudConfig {
         public boolean hideTeamBossBar = true;
         /** 玩家血条长度（原版名牌像素），默认 75。 */
         public double teamBarWidth = 75.0;
-        /** 玩家血条整体缩放。 */
+        /** 玩家血条的缩放比例（界面文案「缩放比例」）。 */
         public double teamScale = 0.9;
-        /** 玩家血条显示距离（格）。 */
+        /** 玩家血条最远显示距离（格，界面文案「最远显示距离」）。 */
         public double teamMaxDistance = 48.0;
         /** 超过这个距离（格）不再绘制。 */
         public double maxDistance = 48.0;
@@ -105,21 +105,27 @@ public final class HudConfig {
         public int containerX = 4;
         /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}；1.20.42）。 */
         public int containerY = DEFAULT_Y_SENTINEL;
+        /** 容器那套的列数（1~3）。 */
         public int containerColumns = 2;
+        /** 容器那套的透明度（0.20~1.00）。 */
         public double containerOpacity = 1.0;
         /** 模式 2 在 HUD 上的那一套配置。 */
         public int bothX = 4;
         /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}）。 */
         public int bothY = DEFAULT_Y_SENTINEL;
+        /** 模式 2 HUD 那套的列数（1~3）。 */
         public int bothColumns = 2;
+        /** 模式 2 HUD 那套的透明度（0.20~1.00）。 */
         public double bothOpacity = 1.0;
         /** 模式 2 在容器界面上的那一套配置（1.20.18 起独立）。 */
         public int bothContainerX = 4;
         /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}）。 */
         public int bothContainerY = DEFAULT_Y_SENTINEL;
+        /** 模式 2 容器那套的列数（1~3）。 */
         public int bothContainerColumns = 2;
+        /** 模式 2 容器那套的透明度（0.20~1.00）。 */
         public double bothContainerOpacity = 1.0;
-        /** 属性面板文字不透明度，0.20 ~ 1.00（1.20.4）。 */
+        /** 属性面板透明度，0.20 ~ 1.00（1.20.4 起可调；1.0.0 起界面文案叫「透明度」）。 */
         public double selfStatsOpacity = 1.0;
         /**
          * 属性面板文字阴影（1.20.32 起独立）。
@@ -146,10 +152,11 @@ public final class HudConfig {
          * 水平对准副手物品格中心（右手玩家 = 快捷栏左侧 {@code guiW/2 - 109}），底边距屏幕底 76 px。
          */
         public int shieldX = -1;
+        /** 同 {@link #shieldX}；两个都为 -1 时才走「跟随副手槽」的默认位置。 */
         public int shieldY = -1;
         /** 缩放倍率（1.0 = 纹理原尺寸 34×86；1.20.22 起允许 0.5~1.5 的小数倍；1.20.26 起默认 0.7）。 */
         public double shieldScale = 0.7;
-        /** 不透明度 0.1~1.0（1.20.26 起默认 0.75；1.20.32 起默认 0.65）。 */
+        /** 透明度 0.1~1.0（1.20.26 起默认 0.75；1.20.32 起默认 0.65；界面文案「透明度」）。 */
         public double shieldOpacity = 0.65;
 
         /**
@@ -164,6 +171,7 @@ public final class HudConfig {
          * 平时窗口怎么变都不改它，这样换算才有基准。</p>
          */
         public int layoutGuiW = 0;
+        /** 同 {@link #layoutGuiW}；两个必须同时有效（任一为 0 就当未知，绘制时重新记录）。 */
         public int layoutGuiH = 0;
     }
 
@@ -173,11 +181,21 @@ public final class HudConfig {
      * {@link Cfg#selfStatsHidden}。
      */
     public static final class Panel {
+        /** 当前 GUI 尺寸下的左上角 x（已按相对位置换算，直接画即可）。 */
         public final int x;
+        /** 当前 GUI 尺寸下的左上角 y（{@code -1} 已解析成「屏幕高 ÷ 3」）。 */
         public final int y;
+        /** 列数（1~3，列优先排版）。 */
         public final int columns;
+        /** 整块文字的透明度（0.20~1.00）。 */
         public final double opacity;
 
+        /**
+         * @param x       当前 GUI 下的左上角 x（已换算）
+         * @param y       当前 GUI 下的左上角 y（已换算，不会为 -1）
+         * @param columns 列数 1~3
+         * @param opacity 透明度 0.20~1.00
+         */
         public Panel(int x, int y, int columns, double opacity) {
             this.x = x;
             this.y = y;
@@ -292,7 +310,7 @@ public final class HudConfig {
     /**
      * 当前显示方式 + 上下文对应的布局，位置按当前 GUI 尺寸换算（1.20.40）。
      *
-     * @param guiW 当前 GUI 宽；{@code <=0} = 不换算（只取列数/缩放/不透明度的调用点用）
+     * @param guiW 当前 GUI 宽；{@code <=0} = 不换算（只取列数 / 透明度这类与位置无关的字段时可用）
      * @param guiH 当前 GUI 高
      */
     public static Panel panel(int mode, boolean container, int guiW, int guiH) {
@@ -461,7 +479,9 @@ public final class HudConfig {
         }
     }
 
-    public static void setPanelColumns(int mode, boolean container, int columns) {        Cfg c = get();
+    /** 写当前显示方式 + 上下文那一套的列数（1~3）。 */
+    public static void setPanelColumns(int mode, boolean container, int columns) {
+        Cfg c = get();
         switch (mode) {
             case 1 -> c.containerColumns = columns;
             case 2 -> {
@@ -472,6 +492,7 @@ public final class HudConfig {
         }
     }
 
+    /** 写当前显示方式 + 上下文那一套的透明度（0.20~1.00）。 */
     public static void setPanelOpacity(int mode, boolean container, double opacity) {
         Cfg c = get();
         switch (mode) {
@@ -671,7 +692,7 @@ public final class HudConfig {
         read.selfStatsX = (int) clamp(read.selfStatsX, 0.0, 4000.0);
         // 1.20.41：y = -1 是「动态默认位置」的哨兵，允许保留。
         read.selfStatsY = (int) clamp(read.selfStatsY, -1.0, 4000.0);
-        // 1.20.4：文字缩放、不透明度、内容过滤；1.20.14 起字号最小 1.00、范围 1.0~2.0
+        // 1.20.4：透明度、内容过滤（「文字大小」在 1.0.0 删掉，面板固定 1.0 倍）
         read.selfStatsOpacity = clamp(read.selfStatsOpacity, 0.2, 1.0);
         // 1.20.14：显示方式（0=始终显示 HUD，1=在容器界面显示）+ 容器那一套配置
         read.selfStatsMode = (int) clamp(read.selfStatsMode, 0.0, 2.0);

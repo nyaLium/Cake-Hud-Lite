@@ -14,6 +14,20 @@ import java.util.function.DoubleFunction;
 
 /**
  * 「属性面板设置」（1.20.20 从子页面独立成可滚动界面，带右侧滚动条）。
+ *
+ * <h2>行 ↔ 配置字段（从上到下的顺序）</h2>
+ * <table>
+ *   <tr><th>行</th><th>字段</th><th>范围 / 默认</th></tr>
+ *   <tr><td>开关</td><td>{@code showSelfStats}</td><td>默认开</td></tr>
+ *   <tr><td>刷新间隔</td><td>{@code selfStatsSeconds}</td><td>1~5 秒，默认 3；他人服务器强制 3 s 且滑条禁用</td></tr>
+ *   <tr><td>列数</td><td>{@code *Columns}</td><td>1~3，默认 2</td></tr>
+ *   <tr><td>透明度</td><td>{@code *Opacity}</td><td>0.20~1.00，默认 1.0</td></tr>
+ *   <tr><td>文字阴影</td><td>{@code selfStatsTextShadow}</td><td>默认开（与实体血条 {@code textShadow} 分开）</td></tr>
+ *   <tr><td>显示方式</td><td>{@code selfStatsMode}</td><td>0 HUD / 1 容器 / 2 两者，默认 2</td></tr>
+ *   <tr><td>编辑对象</td><td>（仅模式 2）</td><td>HUD 那套 ↔ 容器那套</td></tr>
+ *   <tr><td>调整位置…</td><td>{@code *X / *Y} + {@code layoutGuiW/H}</td><td>拖到哪存哪；{@code -1} = 屏幕高 ÷ 3</td></tr>
+ *   <tr><td>显示内容过滤…</td><td>{@code selfStatsHidden}</td><td>88 项，默认全显示</td></tr>
+ * </table>
  */
 public final class SelfStatsSettingsScreen extends Screen {
 
@@ -56,14 +70,23 @@ public final class SelfStatsSettingsScreen extends Screen {
         HudConfig.Panel panel = HudConfig.panel(mode, mode == 1 || (mode == 2 && editContainer),
                 this.width, this.height);
         int y = 0;
+        // 总开关：showSelfStats（整个模组的总开关是 enabled，不在这页）
         y = toggle("showSelfStats", y);
+        // 刷新间隔：selfStatsSeconds（1~5 秒，默认 3；1.0.0 起没有「立即」档）
         y = slider("selfStatsSeconds", y, 1, 5, 1, cfg.selfStatsSeconds, mode);
+        // 列数：*Columns（当前编辑的那一套：selfStats* / container* / both* / bothContainer*）
         y = slider("selfStatsColumns", y, 1, 3, 1, panel.columns, mode);
+        // 透明度：*Opacity（0.20~1.00；界面文案 1.0.0 起叫「透明度」）
         y = slider("selfStatsOpacity", y, 0.2, 1.0, 0.05, panel.opacity, mode);
+        // 文字阴影：selfStatsTextShadow（只管面板，与实体血条 textShadow 分开）
         y = toggle("selfStatsTextShadow", y);
+        // 显示方式：selfStatsMode（0 HUD / 1 容器 / 2 两者；循环顺序见 nextMode）
         y = button("selfStatsMode", y, "mode");
+        // 编辑对象：仅模式 2，切换 HUD 那套 / 容器那套
         if (mode == 2) y = button("selfStatsTarget", y, "target");
+        // 调整位置…：进 SelfStatsLayoutScreen（拖动 / 方向键，写 *X/*Y + layoutGuiW/H）
         y = button("selfStatsMove", y, "move");
+        // 显示内容过滤…：进 SelfStatsFilterScreen（88 项，三节；写 selfStatsHidden）
         y = button("selfStatsFilter", y, "filter");
         contentHeight = y;
     }
@@ -300,7 +323,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         this.minecraft.gui.setScreen(this.menu);
     }
 
-    /** 「移动面板」里就地切换了 HUD / 容器界面后，回到本页要跟着变。 */
+    /** 「调整位置…」里就地切换了 HUD / 容器界面后，回到本页要跟着变。 */
     void setEditContainer(boolean editContainer) {
         this.editContainer = editContainer;
     }

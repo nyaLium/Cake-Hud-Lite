@@ -28,8 +28,11 @@ public final class BossBarTitle {
     /** 玩家自己 / 队友的 bossbar 用 " (/)" 之类标记，遇到就不当作怪物条。 */
     private static final Pattern TEAM_MARK = Pattern.compile("[（(]\\s*/\\s*[）)]");
 
+    /** 括号前的名字（已 trim；名字里出现括号就判定为「不是怪物条」）。 */
     public final String name;
+    /** 括号里的当前血量（可能是负数，数据包会这么发）。 */
     public final int hp;
+    /** 括号里的血量上限；{@code <= 0} 视为解析失败（不当作怪物条）。 */
     public final int maxHp;
 
     private BossBarTitle(String name, int hp, int maxHp) {

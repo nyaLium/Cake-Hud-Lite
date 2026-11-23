@@ -58,8 +58,11 @@ public final class HudLayout {
     public static final int ROW_STEP = TEXT_BOX_HEIGHT;
 
     /** 血条长度的允许范围与默认值（原版名牌像素）。默认 75（1.18.0 起）。 */
+    /** 血条长度下限（原版名牌像素）。 */
     public static final int BAR_WIDTH_MIN = 50;
+    /** 血条长度上限。 */
     public static final int BAR_WIDTH_MAX = 150;
+    /** 血条长度默认值（1.18.0 起 75，旧默认 100 会被迁移改掉）。 */
     public static final int BAR_WIDTH_DEFAULT = 75;
 
     /** 同一行内各段之间的间隔（各类心之间、元素护甲之间）。 */
@@ -86,10 +89,13 @@ public final class HudLayout {
 
     /** 一帧布局需要的开关（与 {@link HudConfig.Cfg} 解耦，便于测试）。 */
     public static final class Options {
+        /** 是否画血量数字（敌人：{@code 当前/上限} 或百分比）。 */
         public boolean showNumbers = true;
         /** 血量数字优先用心数（红/魂/黑/蓝/碎），拆不出来时才退回「当前/最大」。 */
         public boolean showHearts = true;
+        /** 是否画护甲段（玩家侧固定关，见 {@code HudWorldRenderer#teamOptions}）。 */
         public boolean showArmor = true;
+        /** 是否画血条（敌人 / 玩家都是「整块」开关的一部分）。 */
         public boolean showBar = true;
         /** 固定长度（原版名牌像素），夹在 BAR_WIDTH_MIN ~ BAR_WIDTH_MAX。 */
         public double barWidth = BAR_WIDTH_DEFAULT;
@@ -116,7 +122,9 @@ public final class HudLayout {
 
     /** 一段带颜色的文字。 */
     public static final class Line {
+        /** 这一段的文字（已按段切开，绘制时不再做样式解析）。 */
         public final String text;
+        /** 这一段的颜色（0xRRGGBB，不含 alpha）。 */
         public final int rgb;
 
         Line(String text, int rgb) {
@@ -160,11 +168,15 @@ public final class HudLayout {
         public final List<Row> rows;
         /** 所有行扁平化后的段（调试 / 测试用）。 */
         public final List<Line> lines;
+        /** 最宽那一行文字的像素宽（排版列宽用）。 */
         public final int textWidth;
+        /** 解析后的血条长度（已夹进 BAR_WIDTH_MIN~MAX；{@code showBar=false} 时为 0）。 */
         public final int barWidth;
         /** 最下面一行的文字顶部（多行时上面的行依次再往上 ROW_STEP 像素）。 */
         public final int textTop;
+        /** 血条顶部的相对 y（{@code BAR_TOP}）。 */
         public final int barTop;
+        /** 是否有任何文字行（{@code false} 时只画血条）。 */
         public final boolean hasText;
 
         Result(List<Row> rows, List<Line> lines, int textWidth, int barWidth,
@@ -409,6 +421,7 @@ public final class HudLayout {
         return Math.max(BAR_WIDTH_MIN, Math.min(BAR_WIDTH_MAX, width));
     }
 
+    /** 这一实体有没有护甲段要画（{@code 🛡 防御} 非 0 或任一元素护甲非 0）。 */
     public static boolean hasArmor(int defence, int[] armor) {
         if (defence != 0) return true;
         if (armor == null) return false;

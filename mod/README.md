@@ -2,7 +2,7 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.0.0（正式版）**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.0.1**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/透明度，
 > 88 个属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
 > 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」（进服后先静默 3 s 再问）；1.20.40 把面板/盾牌的位置改成**相对位置**，窗口大小或 GUI 缩放变化后不再错位；1.20.41 面板默认位置改到**左侧偏上（y = 屏幕高 ÷ 3）**；1.20.42 容器界面那两套的默认位置也一样。
@@ -16,11 +16,11 @@
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.0.0` |
+| 版本 | `1.0.1` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/ctt-hud-fork-1.0.0.jar` |
+| 产物 | `build/libs/ctt-hud-fork-1.0.1.jar` |
 
 ## 代码导览（每个类做什么）
 
@@ -251,6 +251,35 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 打分顺序（从强到弱）：百分比精确吻合 → 差 ≤ 2（同步差一两个 tick）→ 名字完全相同 →
 上一帧绑定 → 最后才是距离。都匹配不上时宁可不给绝对值（那只怪退回百分比条），
 也不会把数字挂到错的怪头上。
+
+## 界面文案 ↔ 配置字段对照
+
+同一件事在三处叫法不同：界面上叫「透明度」、JSON 里叫 `*Opacity`、代码里叫 `opacity`。这张表是索引：
+
+| 界面文案 | JSON 字段 | 代码位置 | 备注 |
+| --- | --- | --- | --- |
+| 显示血条（敌人） | `showBar` | `HudConfig.Cfg.showBar` | 整块开关（血条 + 文字） |
+| 显示血条（玩家） | `showTeammates` | `HudConfig.Cfg.showTeammates` | 整块开关；自己永不显示 |
+| 最远显示距离 | `maxDistance` / `teamMaxDistance` | 同上 | 4~128 格，步进 4 |
+| 血条长度 | `barWidth` / `teamBarWidth` | 同上 | 50~150 |
+| 缩放比例 | `scale` / `teamScale` | 同上 | 0.75~1.50 |
+| 透明度（血条） | `opacity` | 同上 | 0.50~1.00 |
+| 文字阴影（血条） | `textShadow` | 同上 | 默认关；面板是另一项 |
+| 开关（属性面板） | `showSelfStats` | 同上 | 默认开 |
+| 刷新间隔 | `selfStatsSeconds` | 同上 | 1~5 秒，默认 3 |
+| 列数 | `*Columns` | `HudConfig.Cfg` 四套 | 1~3 |
+| 透明度（属性面板） | `*Opacity` | 四套 | 0.20~1.00 |
+| 文字阴影（属性面板） | `selfStatsTextShadow` | 同上 | 默认开 |
+| 显示方式 | `selfStatsMode` | 同上 | 0 HUD / 1 容器 / 2 两者（默认 2） |
+| 调整位置…（面板） | `*X` / `*Y` + `layoutGuiW/H` | `movePanel` / `panel` / `scalePos` | `-1` = 屏幕高 ÷ 3 |
+| 显示内容过滤… | `selfStatsHidden` | `hiddenKinds` / `SelfStatsKind` | 88 项，三节 |
+| 显示盾牌指示器 | `shieldEnabled` | `HudConfig.Cfg.shieldEnabled` | 默认开 |
+| 缩放比例（盾牌） | `shieldScale` | 同上 | 0.50~1.50，步进 0.05 |
+| 透明度（盾牌） | `shieldOpacity` | 同上 | 0.10~1.00 |
+| 调整位置…（盾牌） | `shieldX` / `shieldY` + `layoutGuiW/H` | `shieldPosition` / `setShieldPosition` | `-1` = 跟随副手槽 |
+
+> 注释约定：每个公开类 / 方法都有中文 javadoc；版本相关的事用「`1.0.0` 起 / `1.0.0` 删掉」标注，
+> 删掉的旧名会保留一句「旧名『xxx』」，方便和旧文档、旧截图对照。
 
 ## 设置界面
 
@@ -633,7 +662,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/ctt-hud-fork-1.0.0.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/ctt-hud-fork-1.0.1.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革
@@ -705,6 +734,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 | **1.20.41** | 面板**默认位置**改成 x=4、y = 屏幕高 ÷ 3（左侧偏上，随窗口走）；「回到初始位置」写回这个动态默认；配置 v20（只有仍停在旧默认 40 的才迁移） |
 | **1.20.42** | **容器界面**那两套的默认位置也改成 x=4、y = 屏幕高 ÷ 3；配置 v21 |
 | **1.0.0（正式版）** | 界面文案统一：血条设置 / 最远显示距离 / 缩放比例 / 透明度 / 调整位置… / 显示内容过滤… / 显示盾牌指示器；删掉面板「文字大小」与血条「垂直偏移」；面板显示方式默认 **HUD + 容器界面**；盾牌缩放步进 0.05、不再写「倍」；配置 v22；删掉一批死代码（`BoxOcclusion`、未被读取的写死开关、旧调用点重载等） |
+| **1.0.1** | **只动注释与文档**（无行为变化）：三个设置页补「行 ↔ 配置字段 ↔ 范围」表、每行一句注释；校正 v1.0.0 删改后的陈旧注释；补 `Panel`/`Line`/`Result`/`BarWidth` 等字段说明；README 新增「界面文案 ↔ 配置字段对照」 |
 | **1.20.42** | **容器界面**那两套面板的默认位置也改成 x=4、y = 屏幕高 ÷ 3（打开箱子/背包时同样在偏上 1/3）；配置 v21（只有仍停在旧默认 20 的才迁移） |
 
 ## 已知限制

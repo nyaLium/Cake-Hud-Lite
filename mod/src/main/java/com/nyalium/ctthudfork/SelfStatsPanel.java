@@ -20,8 +20,8 @@ import java.util.List;
  * <h2>1.20.4 新增</h2>
  * <ul>
  *   <li>{@code selfStatsOpacity}：整块文字透明度；</li>
- *   <li>内容过滤：{@link SelfStats#lines()} 已经把「隐藏类」剔掉了；</li>
- *   <li>同样的绘制代码给「移动面板」界面做预览用（{@link #draw}）。</li>
+ *   <li>显示内容过滤：{@link SelfStats#lines()} 已经把「隐藏类」剔掉了；</li>
+ *   <li>同样的绘制代码给「调整位置…」界面做预览用（{@link #draw}）。</li>
  * </ul>
  *
  * <p>1.20.40：位置从「绝对 GUI 像素」改成<b>相对位置</b> —— 配置里存的是量在
@@ -118,7 +118,7 @@ final class SelfStatsPanel implements HudElement {
         return -1;
     }
 
-    /** 画整块面板（HUD 元素与「移动面板」预览共用）。 */
+    /** 画整块面板（HUD 元素与「调整位置…」预览共用）。 */
     static void draw(GuiGraphicsExtractor g, Font font, List<Component> lines,
                      HudConfig.Panel panel, boolean shadow) {
         if (g == null || font == null || lines == null || lines.isEmpty() || panel == null) return;
@@ -151,7 +151,7 @@ final class SelfStatsPanel implements HudElement {
     /**
      * 面板在屏幕上的外框（GUI 像素，已含缩放）：{@code {x, y, width, height}}。
      *
-     * <p>「移动面板」界面用它做命中判定与高亮框。</p>
+     * <p>「调整位置…」界面用它做命中判定与高亮框。</p>
      */
     static int[] bounds(Font font, List<Component> lines, HudConfig.Panel panel) {
         if (font == null || lines == null || lines.isEmpty() || panel == null) {

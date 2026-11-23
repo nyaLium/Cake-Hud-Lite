@@ -9,7 +9,7 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 
 /**
- * 「移动面板」界面（1.20.4；1.20.23 改成上游 Cake-Hud 那种拖动方式）。
+ * 「调整位置…」界面（旧名「移动面板」；1.20.4 起；1.20.23 改成上游 Cake-Hud 那种拖动方式）。
  *
  * <p>上游 {@code ConfigScreen.beginPreviewDrag/movePreviewDrag} 的做法：
  * <b>按下时记住「鼠标 ↔ 面板左上角」的偏移，移动时直接用鼠标绝对坐标减偏移定位</b>，
@@ -43,6 +43,10 @@ public final class SelfStatsLayoutScreen extends Screen {
     private double dragOffsetX;
     private double dragOffsetY;
 
+    /**
+     * @param parent          返回时回到的属性面板设置页（会把当前编辑对象同步回去）
+     * @param containerConfig {@code true} = 编辑容器界面那一套，{@code false} = 编辑 HUD 那一套
+     */
     public SelfStatsLayoutScreen(SelfStatsSettingsScreen parent, boolean containerConfig) {
         super(Component.translatable("ctt_hud_fork.config.selfStatsMove"));
         this.parent = parent;

@@ -29,6 +29,7 @@ public final class HeartCycle {
 
     private HeartCycle() {}
 
+    /** 轮换顺序（玩家只看魂↔黑，敌人还有碎/粉；与时间窗口配合见 {@code pick}）。 */
     public static int[] order(boolean player) {
         return player ? PLAYER_ORDER : ENEMY_ORDER;
     }

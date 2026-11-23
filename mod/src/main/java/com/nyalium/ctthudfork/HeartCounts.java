@@ -30,8 +30,11 @@ public final class HeartCounts {
     /** 心类下标，顺序与需求一致：红 / 魂 / 黑 / 蓝 / 碎 / 粉。 */
     public static final int RED = 0;
     public static final int SOUL = 1;
+    /** 黑心（数据包 {black ❤}）。 */
     public static final int BLACK = 2;
+    /** 蓝心（{blue ❤}）。 */
     public static final int BLUE = 3;
+    /** 碎心（私有区字形 + 暗红）。 */
     public static final int CRACKED = 4;
     /**
      * 粉心。数据包里和碎心共用一个 objective：
@@ -40,6 +43,7 @@ public final class HeartCounts {
      * 正数 {@code dark_red}，负数先取相反数存进 {@code PinkHearts} 再画 {@code light_purple}。
      */
     public static final int PINK = 5;
+    /** 心类总数（下标 0~5 有效，0 号不用；心数数组长度用 7 见各类的 {@code int[7]}）。 */
     public static final int COUNT = 6;
 
     /** 数值未知（不是 0）。 */
@@ -110,6 +114,12 @@ public final class HeartCounts {
         return h;
     }
 
+    /**
+     * 取某一类心的数量。
+     *
+     * @param kind {@link #RED} … {@link #PINK}
+     * @return 该类的数量；下标越界返回 {@link #UNKNOWN}（不是 0）
+     */
     public int get(int kind) {
         return kind >= 0 && kind < COUNT ? values[kind] : UNKNOWN;
     }

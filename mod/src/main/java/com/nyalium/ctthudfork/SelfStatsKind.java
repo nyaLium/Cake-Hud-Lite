@@ -219,7 +219,7 @@ public enum SelfStatsKind {
 
     /** 配置里存的名字（写进 JSON，改了就迁移不了，别动）。 */
     public final String id;
-    /** 是否出现在「内容过滤」界面里。 */
+    /** 是否出现在「显示内容过滤…」界面里。 */
     public final boolean filterable;
     /** 归在哪一节（过滤界面按节分组显示）。 */
     public final Group group;
