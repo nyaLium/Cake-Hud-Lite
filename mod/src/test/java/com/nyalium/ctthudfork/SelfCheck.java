@@ -1389,95 +1389,48 @@ public final class SelfCheck {
                 && SelfStats.CAPTURE_HARD_MS > SelfStats.CAPTURE_TIMEOUT_MS,
                 "采集超时应大于 0 且硬上限大于它");
 
-        // ③.5 1.20.38：进存档时迟到的那趟仍算我们自己的
-        check(SelfStats.OWN_RESPONSE_WINDOW_MS > SelfStats.CAPTURE_TIMEOUT_MS,
-                "认领窗口必须比采集超时宽（否则超时收尾后照样漏到聊天栏）");
-        long w = SelfStats.OWN_RESPONSE_WINDOW_MS;
-        check(SelfStats.claimedAsOwn(true, 5_000, 4_000, w),
-                "发过 trigger 且还没收到输出 → 迟到的那批算我们的");
-        check(!SelfStats.claimedAsOwn(false, 5_000, 4_000, w),
-                "没在等输出时不该认领（玩家手动触发照旧显示）");
-        check(!SelfStats.claimedAsOwn(true, 5_000, 0, w), "从没发过 trigger → 不认领");
-        check(!SelfStats.claimedAsOwn(true, 40_000, 4_000, w), "超出认领窗口 → 不认领");
-        check(!SelfStats.claimedAsOwn(true, 3_000, 4_000, w), "时钟回拨（现在早于发送）→ 不认领");
-        check(SelfStats.claimedAsOwn(true, 4_000 + w, 4_000, w), "窗口边界上仍应认领");
-        check(!SelfStats.claimedAsOwn(true, 4_000 + w + 1, 4_000, w), "窗口外 1 ms 就不认领");
-        check(SelfStats.looksLikeViewStatsPayload("50\u2764\uD83D\uDDE1", null),
-                "数字 + 图形应算 ViewStats 输出");
-        check(SelfStats.looksLikeViewStatsPayload("Misc_View_Stats_1", null),
-                "未解析的翻译键应算 ViewStats 输出");
-        check(SelfStats.looksLikeViewStatsPayload("Hover over the icons", null),
-                "提示行也算这一趟的输出");
-        check(SelfStats.looksLikeViewStatsPayload("Game time 00:10:54", null),
-                "计时行也算这一趟的输出（缺资源包时只有中文/英文可认）");
-        check(SelfStats.looksLikeViewStatsPayload("\u25A1", null), "草方块 □ 也算");
-        check(!SelfStats.looksLikeViewStatsPayload("hello world",
-                        SelfStats.analyze(net.minecraft.network.chat.Component.literal("hello world"))),
-                "普通聊天不该被认成 ViewStats 输出");
-        check(!SelfStats.looksLikeViewStatsPayload("", null), "空行不认领");
-        var keyed = net.minecraft.network.chat.Component.translatable("Misc_View_Stats_49");
-        check(SelfStats.looksLikeViewStatsPayload(keyed.getString(), SelfStats.analyze(keyed)),
-                "带地图翻译键的行应认领（键留在组件树里，装了资源包被翻译后也认得出）");
+        // ③.5 1.20.39：进存档 / 进服后先安静 3 s
+        check(SelfStats.JOIN_GRACE_MS > 0 && SelfStats.JOIN_GRACE_TICKS > 0,
+                "静默时长与实体 tick 门槛都应大于 0");
+        check(SelfStats.JOIN_GRACE_MS >= 1_000L, "静默时长不该小于 1 s");
+        check(SelfStats.inJoinGrace(1_000L, 4_000L, 100, 20),
+                "还没到静默结束时刻 → 先别问");
+        check(!SelfStats.inJoinGrace(4_000L, 4_000L, 100, 20),
+                "到点且实体已经在 tick → 可以问");
+        check(SelfStats.inJoinGrace(5_000L, 4_000L, 5, 20),
+                "时间到但实体还没 tick 够 → 仍在静默");
+        check(!SelfStats.inJoinGrace(5_000L, 4_000L, 20, 20), "tick 刚好够 → 可以问");
+        check(SelfStats.inJoinGrace(5_000L, 4_000L, -1, 20),
+                "还没有实体（null）→ 按静默处理");
 
-        // ③.6 1.20.38 端到端：进存档时「发了 trigger、服务端 5 s 后才回」
+        // ③.6 端到端：进存档 → 静默窗口里来的属性行不进聊天栏、也不收进面板
         SelfStats.reset();
-        SelfStats.beginCapture(1_000L, true);       // tick 发命令那一瞬间
-        SelfStats.noteAutoTriggerSent(1_000L);
-        var lateTitle = net.minecraft.network.chat.Component.translatable("Misc_View_Stats_1");
-        check(SelfStats.onGameMessage(lateTitle, false, 6_000L),
-                "迟到的标题行要吞（这时这趟早已按 3 s 超时收尾）");
-        var lateStat = net.minecraft.network.chat.Component.empty()
+        SelfStats.onWorldJoined(1_000L);
+        check(SelfStats.joinQuietUntilMs() == 4_000L,
+                "静默窗口应是进世界后 3 s，实际 " + SelfStats.joinQuietUntilMs());
+        check(SelfStats.nextTriggerMs() == 4_000L,
+                "第一次自动触发应被推到 3 s 后，实际 " + SelfStats.nextTriggerMs());
+        var joinTitle = net.minecraft.network.chat.Component.translatable("Misc_View_Stats_1");
+        var joinStat = net.minecraft.network.chat.Component.empty()
                 .append(net.minecraft.network.chat.Component.literal("50")
                         .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED))))
                 .append(net.minecraft.network.chat.Component.literal("\u2764")
                         .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED))));
-        check(SelfStats.onGameMessage(lateStat, false, 6_010L), "迟到的属性行也要吞");
-        var lateTimer = net.minecraft.network.chat.Component.translatable("Misc_View_Stats_78");
-        check(SelfStats.onGameMessage(lateTimer, false, 6_050L), "迟到的计时行也要吞");
-        // 测试环境没有地图资源包，计时行是「未解析的键」→ 按 1.20.4 的规则不上面板，
-        // 所以这里只剩属性行那一条；关键是它确实进了面板缓冲。
-        check(SelfStats.storedLineCount() == 1,
-                "迟到的属性行要照样进面板，实际 " + SelfStats.storedLineCount() + " 行");
-        check(SelfStats.outstandingAutoTriggers() == 0,
-                "收到我们自己那趟输出后欠账应清零，实际 " + SelfStats.outstandingAutoTriggers());
-
-        // ③.7 进存档时连发好几趟、服务端随后连回好几批：每一批都要吞
+        check(SelfStats.onGameMessage(joinTitle, false, 1_500L),
+                "静默窗口里的 ViewStats 标题行要吞");
+        check(SelfStats.onGameMessage(joinStat, false, 2_000L),
+                "静默窗口里的属性行也要吞（这时我们还没问过）");
+        check(SelfStats.storedLineCount() == 0,
+                "静默窗口里吞掉的行不该进面板，实际 " + SelfStats.storedLineCount() + " 行");
+        check(!SelfStats.onGameMessage(net.minecraft.network.chat.Component.literal("hello"), false, 2_000L),
+                "静默窗口里普通消息照常显示");
+        check(!SelfStats.onGameMessage(joinTitle.copy(), false, 10_000L),
+                "窗口之外玩家手动触发的标题照旧显示");
+        check(!SelfStats.onGameMessage(joinStat.copy(), false, 10_010L),
+                "窗口之外玩家手动触发的属性行照旧显示（1.20.24 的结论不变）");
         SelfStats.reset();
-        SelfStats.beginCapture(1_000L, true);
-        SelfStats.noteAutoTriggerSent(1_000L);
-        SelfStats.beginCapture(4_000L, true);
-        SelfStats.noteAutoTriggerSent(4_000L);
-        check(SelfStats.outstandingAutoTriggers() == 2, "两趟都没回 → 欠 2 批，实际 "
-                + SelfStats.outstandingAutoTriggers());
-        check(SelfStats.onGameMessage(lateTitle.copy(), false, 9_000L), "第一批标题要吞");
-        check(SelfStats.onGameMessage(lateStat.copy(), false, 9_010L), "第一批属性行要吞");
-        check(SelfStats.onGameMessage(lateTimer.copy(), false, 9_050L), "第一批计时行要吞");
-        check(SelfStats.outstandingAutoTriggers() == 1,
-                "第一批收完应还剩 1 批欠账，实际 " + SelfStats.outstandingAutoTriggers());
-        check(SelfStats.onGameMessage(lateTitle.copy(), false, 9_200L), "第二批标题也要吞");
-        check(SelfStats.onGameMessage(lateStat.copy(), false, 9_210L), "第二批属性行也要吞");
-        check(SelfStats.onGameMessage(lateTimer.copy(), false, 9_250L), "第二批计时行也要吞");
-        check(SelfStats.outstandingAutoTriggers() == 0,
-                "两批都收完欠账应清零，实际 " + SelfStats.outstandingAutoTriggers());
-        check(!SelfStats.onGameMessage(lateTitle.copy(), false, 20_000L),
-                "欠账清零后的手动触发不再吞（1.20.24 保住）");
-
-        // 欠账上限：地图一直不回也不会无限累积
-        SelfStats.reset();
-        for (int i = 0; i < SelfStats.MAX_OUTSTANDING_AUTO + 5; i++) {
-            SelfStats.noteAutoTriggerSent(1_000L + i);
-        }
-        check(SelfStats.outstandingAutoTriggers() == SelfStats.MAX_OUTSTANDING_AUTO,
-                "欠账应夹在上限 " + SelfStats.MAX_OUTSTANDING_AUTO + "，实际 "
-                        + SelfStats.outstandingAutoTriggers());
-
-        // 窗口之外（玩家自己手动敲的 /trigger）：照旧显示在聊天栏
-        SelfStats.reset();
-        check(!SelfStats.onGameMessage(lateTitle.copy(), false, 90_000L),
-                "没有 trigger 时手动触发的标题不吞");
-        check(!SelfStats.onGameMessage(lateStat.copy(), false, 90_010L),
-                "手动触发的属性行照旧显示（1.20.24 的结论不变）");
-        SelfStats.reset();
+        check(SelfStats.joinQuietUntilMs() == 0L && SelfStats.nextTriggerMs() == 0L,
+                "reset 后静默窗口与下次触发时刻都应清零");
 
         // ④ 端到端：把地图那种「数字 + 彩色心」的 Component 喂进解析器
         SelfStats.reset();

@@ -76,6 +76,10 @@ public final class CttHudForkClient implements ClientModInitializer {
         });
         // 服务端选装组件：接收按 UUID 的怪物权威数据。
         ClientMobHealthCache.register();
+        // 1.20.39：进存档 / 进服先安静 3 s 再问 ViewStats（世界还在载入时问了只会得到一批迟到输出，
+        // 反而整屏刷进聊天栏）。
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
+                SelfStats.onWorldJoined(System.currentTimeMillis()));
         // 断线 / 换服清缓存，避免看到上一局的残留数据。
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ClientMobHealthCache.reset();

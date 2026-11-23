@@ -38,15 +38,13 @@ import java.util.Set;
  *       所以刷新时面板不会先清空再慢慢长出来（之前那一下「闪烁」就是这么来的）。</li>
  * </ul>
  *
- * <h2>1.20.38：进存档那一刻的属性行不再漏到聊天栏</h2>
- * <p>世界载入时服务端常常隔好几秒才回这一趟（玩家还在「加载地形」、区块还在生成），
- * 而一趟采集 {@value #CAPTURE_TIMEOUT_MS} ms 就按 {@link #settleIfTimedOut} 超时收尾了。
- * 迟到的输出落进「没在采集」的状态，于是被当成<b>玩家手动触发</b>（1.20.24 的行为：照常显示在聊天栏），
- * 整批属性行就这么刷了出来。</p>
- * <p>现在记住「我们刚问过、还没收到」（{@link #claimedAsOwn}）：窗口
- * {@link #OWN_RESPONSE_WINDOW_MS} ms 内的 ViewStats 输出一律算我们那趟，迟到的标题行
- * 按自动重开采集，连标题都丢了的情况也会被第一行属性行认领回来。玩家真正手动触发的
- * 那一趟（窗口之外）照旧显示，1.20.24 的结论不变。</p>
+ * <h2>1.20.39：进存档后先安静 3 s</h2>
+ * <p>世界刚载入时（玩家卡在「加载地形」、区块还在生成）就去问 {@code ViewStats}，服务端要隔好几秒
+ * 才回；而一趟采集 {@value #CAPTURE_TIMEOUT_MS} ms 就超时收尾了，迟到的这批会被当成
+ * <b>玩家手动触发</b>（1.20.24 的约定：手动触发照常显示）→ 整屏刷进聊天栏。
+ * 现在 {@code ClientPlayConnectionEvents.JOIN} 记一笔「刚进世界」（{@link #onWorldJoined}），
+ * {@value #JOIN_GRACE_MS} ms 内不发 trigger、聊天里的 ViewStats 输出也直接丢掉；
+ * 世界跑起来之后再问，一问一答都是毫秒级，问题就不存在了。</p>
  *
  * <h2>为什么必须靠这个</h2>
  * <p>别人的心数、敌人绝对血量都不在客户端可见的同步范围里（{@code RedHearts} 这类 dummy
@@ -60,15 +58,26 @@ public final class SelfStats {
     static final long CAPTURE_TIMEOUT_MS = 3000L;
     /** 一次爆发最长持续多久（地图一趟 ViewStats 是分多个 tick 发的）。 */
     static final long CAPTURE_HARD_MS = 8000L;
-    /**
-     * 1.20.38：「这趟 ViewStats 是我们自己触发的」认领窗口。
-     *
-     * <p>进存档时世界还在载入，服务端可能隔好几秒才回，而一趟采集 {@value #CAPTURE_TIMEOUT_MS} ms
-     * 就超时收尾了；迟到的那批属性行仍然属于我们，要接着吞（不然整批照常刷在聊天栏）。</p>
-     */
-    static final long OWN_RESPONSE_WINDOW_MS = 20_000L;
     /** 一次最多攒多少行（地图一趟大约 20~40 行，留点余量）。 */
     private static final int MAX_LINES = 64;
+
+    /**
+     * 1.20.39：进存档 / 进服后的静默时长（毫秒）—— 这之前**不自动发** {@code /trigger ViewStats}。
+     *
+     * <p>世界刚载入时玩家还卡在「加载地形」、区块还在生成，这时候问，服务端要隔好几秒才回；
+     * 而一趟采集 {@value #CAPTURE_TIMEOUT_MS} ms 就按 {@link #settleIfTimedOut} 超时收尾了，
+     * 迟到的这批会被当成<b>玩家手动触发</b>（1.20.24 的约定：手动触发照常显示）→ 整屏刷进聊天栏。
+     * 等世界真的跑起来再问，一问一答都是毫秒级，这问题就不存在了。</p>
+     */
+    static final long JOIN_GRACE_MS = 3000L;
+
+    /**
+     * 1.20.39：静默窗口的第二个条件 —— 本人实体至少要过这么多 tick（世界真的在跑）。
+     *
+     * <p>只看「进世界后 3 s」在慢机上可能还不够：加载没完就又是同一批迟到输出。
+     * 20 tick ≈ 1 s，实体没在 tick 就说明还在载入。</p>
+     */
+    static final int JOIN_GRACE_TICKS = 20;
 
     /** 地图 tellraw 里用的颜色（{@code ChatFormatting} 的 RGB）。 */
     static final int RED = 0xFF5555;
@@ -107,24 +116,14 @@ public final class SelfStats {
      * 只有自己发的才把输出从聊天栏吞掉；玩家手动触发的照常显示（对齐上游 {@code hideCapture}）。
      */
     private static boolean selfTriggered;
-    /**
-     * 我们自己最近一次发 {@code /trigger ViewStats} 的时间（ms，0 = 还没发过）。
-     *
-     * <p>用来认领「迟到的输出」（见 {@link #OWN_RESPONSE_WINDOW_MS}）。</p>
-     */
-    private static long lastAutoTriggerMs;
-    /**
-     * 我们自己发了几趟 {@code /trigger ViewStats}、还没收到输出（每收到一趟自己的输出减 1）。
-     *
-     * <p>为什么是计数不是布尔：进存档时可能连着发了好几趟、服务端随后连回好几批
-     * （一批答一趟），只用一个布尔的话，第一批一到就被清掉，第二批又会漏进聊天栏。
-     * 超时收尾时<b>不减</b>：还在路上。</p>
-     */
-    private static int ownTriggersOutstanding;
-    /** 计数器上限：地图一直不回时别无限累积。 */
-    static final int MAX_OUTSTANDING_AUTO = 6;
     /** 这一趟开始的时间（毫秒），用于超时收尾。 */
     private static long captureStartMs;
+    /**
+     * 1.20.39：静默窗口的结束时刻（ms）。这之前不发 trigger，聊天里来的 ViewStats 输出也不显示。
+     *
+     * <p>由 {@link #onWorldJoined(long)} 置位；{@link #reset()} 清 0。</p>
+     */
+    private static long quietUntilMs;
 
     // ── 1.20.23：游戏时间没走 → 数据是「冻住的」，面板不上屏 ──
 
@@ -174,6 +173,48 @@ public final class SelfStats {
 
     // ── 触发 ──
 
+    /**
+     * 1.20.39：进入存档 / 服务器时调用（{@code ClientPlayConnectionEvents.JOIN}）。
+     *
+     * <p>清掉上一服的残留，并把「第一次自动触发」推到 {@value #JOIN_GRACE_MS} ms 之后 ——
+     * 那一下世界还在载入，问了也只会得到一批迟到输出（见 {@link #JOIN_GRACE_MS}）。</p>
+     */
+    public static void onWorldJoined(long nowMs) {
+        reset();
+        quietUntilMs = nowMs + JOIN_GRACE_MS;
+        nextTriggerMs = Math.max(nextTriggerMs, quietUntilMs);
+    }
+
+    /**
+     * 纯函数版「还在进世界的静默窗口里」（selfCheck 直接打）。
+     *
+     * @param nowMs         现在
+     * @param quietUntilMs  静默窗口结束时刻
+     * @param playerTick    本人实体已过的 tick（&lt;0 表示还不知道/没有实体，按「还在等」处理）
+     * @param graceTicks    需要的 tick 数
+     * @return true = 先别自动问
+     */
+    static boolean inJoinGrace(long nowMs, long quietUntilMs, int playerTick, int graceTicks) {
+        if (nowMs < quietUntilMs) return true;
+        return playerTick < Math.max(0, graceTicks);
+    }
+
+    /** 静默窗口里不自动触发（true = 再等等）。 */
+    private static boolean joinQuiet(long nowMs, net.minecraft.client.Minecraft mc) {
+        int tick = (mc == null || mc.player == null) ? -1 : mc.player.tickCount;
+        return inJoinGrace(nowMs, quietUntilMs, tick, JOIN_GRACE_TICKS);
+    }
+
+    /** 静默窗口结束时刻（自检 / 调试用）。 */
+    static long joinQuietUntilMs() {
+        return quietUntilMs;
+    }
+
+    /** 下一次自动触发的时刻（自检 / 调试用）。 */
+    static long nextTriggerMs() {
+        return nextTriggerMs;
+    }
+
     /** 客户端每 tick 调用：先把已经收齐的一趟换上屏，再看要不要发下一次。 */
     public static void tick(net.minecraft.client.Minecraft mc) {
         if (mc == null) return;
@@ -185,6 +226,8 @@ public final class SelfStats {
         int seconds = effectiveSeconds(mc);
         if (seconds <= 0) return;                       // ≤0 = 关闭自动刷新
         if (now < nextTriggerMs) return;
+        // 1.20.39：刚进存档/进服先安静一会儿（世界还在载入时问了只会收到一批迟到输出）。
+        if (joinQuiet(now, mc)) return;
         // 1.20.8：大厅/菜单里**不发命令**。地图只在开局后 setdisplay below_name HealthPercent
         // 并 enable ViewStats；没开局时触发只会收到一行「无法触发该计分项」。
         if (!inGame(mc)) {
@@ -196,15 +239,12 @@ public final class SelfStats {
                 capturing = false;
                 selfTriggered = false;
             }
-            ownTriggersOutstanding = 0;                // 没开局就不会有输出在路上了
             nextTriggerMs = now + GATE_RECHECK_MS;
             return;
         }
         nextTriggerMs = now + seconds * 1000L;
         // auto = true：这一趟的输出要从聊天栏里吞掉（上游 hideCapture 的同一套思路）。
         beginCapture(now, true);
-        // 1.20.38：记下「我们刚问过」，迟迟不回时这批输出仍然算我们的（见 claimedAsOwn）。
-        noteAutoTriggerSent(now);
         ChatTriggerFilter.noteTriggerSent(now);
         try {
             mc.getConnection().sendCommand("trigger ViewStats");
@@ -306,44 +346,6 @@ public final class SelfStats {
     }
 
     /**
-     * 记下「我们自己刚发过 {@code /trigger ViewStats}」（1.20.38）。
-     *
-     * <p>发命令那一刻调用；之后迟到的输出都靠 {@link #claimedAsOwn} 认领回来。
-     * 单列一个方法是为了自检能直接模拟「发了、但一直没回」的时序。</p>
-     */
-    static void noteAutoTriggerSent(long nowMs) {
-        lastAutoTriggerMs = nowMs;
-        if (ownTriggersOutstanding < MAX_OUTSTANDING_AUTO) ownTriggersOutstanding++;
-    }
-
-    /** 还欠几趟自己的输出（自检 / 调试用）。 */
-    static int outstandingAutoTriggers() {
-        return ownTriggersOutstanding;
-    }
-
-    /** 迟到的 ViewStats 输出能不能算「我们自己触发的那趟」—— 读当前状态。 */
-    private static boolean claimedAsOwn(long nowMs) {
-        return claimedAsOwn(ownTriggersOutstanding > 0, nowMs, lastAutoTriggerMs,
-                OWN_RESPONSE_WINDOW_MS);
-    }
-
-    /**
-     * 纯函数版「认领」判定（selfCheck 直接打）。
-     *
-     * @param awaiting          发过 trigger 且还没收到输出
-     * @param nowMs             现在
-     * @param lastAutoTriggerMs 上次自己发 trigger 的时刻（0 = 从没发过）
-     * @param windowMs          认领窗口
-     * @return true = 这批输出属于我们自己，要接着吞
-     */
-    static boolean claimedAsOwn(boolean awaiting, long nowMs, long lastAutoTriggerMs, long windowMs) {
-        if (!awaiting || lastAutoTriggerMs <= 0L) return false;
-        long age = nowMs - lastAutoTriggerMs;
-        // 时钟回拨（age < 0）时认领不了，宁可不吞也别把玩家的输出吞错。
-        return age >= 0L && age <= Math.max(0L, windowMs);
-    }
-
-    /**
      * 收尾一趟：把 PENDING 整体换到 SHOWN，并复位「要不要吞」。
      *
      * <p>空结果默认不覆盖旧面板（偶发丢包时不闪）。连续 {@value #MAX_EMPTY_CAPTURES}
@@ -352,21 +354,16 @@ public final class SelfStats {
      */
     private static void endCapture(long now) {
         if (!capturing) return;
-        boolean own = selfTriggered;
         capturing = false;
         selfTriggered = false;
         if (PENDING.isEmpty()) {
             pendingTimeText = null;
-            // 自己的那趟还一行都没收到（进存档时服务端可能还没回）：**不减**欠账，
-            // 让迟到的那批仍被认作我们的输出（1.20.38）。
             if (++emptyCaptures >= MAX_EMPTY_CAPTURES) {
                 SHOWN.clear();
                 java.util.Arrays.fill(HEARTS, 0);
             }
             return;
         }
-        // 收到一趟我们自己的输出：欠账减一（进存档时可能连发了好几趟、随后连回好几批）。
-        if (own && ownTriggersOutstanding > 0) ownTriggersOutstanding--;
         emptyCaptures = 0;
         SHOWN.clear();
         // 去重：同一行文字只保留第一次出现，避免「多重显示」。
@@ -436,8 +433,7 @@ public final class SelfStats {
         hardEndMs = 0L;
         nextTriggerMs = 0L;
         notStarted = false;
-        lastAutoTriggerMs = 0L;
-        ownTriggersOutstanding = 0;
+        quietUntilMs = 0L;
         lastTimeText = null;
         pendingTimeText = null;
         sameTimeRounds = 0;
@@ -464,11 +460,10 @@ public final class SelfStats {
 
         // 「没开局 / 触发项没 enable」这两种回执：清面板、停这一趟。
         if (isGameNotStarted(flat)) {
-            boolean hide = selfTriggered || claimedAsOwn(nowMs);
+            boolean hide = selfTriggered;
             notStarted = true;
             capturing = false;
             selfTriggered = false;
-            ownTriggersOutstanding = 0;    // 服务端已经答过了，迟到的那批不存在了
             SHOWN.clear();                 // 地图明确说「没开局」：清空，别留上一局的数字
             java.util.Arrays.fill(HEARTS, 0);
             return hide;
@@ -476,11 +471,10 @@ public final class SelfStats {
         if (isTriggerDenied(flat)) {
             // 触发项还没 enable（对局没开始 / 两局之间 / 这张图不给触发）：
             // 停掉这一趟、清空面板；自己是自动触发时顺手把这行提示吞掉。
-            boolean hide = selfTriggered || claimedAsOwn(nowMs);
+            boolean hide = selfTriggered;
             notStarted = true;
             capturing = false;
             selfTriggered = false;
-            ownTriggersOutstanding = 0;
             SHOWN.clear();
             PENDING.clear();
             java.util.Arrays.fill(HEARTS, 0);
@@ -488,28 +482,28 @@ public final class SelfStats {
             return hide;
         }
 
-        // 「已触发 ViewStats」的确认行：只有自动触发时吞（迟到的那趟也算自动，1.20.38）。
-        if (isTriggerAck(flat)) return selfTriggered || claimedAsOwn(nowMs);
+        // 1.20.39：还在进世界的静默窗口里 —— 我们自己还没问过，这一批只可能是
+        // 「上一趟迟到的」或「地图补发的」，一律不进聊天栏，也不收进面板。
+        if (nowMs <= quietUntilMs && (isTriggerAck(flat) || isViewStatsTitle(message)
+                || looksLikeViewStatsPayload(flat, analyze(message)))) {
+            return true;
+        }
+
+        // 「已触发 ViewStats」的确认行：只有自动触发时吞。
+        if (isTriggerAck(flat)) return selfTriggered;
 
         // 标题行（Your Stats / 统计信息 / Misc_View_Stats_1）：
         // 不在采集里就说明是**玩家手动**触发的 —— 开一趟，但这一趟不吞。
-        // 例外：我们自己那趟迟到了（进存档时世界还在载入，服务端隔好几秒才回）。
         if (isViewStatsTitle(message)) {
-            if (!capturing) beginCapture(nowMs, claimedAsOwn(nowMs));
+            if (!capturing) beginCapture(nowMs, false);
             return selfTriggered;
-        }
-
-        Analyzed a = analyze(message);
-
-        // 1.20.38：这一趟已经按 3 s 超时收尾，但输出是我们自己问来的（迟到了）。
-        // 重新开一趟并继续吞 —— 否则整批属性行会照常刷进聊天栏。
-        if (!capturing && claimedAsOwn(nowMs) && looksLikeViewStatsPayload(flat, a)) {
-            beginCapture(nowMs, true);
         }
         if (!capturing) return false;
 
         // 提示行（Hover over / 停留…）：不开面板，但算这一趟的输出。
         if (isHintLine(flat)) return selfTriggered;
+
+        Analyzed a = analyze(message);
 
         // 计时行 = 这一趟结束（上游同样用它当收尾信号），顺手记下来判「时间冻住」。
         // 1.20.31：这一行本身也上面板（以前只当收尾信号、白扔掉，所以面板上从来见不到游戏时间）。
@@ -805,7 +799,7 @@ public final class SelfStats {
     }
 
     /**
-     * 这一行像不像 ViewStats 的输出（1.20.38：认领迟到的那批用）。
+     * 这一行像不像 ViewStats 的输出（1.20.39：静默窗口里判「这是不是那批属性行」用）。
      *
      * <p>比 {@link #isViewStatsLine(String)} 宽：装了资源包时翻译键已经变成中文/英文，
      * 所以「提示行 / 计时行 / 未解析键 / 数字 + 图形 / 草方块」都算。</p>

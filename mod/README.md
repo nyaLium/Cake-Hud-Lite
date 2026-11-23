@@ -2,10 +2,10 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.20.38**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.20.39**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/字号/透明度，
 > 88 个属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
-> 1.20.38 修掉「进存档那一刻属性行刷进聊天栏」：采集超时收尾后，自己 trigger 的迟到输出仍按我们的吞掉。
+> 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」：进存档 / 进服后先静默 3 s 再自动问 ViewStats。
 >
 > **1.20.37 起彻底改名**：仓库 `CTT HUD - Fork`、Gradle 工程 `mod/`、包名 `com.nyalium.ctthudfork`、
 > 入口类 `CttHudForkClient` / `CttHudForkServer`、配置类 `HudConfig`、布局类 `HudLayout`、
@@ -15,11 +15,11 @@
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.20.38` |
+| 版本 | `1.20.39` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/ctt-hud-fork-1.20.38.jar` |
+| 产物 | `build/libs/ctt-hud-fork-1.20.39.jar` |
 
 ## 绘制方式（1.15.0 起）
 
@@ -270,12 +270,15 @@ CTT HUD - Fork 设置（F8 或 Mod Menu 打开）
 `ViewStats` 那几十行属性走的是另一条路（`SelfStats.onGameMessage`）：**只有我们自己触发的那趟**才吞，
 玩家手动敲 `/trigger ViewStats` 照常显示（1.20.24）。
 
-1.20.38 起补上「迟到的那趟」：世界载入时服务端可能隔好几秒才回，而一趟采集 3 s 就超时收尾了，
-于是迟到的那批会被误判成「玩家手动触发」、整批刷进聊天栏（**只在进存档那一刻出现**）。
-现在发 trigger 时记一笔欠账（`noteAutoTriggerSent` → `ownTriggersOutstanding`，上限 6），
-20 s 认领窗口（`OWN_RESPONSE_WINDOW_MS`）内到达的 ViewStats 输出一律算我们那趟 ——
-标题行怎么认、标题丢了怎么按载荷认，见
+1.20.39 起补上「进存档那一刻」：世界载入时（玩家卡在「加载地形」）问 ViewStats，服务端要隔好几秒才回，
+而一趟采集 3 s 就超时收尾了，迟到的这批会被误判成「玩家手动触发」、整批刷进聊天栏。
+现在 `ClientPlayConnectionEvents.JOIN` 一到就记一笔（`SelfStats.onWorldJoined`），**3 s 内不发 trigger**、
+这期间来的 ViewStats 输出也直接丢掉（`JOIN_GRACE_MS`）；
+等世界跑起来再问，一问一答都是毫秒级，问题自然没有。详见
 [属性面板](#自身属性面板1203纯客户端) 那节的「防刷屏」。
+
+> 1.20.38 试过另一条路（把「迟到的输出」按 20 s 窗口 + 欠账计数继续认作我们的），
+> 副作用是会把玩家自己敲的 `/trigger ViewStats` 也吞掉，已回退。
 
 ## 血条纹理（敌人 / 队友同一条路径）
 
@@ -332,7 +335,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | --- | --- |
 | 触发 | `ClientTickEvents` 到点发 `/trigger ViewStats`；`selfStatsSeconds=0` 关闭自动刷新 |
 | 采集 | 触发后 3 s 收尾（等不到计时行才用它），单次上限 8 s；只收「带 `Misc_View_Stats_*` 键 / 数字 + 图形（🗡🏹🛡❤…）/ 草方块 `□`」的行（1.20.23 起改用这条窄判据，不再「数字开头就算」） |
-| 防刷屏 | 收下的行**不显示**在聊天栏（和上游一样）；1.20.38 起「我们发过 trigger 但还没收到输出」用**欠账计数**跨过 3 s 超时保留（上限 6 批），迟到的那批照样吞（认领窗口 20 s） |
+| 防刷屏 | 收下的行**不显示**在聊天栏（和上游一样）；1.20.39 起「进存档 / 进服后 3 s 内」既不自动问、也不显示任何 ViewStats 输出（那批只可能是我们自己问出来的迟到回答） |
 | 解析 | `heartKindOf(字形, 颜色)`：❤+红/黄/黑/蓝 → 红/魂/黑/蓝；私有区字形 + 暗红/亮紫 → 碎/粉；`amountBefore` 取字形前紧邻的数字 |
 | 面板 | 列优先排版，列数 1~3，位置 `selfStatsX/Y`（**GUI 像素**，界面上用「移动面板」拖动），支持字号/透明度 |
 | 门控 | 地图回「Game not started」时整块不画（1.20.36 的「选过职业」门控已在 1.20.37 回退） |
@@ -513,7 +516,8 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | `ECHO_WINDOW_MS` / `MUTED_TRIGGERS` | `ChatTriggerFilter` | 3 s / {`TogglePartyBossbar`,`ViewStats`} | 自己发的 trigger 回显多久内吞掉 |
 | `COOLDOWN_MS` / `MAX_ATTEMPTS` / `FAILSAFE_MS` / `REOPEN_DELAY_MS` / `MAX_SENDS` | `PartyBossbarAutoToggle` | 3 s / 5 / 10 min / 10 s / 20 | 自动开队伍条的全部阈值 |
 | `ROW_HEIGHT` / `COLUMN_GAP` | `SelfStatsPanel` | 10 / 8 | 面板行高 / 列间距 |
-| `CAPTURE_TIMEOUT_MS` / `CAPTURE_HARD_MS` / `OWN_RESPONSE_WINDOW_MS` / `MAX_OUTSTANDING_AUTO` | `SelfStats` | 3 s / 8 s / 20 s / 6 | 一趟采集的超时与硬上限 / 「迟到的那批仍算我们触发」的认领窗口 / 未回趟数的上限（1.20.38） |
+| `CAPTURE_TIMEOUT_MS` / `CAPTURE_HARD_MS` | `SelfStats` | 3 s / 8 s | 一趟采集的超时与硬上限 |
+| `JOIN_GRACE_MS` / `JOIN_GRACE_TICKS` | `SelfStats` | 3 s / 20 tick | 进存档 / 进服后先不问 ViewStats 的静默窗口（1.20.39） |
 | `COLUMNS` / `STEP` | `SelfStatsFilterScreen` | 2 / 25 | 过滤列表两列 / 行距（分组标题也占一行，行高 20 + 间距 5） |
 | `BAR_WIDTH` / `BAR_HIT_PAD` | `ScrollPane` | 4 / 5 | 滚动条宽度 / 命中容差（鼠标点、拖都靠它；1.20.33 从 3 放宽到 5） |
 | `TOP` / `BOTTOM_PAD` | 各滚动页 | 52~58 / 40~56 | 可视区上下边界（每页略有差异，见各文件） |
@@ -525,13 +529,13 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**5371 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**5353 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
 护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）、
 属性面板（心数解析、88 项属性识别、提示键识别、过滤表清洗与粗类展开、三节 47 行的行结构、计时行/草方块上屏、
 滚动条拖拽的滑块高度/偏移/反解/命中容差、缩放/位置夹取、滚动列表的可见行/最大滚动/滚轮换算/列宽、
-**迟到输出认领**的窗口真值表 / 载荷识别 / 「发了 trigger、5 s 后才回」的端到端时序 / 欠账计数与连回多批）、
+**进世界静默窗口**（3 s 边界 / 实体 tick 门槛 / 窗口内吞掉属性行且不进面板 / 窗口外手动触发照旧显示）、
 局部设置独立性（「显示血条」整块开关的四个 flag、四套面板位置列数字号、两种文字阴影互不串改）、
 
 ## 构建
@@ -606,7 +610,8 @@ gradlew selfCheck      # gradlew build 会自动带上
 | **1.20.35** | 「优先使用服务端数据」默认保持开启且不再允许修改：界面去掉该开关、`useServerData` 字段删除（v18），代码写死优先使用服务端组件数据（没装服务端组件时照旧自动回落） |
 | 1.20.36 | 准备大厅「选过职业」门控（`ClassPassive` → 职业被动道具 → 「职业点」行）—— **已在 1.20.37 回退** |
 | **1.20.37** | 回退 1.20.36 的门控（行为同 1.20.35）；**项目与产物彻底改名 CTT HUD - Fork**：仓库/工程目录、包名 `com.nyalium.ctthudfork`、类名 `CttHudFork*` / `HudConfig*` / `HudLayout`、产物 `ctt-hud-fork-x.y.z.jar`、翻译键 `ctt_hud_fork.*`、Mixin 前缀 `cttHudFork$` |
-| **1.20.38** | 进存档那一刻刷进聊天栏的属性行不再漏：采集 3 s 超时收尾后，我们自己 trigger 的迟到输出仍在 20 s 认领窗口内，按自动重开采集继续吞（玩家手动触发的行为不变） |
+| **1.20.38** | 进存档那一刻刷进聊天栏的属性行：采集 3 s 超时收尾后，自己 trigger 的迟到输出仍在 20 s 认领窗口内按自动吞掉 —— **已在 1.20.39 回退**（会误吞玩家手动触发的输出） |
+| **1.20.39** | 改为「进存档 / 进服后静默 3 s 再自动问 ViewStats」：这之前不发 trigger、这期间来的 ViewStats 输出既不显示也不收进面板；手动触发照旧显示 |
 
 ## 已知限制
 
