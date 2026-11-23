@@ -6,7 +6,7 @@
   "description": "Fork of Cake-Hud (MIT): enemy / teammate health above name plates, plus a client-side stats panel (/trigger ViewStats) with per-attribute filtering.",
   "authors": [
     "nyaLium",
-    "Fork of Cake-Hud by TheHolyLord (MIT)"
+    "Fork of Cake-Hud (TheHolyLord/Cake-Hud, MIT, (c) Kirin0321)"
   ],
   "license": "MIT",
   "icon": "assets/ctt-hud-fork/icon.png",

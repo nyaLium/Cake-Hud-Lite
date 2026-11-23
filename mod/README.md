@@ -1,6 +1,6 @@
 # CTT HUD - Fork
 
-> **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
+> **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（MIT 许可；其 LICENSE 的版权声明为 Copyright (c) 2026 Kirin0321（麒麟））。
 >
 > 当前版本 **1.0.1**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/透明度，

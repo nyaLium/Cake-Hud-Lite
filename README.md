@@ -11,7 +11,7 @@
 >
 > **客户端必装、服务端选装**：服务端只装 Fabric API 也能用完整功能。
 >
-> 当前正式版 **1.0.1**。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
+> 当前正式版 **1.0.2**。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
 
 ## 功能
 
@@ -29,7 +29,8 @@
 
 | 版本 | 文件 | 说明 |
 | --- | --- | --- |
-| **1.0.1**（正式版 · 最新） | [`versions/v1.0.1/ctt-hud-fork-1.0.1.jar`](versions/v1.0.1/ctt-hud-fork-1.0.1.jar) | 客户端必装；同一个 jar 放服务端即启用权威数据推送（选装） |
+| **1.0.2**（正式版 · 最新） | [`versions/v1.0.2/ctt-hud-fork-1.0.2.jar`](versions/v1.0.2/ctt-hud-fork-1.0.2.jar) | 修正 LICENSE 里的上游版权署名（Kirin0321／麒麟），jar 内嵌的 LICENSE 同步更新 |
+| 1.0.1 | [`versions/v1.0.1/ctt-hud-fork-1.0.1.jar`](versions/v1.0.1/ctt-hud-fork-1.0.1.jar) | 首个公开上传的正式版 |
 | 1.0.0 | [`versions/v1.0.0/ctt-hud-fork-1.0.0.jar`](versions/v1.0.0/ctt-hud-fork-1.0.0.jar) | 首个正式版 |
 
 依赖：Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；Mod Menu 可选（装了就有设置入口）。
@@ -57,7 +58,7 @@
 ```bash
 cd mod
 ./gradlew build        # 需要 JDK 25；会自动跑 selfCheck（4786 条断言）
-# 产物：mod/build/libs/ctt-hud-fork-1.0.1.jar
+# 产物：mod/build/libs/ctt-hud-fork-1.0.2.jar
 ```
 
 ## 目录结构
@@ -65,11 +66,11 @@ cd mod
 | 路径 | 内容 |
 | --- | --- |
 | `mod/` | 源码工程（Gradle + Loom，Minecraft 26.3 / Fabric） |
-| `versions/vX.Y.Z/` | **正式版的归档**（当前 v1.0.0 / v1.0.1）：jar、sources、README、RELEASE；发布前的测试版（1.10.0 – 1.20.42）**只在本地**，已被 `.gitignore` 排除 |
+| `versions/vX.Y.Z/` | **正式版的归档**（当前 v1.0.0 / v1.0.1 / v1.0.2）：jar、sources、README、RELEASE；发布前的测试版（1.10.0 – 1.20.42）**只在本地**，已被 `.gitignore` 排除 |
 | `versions/ARCHIVE.md` | 全部版本的清单（大小 / SHA-256 / 内嵌版本号 / git 标签） |
 | `versions/VERSIONING.md` | 版本保留规则（每版必留档，不覆盖、不删除）与上传流程 |
 | `versions/tools/archive_audit.py` | 归档审计：重新生成 `ARCHIVE.md` 并校验 |
-| `ctt-hud-fork-1.0.1.jar` | 最新版 jar（与 `versions/v1.0.1/` 中的字节一致） |
+| `ctt-hud-fork-1.0.2.jar` | 最新版 jar（与 `versions/v1.0.2/` 中的字节一致） |
 | `LICENSE` / `NOTICE.md` | MIT 许可（含上游 Fork 声明）/ 来源与第三方说明 |
 
 ## 归档规则

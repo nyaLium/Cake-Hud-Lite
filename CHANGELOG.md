@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.0.2** | 修正 LICENSE 里的上游版权署名：上游 Cake-Hud 的 LICENSE 写的是 `Copyright (c) 2026 Kirin0321 (麒麟)`（不是仓库账号名），根 `LICENSE` / `NOTICE.md` / `mod/LICENSE`（内嵌进 jar）与 `fabric.mod.json` 的 authors 一并更正；无代码改动 | `versions/v1.0.2/` |
 | **1.0.1** | **注释与文档岗位**（无行为变化）：设置页补「行 ↔ 字段 ↔ 范围」对照表与逐行注释、校正被 1.0.0 删改的陈旧注释、补数据类字段说明、README 加「界面文案 ↔ 配置字段对照」 | `versions/v1.0.1/` |
 | **1.0.0（正式版）** | 界面文案统一（血条设置 / 最远显示距离 / 缩放比例 / 透明度 / 调整位置… / 显示内容过滤… / 显示盾牌指示器）；删掉面板「文字大小」与血条「垂直偏移」；面板显示方式默认 **HUD + 容器界面**；盾牌缩放步进 0.05、不再写「倍」；配置 v22；清理死代码 | `versions/v1.0.0/` |
 | **1.20.42** | **容器界面**那两套面板的默认位置也改成 x=4、y = 屏幕高 ÷ 3（打开箱子/背包时同样在偏上 1/3）；「回到初始位置」四套都回动态默认；配置 v21（只有仍停在旧默认 20 的才迁移） | 本地（未上传） |
@@ -93,6 +94,28 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.0.2
+
+### ① 内容（只改许可署名与版本号，无代码改动）
+
+| 文件 | 改动 |
+| --- | --- |
+| `LICENSE`（根） | 改为标准 MIT 文本 + 两行版权声明：`Copyright (c) 2026 nyaLium` / `Copyright (c) 2026 Kirin0321 (麒麟)`；删掉夹在标题与正文之间的 Fork 说明段（GitHub 的 LICENSE 识别能正常认成 MIT） |
+| `mod/LICENSE` | 同上（这份是**打包进 jar** 的 `LICENSE_ctt-hud-fork`），末尾保留一句「部分设计源自 Cake-Hud」 |
+| `NOTICE.md` | 上游署名改为仓库 `TheHolyLord/Cake-Hud` + 其 LICENSE 的版权人 `Kirin0321（麒麟）` |
+| `fabric.mod.json` | `authors` 第二项改为 `Fork of Cake-Hud (TheHolyLord/Cake-Hud, MIT, (c) Kirin0321)` |
+| `mod/README.md` | 开头 Fork 说明同步补上真实版权人 |
+
+原来的写法把上游版权人写成了仓库账号名 `TheHolyLord`，而上游 `LICENSE` 实际写的是 `Kirin0321 (麒麟)` —— 这次更正。
+
+### ② 自检
+
+`checks=4786 failures=0`（无代码改动，断言数不变）。
+
+### ③ 未验证
+
+GitHub 的 LICENSE 识别（仓库页右上角显示 MIT 还是 Other）要等推送后 GitHub 重新扫描，属平台行为。
 
 ## 1.0.1
 
