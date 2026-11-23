@@ -84,7 +84,7 @@ cd mod
 
 - 功能与配置详解：[`mod/README.md`](mod/README.md)（代码导览、配置字段表、界面文案 ↔ 字段对照）
 - 版本沿革：[`CHANGELOG.md`](CHANGELOG.md)
-- 最新版说明：[`versions/v1.0.1/RELEASE.md`](versions/v1.0.1/RELEASE.md)
+- 最新版说明：[`versions/v1.0.2/RELEASE.md`](versions/v1.0.2/RELEASE.md)
 - 归档清单：[`versions/ARCHIVE.md`](versions/ARCHIVE.md)
 
 ## 许可
