@@ -11,7 +11,6 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
@@ -258,7 +257,7 @@ public final class HudWorldRenderer {
         cacheStamp = now;
         HudConfig.Cfg cfg = HudConfig.get();
         exactBars = BossBarTracker.resolve(mc, BossBarTracker.snapshot(mc));
-        if (cfg.showTeammates && cfg.autoPartyBossbar) {
+        if (cfg.showTeammates) {
             PartyBossbarAutoToggle.tick(mc, BossBarTracker.hasTeamBar(mc),
                     BossBarTracker.hasPersonalBar(mc));
         }
@@ -399,7 +398,6 @@ public final class HudWorldRenderer {
         o.showArmor = false;
         o.showBar = true;
         o.barWidth = cfg.teamBarWidth;
-        o.verticalOffset = cfg.teamVerticalOffset;
         o.textShadow = cfg.textShadow;
         o.scale = cfg.teamScale;
         return o;
@@ -418,7 +416,6 @@ public final class HudWorldRenderer {
         o.showArmor = cfg.showBar;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.barWidth;
-        o.verticalOffset = cfg.verticalOffset;
         o.textShadow = cfg.textShadow;
         o.scale = cfg.scale;
         return o;

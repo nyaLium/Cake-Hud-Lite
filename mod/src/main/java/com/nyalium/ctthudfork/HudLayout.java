@@ -93,7 +93,6 @@ public final class HudLayout {
         public boolean showBar = true;
         /** 固定长度（原版名牌像素），夹在 BAR_WIDTH_MIN ~ BAR_WIDTH_MAX。 */
         public double barWidth = BAR_WIDTH_DEFAULT;
-        public int verticalOffset = 0;
         /** 文字是否带阴影（纯渲染开关，放这里只为让测试能覆盖到）。 */
         public boolean textShadow = true;
         /** 整组 UI 缩放，1.0 = 与原版名牌同字号。 */
@@ -266,7 +265,7 @@ public final class HudLayout {
         if (!top.isEmpty()) groups.add(top);
         if (!heartRow.isEmpty()) groups.add(heartRow);
 
-        int bottomTop = TEXT_TOP + opt.verticalOffset;
+        int bottomTop = TEXT_TOP;
         int count = groups.size();
         List<Row> rows = new ArrayList<>(count);
         List<Line> flat = new ArrayList<>(12);
@@ -279,8 +278,7 @@ public final class HudLayout {
             textWidth += width;
         }
 
-        return new Result(rows, flat, textWidth, barWidth,
-                bottomTop, BAR_TOP + opt.verticalOffset);
+        return new Result(rows, flat, textWidth, barWidth, bottomTop, BAR_TOP);
     }
 
     /** 当前页的元素护甲段（最多 {@link #ARMOUR_PAGE_SIZE} 项，不带分隔空格）。 */

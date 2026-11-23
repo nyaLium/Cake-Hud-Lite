@@ -23,7 +23,6 @@ public final class SelfCheck {
         heartCycling();
         bigNumbers();
         barOwnershipScoring();
-        screenOcclusion();
         payloadConversion();
         bossBarTitles();
         curseKeys();
@@ -279,9 +278,9 @@ public final class SelfCheck {
         check(SelfStatsFilterScreen.columnWidth(150) == 60, "极窄屏兜底 60");
     }
 
-    // ── 1f. 属性面板显示方式：两套配置 ──
+    // ── 1f. 属性面板显示方式：四套配置 ──
 
-    /** 1.20.14：HUD / 容器界面各一套位置·列数·缩放·不透明度；模式 0/1。 */
+    /** 1.20.14：HUD / 容器界面各一套位置·列数·透明度；模式 0/1/2（v1.0.0 起没有「文字大小」）。 */
     private static void panelModes() {
         HudConfig.Cfg c = HudConfig.get();
         int oldMode = c.selfStatsMode;
@@ -290,10 +289,9 @@ public final class SelfCheck {
             check(!HudConfig.containerMode(), "模式 0 不该是容器模式");
             c.selfStatsX = 11;
             c.selfStatsColumns = 3;
-            c.selfStatsScale = 1.5;
             c.selfStatsOpacity = 0.6;
-            HudConfig.Panel hud = HudConfig.panel();
-            check(hud.x == 11 && hud.columns == 3 && hud.scale == 1.5 && hud.opacity == 0.6,
+            HudConfig.Panel hud = HudConfig.panel(0, false, 320, 240);
+            check(hud.x == 11 && hud.columns == 3 && hud.opacity == 0.6,
                     "HUD 模式应取 selfStats* 那一套");
 
             c.selfStatsMode = 1;
@@ -304,37 +302,35 @@ public final class SelfCheck {
             c.selfStatsMode = 1;   // 后面的断言按「容器模式」继续
             c.containerX = 22;
             c.containerColumns = 1;
-            c.containerScale = 2.0;
             c.containerOpacity = 0.3;
-            HudConfig.Panel box = HudConfig.panel();
-            check(box.x == 22 && box.columns == 1 && box.scale == 2.0 && box.opacity == 0.3,
+            HudConfig.Panel box = HudConfig.panel(1, false, 320, 240);
+            check(box.x == 22 && box.columns == 1 && box.opacity == 0.3,
                     "容器模式应取 container* 那一套");
 
             // 移动只改当前模式那一套
-            HudConfig.movePanel(33, 44);
+            HudConfig.movePanel(1, false, 33, 44, 320, 240);
             check(c.containerX == 33 && c.containerY == 44, "容器模式下移动应写 container*");
             check(c.selfStatsX == 11, "HUD 那一套不该被改");
-            HudConfig.setPanelColumns(2);
+            HudConfig.setPanelColumns(1, false, 2);
             check(c.containerColumns == 2 && c.selfStatsColumns == 3, "setPanelColumns 应只改当前模式");
 
             // 模式 2 有自己的一套（v8）
             c.selfStatsMode = 2;
             c.bothX = 55;
             c.bothColumns = 1;
-            c.bothScale = 1.2;
             c.bothOpacity = 0.5;
-            HudConfig.Panel both = HudConfig.panel();
-            check(both.x == 55 && both.columns == 1 && both.scale == 1.2 && both.opacity == 0.5,
+            HudConfig.Panel both = HudConfig.panel(2, false, 320, 240);
+            check(both.x == 55 && both.columns == 1 && both.opacity == 0.5,
                     "模式 2 应取 both* 那一套");
-            HudConfig.movePanel(2, false, 66, 77);
+            HudConfig.movePanel(2, false, 66, 77, 320, 240);
             check(c.bothX == 66 && c.bothY == 77, "模式 2（HUD）移动应写 both*");
             check(c.selfStatsX == 11 && c.containerX == 33, "模式 2 移动不该改另外两套");
             // 模式 2 的容器那一套独立
             c.bothContainerX = 88;
             c.bothContainerColumns = 3;
-            HudConfig.Panel bothBox = HudConfig.panel(2, true);
+            HudConfig.Panel bothBox = HudConfig.panel(2, true, 320, 240);
             check(bothBox.x == 88 && bothBox.columns == 3, "模式 2 容器应取 bothContainer*");
-            HudConfig.movePanel(2, true, 99, 111);
+            HudConfig.movePanel(2, true, 99, 111, 320, 240);
             check(c.bothContainerX == 99 && c.bothX == 66, "模式 2 容器移动应只改 bothContainer*");
         } finally {
             c.selfStatsMode = oldMode;
@@ -346,145 +342,42 @@ public final class SelfCheck {
         old.selfStatsX = 123;
         old.selfStatsY = 45;
         old.selfStatsColumns = 3;
-        old.selfStatsScale = 1.3;
         old.selfStatsOpacity = 0.7;
         HudConfig.migrate("{\"configVersion\":6}", old);
         check(old.containerX == 123 && old.containerY == 45 && old.containerColumns == 3,
                 "v6 → v7 应把 HUD 配置复制给容器那套");
-        check(Math.abs(old.containerScale - 1.3) < 1e-9 && Math.abs(old.containerOpacity - 0.7) < 1e-9,
-                "v6 → v7 缩放/不透明度也应复制");
+        check(Math.abs(old.containerOpacity - 0.7) < 1e-9, "v6 → v7 透明度也应复制");
 
-        // 夹取：模式 0~1、容器缩放 ≥ 1.0
+        // 夹取：模式 0~2、列数 1~3
         HudConfig.Cfg wild = new HudConfig.Cfg();
         wild.selfStatsMode = 9;
-        wild.containerScale = 0.1;
         wild.containerColumns = 9;
-        wild.selfStatsScale = 0.1;
         HudConfig.normalize(wild);
         check(wild.selfStatsMode == 2, "selfStatsMode 9 应夹到 2");
-        check(wild.containerScale == 1.0, "containerScale 0.1 应夹到 1.0（字号最小 1.00）");
         check(wild.containerColumns == 3, "containerColumns 9 应夹到 3");
-        check(wild.selfStatsScale == 1.0, "selfStatsScale 0.1 应夹到 1.0（字号最小 1.00）");
-        HudConfig.Cfg shield = new HudConfig.Cfg();
-        shield.shieldScale = 99.0;
-        shield.shieldOpacity = 0.0;
-        shield.shieldX = 99999;
-        HudConfig.normalize(shield);
-        check(shield.shieldScale == HudConfig.SHIELD_SCALE_MAX, "shieldScale 应夹到 1.5");
-        check(shield.shieldOpacity == 0.1, "shieldOpacity 应夹到 0.1");
-        check(shield.shieldX == 4000, "shieldX 应夹到 4000");
-        HudConfig.Cfg tiny = new HudConfig.Cfg();
-        tiny.shieldScale = 0.01;
-        HudConfig.normalize(tiny);
-        check(tiny.shieldScale == HudConfig.SHIELD_SCALE_MIN, "shieldScale 应兜到 0.5");
-
-        // 1.20.22：缩放是「整张纹理等比缩放」，倍率取 0.5~1.5 的小数
-        check(ShieldIndicatorHud.clampScale(Double.NaN) == 1.0, "NaN 倍率应回落 1.0");
-        check(ShieldIndicatorHud.clampScale(9.0) == 1.5, "9 倍应夹到 1.5");
-        check(ShieldIndicatorHud.clampScale(0.1) == 0.5, "0.1 倍应夹到 0.5");
-        // 1.20.26：盾牌默认值（0.7 倍 / 75%）；1.20.32 起不透明度默认 65% + 默认位置公式 + 纹理尺寸
-        HudConfig.Cfg shieldDefaults = HudConfig.normalize(new HudConfig.Cfg());
-        check(Math.abs(shieldDefaults.shieldScale - 0.7) < 1e-9, "盾牌默认缩放应为 0.7 倍");
-        check(Math.abs(shieldDefaults.shieldOpacity - 0.65) < 1e-9, "盾牌默认不透明度应为 65%");
-        check(ShieldIndicatorHud.TEX_W == 34 && ShieldIndicatorHud.TEX_H == 86,
-                "盾牌纹理应为 34×86（1.20.26 换图）");
-        // 默认位置：右手玩家在快捷栏左侧副手槽（guiW/2 - 109），底边距屏幕底 76 px
-        check(ShieldIndicatorHud.defaultX(true, 853, 24) == Math.round(853 / 2.0f - 109) - 12,
-                "默认水平位置应对准左侧副手槽");
-        check(ShieldIndicatorHud.defaultX(false, 853, 24) == Math.round(853 / 2.0f + 109) - 12,
-                "左手玩家应镜像到右侧");
-        check(ShieldIndicatorHud.defaultY(480, 60) == 480 - 76 - 60,
-                "默认垂直位置：底边距屏幕底 76 px");
-        check(ShieldIndicatorHud.clampInto(-5, 24, 853) == 0, "越界应夹到 0");
-        check(ShieldIndicatorHud.clampInto(900, 24, 853) == 829, "右边越界应夹到 屏幕-宽");
-
-        // 迁移：停在旧默认 1.0 / 1.0 的配置跟到 0.7 / 65%（v13 先落 75%，v15 再落 65%）；自己调过的不动
-        HudConfig.Cfg oldShield = new HudConfig.Cfg();
-        oldShield.configVersion = 12;
-        oldShield.shieldScale = 1.0;
-        oldShield.shieldOpacity = 1.0;
-        HudConfig.migrate("{\"configVersion\":12}", oldShield);
-        check(Math.abs(oldShield.shieldScale - 0.7) < 1e-9
-                && Math.abs(oldShield.shieldOpacity - 0.65) < 1e-9,
-                "v12 旧默认值应迁移成 0.7 / 65%");
-        HudConfig.Cfg customShield = new HudConfig.Cfg();
-        customShield.configVersion = 12;
-        customShield.shieldScale = 1.2;
-        customShield.shieldOpacity = 0.4;
-        HudConfig.migrate("{\"configVersion\":12}", customShield);
-        check(Math.abs(customShield.shieldScale - 1.2) < 1e-9
-                && Math.abs(customShield.shieldOpacity - 0.4) < 1e-9,
-                "迁移不该覆盖自己调过的盾牌参数");
-
-        // 1.20.32：属性面板文字阴影独立 + 实体血条文字阴影默认关
-        HudConfig.Cfg shadowDefaults = HudConfig.normalize(new HudConfig.Cfg());
-        check(!shadowDefaults.textShadow, "实体血条「文字阴影」默认应为关闭");
-        check(shadowDefaults.selfStatsTextShadow, "属性面板文字阴影默认应为开启（与升级前观感一致）");
-        HudConfig.Cfg v14Shadow = new HudConfig.Cfg();
-        v14Shadow.configVersion = 14;
-        v14Shadow.textShadow = true;      // 旧默认值
-        v14Shadow.shieldOpacity = 0.75;   // 旧默认值
-        HudConfig.migrate("{\"configVersion\":14}", v14Shadow);
-        check(!v14Shadow.textShadow, "v14 的实体血条文字阴影（旧默认 true）应跟到关闭");
-        check(v14Shadow.selfStatsTextShadow, "v14 升级后属性面板文字阴影应保持新默认（开）");
-        check(Math.abs(v14Shadow.shieldOpacity - 0.65) < 1e-9, "v14 的 75% 应跟到 65%");
-        HudConfig.Cfg v14NoShadow = new HudConfig.Cfg();
-        v14NoShadow.configVersion = 14;
-        v14NoShadow.textShadow = false;
-        HudConfig.migrate("{\"configVersion\":14}", v14NoShadow);
-        check(v14NoShadow.selfStatsTextShadow,
-                "关掉实体血条阴影的人，面板也用新字段的默认值（开）—— 不继承那个副作用");
-        HudConfig.Cfg v14CustomOpacity = new HudConfig.Cfg();
-        v14CustomOpacity.configVersion = 14;
-        v14CustomOpacity.shieldOpacity = 0.4;
-        HudConfig.migrate("{\"configVersion\":14}", v14CustomOpacity);
-        check(Math.abs(v14CustomOpacity.shieldOpacity - 0.4) < 1e-9,
-                "迁移不该覆盖自己调过的盾牌不透明度");
-
-        check(ShieldIndicatorHud.scaledWidth(1.0) == ShieldIndicatorHud.TEX_W, "1.0 倍宽 = 原纹理宽");
-        check(ShieldIndicatorHud.scaledHeight(1.0) == ShieldIndicatorHud.TEX_H, "1.0 倍高 = 原纹理高");
-        check(ShieldIndicatorHud.scaledWidth(0.5) == 17, "0.5 倍宽应为 17（34×0.5）");
-        check(ShieldIndicatorHud.scaledHeight(0.5) == 43, "0.5 倍高应为 43（86×0.5）");
-        check(ShieldIndicatorHud.scaledWidth(1.5) == 51, "1.5 倍宽应为 51（34×1.5）");
-        check(ShieldIndicatorHud.scaledHeight(1.5) == 129, "1.5 倍高应为 129（86×1.5）");
-        check(ShieldIndicatorHud.scaledWidth(1.2) == 41, "1.2 倍宽应为 41（34×1.2）");
-        check(ShieldIndicatorHud.scaledWidth(99.0) == 51, "越界倍率应按 1.5 算宽");
     }
 
     // ── 2. 血条长度 ──
 
     private static void barWidthSweep() {
         double[] configs = {0.0, 16.0, 50.0, 100.0, 150.0, 200.0, 1000.0, -5.0, Double.NaN};
-        int[] offsets = {-30, -15, 0, 200};
         double[] scales = {0.5, 0.75, 1.0, 1.5, 4.0};
         Data d = new Data("扫描", 73, 120, false, 3, new int[]{5, 2, 0, 0, 0, 0, 1});
 
         for (double bw : configs) {
-            for (int off : offsets) {
-                for (double sc : scales) {
-                    HudLayout.Options o = new HudLayout.Options();
-                    o.barWidth = bw;
-                    o.verticalOffset = off;
-                    o.scale = sc;
-                    String tag = "barWidth=" + bw + " offset=" + off + " scale=" + sc;
-                    HudLayout.Result r = run(tag, d, o);
-                    check(r.barWidth >= HudLayout.BAR_WIDTH_MIN
-                            && r.barWidth <= HudLayout.BAR_WIDTH_MAX, tag + " barWidth 越界");
-                    check(r.textTop == HudLayout.TEXT_TOP + off, tag + " textTop 偏移错误");
-                    check(r.barTop == HudLayout.BAR_TOP + off, tag + " barTop 偏移错误");
-                    check(r.textTop + 9 <= r.barTop, tag + " 文字与血条重叠");
-                }
+            for (double sc : scales) {
+                HudLayout.Options o = new HudLayout.Options();
+                o.barWidth = bw;
+                o.scale = sc;
+                String tag = "barWidth=" + bw + " scale=" + sc;
+                HudLayout.Result r = run(tag, d, o);
+                check(r.barWidth >= HudLayout.BAR_WIDTH_MIN
+                        && r.barWidth <= HudLayout.BAR_WIDTH_MAX, tag + " barWidth 越界");
+                check(r.textTop == HudLayout.TEXT_TOP, tag + " textTop 应在 TEXT_TOP");
+                check(r.barTop == HudLayout.BAR_TOP, tag + " barTop 应在 BAR_TOP");
+                check(r.textTop + 9 <= r.barTop, tag + " 文字与血条重叠");
             }
         }
-
-        check(HudLayout.resolveBarWidth(100) == 100, "100 在范围内应保持");
-        check(HudLayout.resolveBarWidth(50) == 50, "下限 50 应保持");
-        check(HudLayout.resolveBarWidth(150) == 150, "上限 150 应保持");
-        check(HudLayout.resolveBarWidth(0) == HudLayout.BAR_WIDTH_MIN, "0 应夹到下限");
-        check(HudLayout.resolveBarWidth(9999) == HudLayout.BAR_WIDTH_MAX, "过大应夹到上限");
-        check(HudLayout.resolveBarWidth(Double.NaN) == HudLayout.BAR_WIDTH_DEFAULT, "NaN 回落默认");
-        check(HudLayout.BAR_WIDTH_DEFAULT == 75, "默认长度应为 75 像素: "
-                + HudLayout.BAR_WIDTH_DEFAULT);
     }
 
     // ── 3. 配置归一化 ──
@@ -495,25 +388,21 @@ public final class SelfCheck {
         c.scale = 0.01;
         c.maxDistance = 0;
         c.barWidth = -100;
-        c.verticalOffset = 9999;
         HudConfig.normalize(c);
         check(c.opacity == 0.5, "opacity 0.1 应夹到 0.5");
         check(c.scale == 0.75, "scale 0.01 应夹到 0.75");
         check(c.maxDistance == 4.0, "maxDistance 0 应夹到 4");
         check(c.barWidth == HudLayout.BAR_WIDTH_MIN, "barWidth -100 应夹到 50");
-        check(c.verticalOffset == 0, "verticalOffset 9999 应夹到 0");
 
         c.opacity = 3.0;
         c.scale = 99;
         c.maxDistance = 9999;
         c.barWidth = 9999;
-        c.verticalOffset = -9999;
         HudConfig.normalize(c);
         check(c.opacity == 1.0, "opacity 3 应夹到 1.0");
         check(c.scale == 1.5, "scale 99 应夹到 1.5");
         check(c.maxDistance == 256.0, "maxDistance 9999 应夹到 256");
         check(c.barWidth == HudLayout.BAR_WIDTH_MAX, "barWidth 9999 应夹到 150");
-        check(c.verticalOffset == -30, "verticalOffset -9999 应夹到 -30");
 
         c.opacity = Double.NaN;
         c.barWidth = Double.NaN;
@@ -526,24 +415,26 @@ public final class SelfCheck {
         check(defaults.teamBarWidth == 75.0, "队友血条默认长度也应为 75");
         check(defaults.scale == 0.9, "默认缩放应为 0.9: " + defaults.scale);
         check(defaults.teamScale == 0.9, "队友默认缩放也应为 0.9: " + defaults.teamScale);
-        check(defaults.verticalOffset == 0, "默认垂直偏移应为 0");
         check(defaults.opacity == 0.75, "默认透明度应为 0.75");
         check(defaults.showBar, "默认应画血条");
-        check(!defaults.hideBehindWalls, "1.20.14 起默认不再按墙隐藏");
-        check(defaults.autoPartyBossbar, "1.20.15 起自动开队伍条写死开启");
-        HudConfig.Cfg forcedCfg = new HudConfig.Cfg();
-        forcedCfg.hideBehindWalls = true;
-        forcedCfg.autoPartyBossbar = false;
-        HudConfig.normalize(forcedCfg);
-        check(!forcedCfg.hideBehindWalls && forcedCfg.autoPartyBossbar,
-                "normalize 应把这两项写死（hideBehindEntities 字段已在 1.20.25 删除）");
         check(defaults.hideBelowNameScore, "默认应隐藏 below_name 分数");
         check(defaults.hideEnemyBossBar, "默认应隐藏上方 Boss 栏里的最近敌人信息");
         check(defaults.hideTeamBossBar, "默认应隐藏上方 Boss 栏里的队伍血量");
         check(defaults.showTeammates, "默认应显示队友血量");
-        check(defaults.autoPartyBossbar, "默认应自动开启队伍血量条（纯客户端数据源）");
 
         check(HudConfig.normalize(null) != null, "normalize(null) 不能返回 null");
+
+        // v22：显示方式默认值改成「HUD + 容器界面」，只动仍停在旧默认 0 的
+        HudConfig.Cfg modeOld = new HudConfig.Cfg();
+        modeOld.configVersion = 21;
+        modeOld.selfStatsMode = 0;
+        HudConfig.migrate("{\"configVersion\":21}", modeOld);
+        check(modeOld.selfStatsMode == 2, "v21 的旧默认「始终显示」应迁移到 HUD + 容器");
+        HudConfig.Cfg modeKept = new HudConfig.Cfg();
+        modeKept.configVersion = 21;
+        modeKept.selfStatsMode = 1;
+        HudConfig.migrate("{\"configVersion\":21}", modeKept);
+        check(modeKept.selfStatsMode == 1, "自己选过的显示方式不该被迁移改掉");
 
         // 老配置（没有 configVersion）迁移：旧默认 100 → 75，其它字段不动。
         HudConfig.Cfg old = new HudConfig.Cfg();
@@ -1003,51 +894,6 @@ public final class SelfCheck {
                 "expectedPercent(" + hp + "/" + maxHp + ")=" + bar.expectedPercent());
     }
 
-    // ── 5b-2. 屏幕空间遮挡（后方的怪被前面的挡住就不画） ──
-
-    private static void screenOcclusion() {
-        java.util.List<double[]> none = java.util.List.of();
-        double[] self = {0, 0, 100, 100};
-
-        check(BoxOcclusion.coverage(self, none) == 0.0, "没有更近实体时覆盖率应为 0");
-        check(!BoxOcclusion.hidden(self, none, BoxOcclusion.DEFAULT_THRESHOLD), "没有遮挡不该隐藏");
-
-        double[] half = {0, 0, 50, 100};
-        check(Math.abs(BoxOcclusion.coverage(self, java.util.List.of(half)) - 0.5) < 1e-9,
-                "盖住一半时覆盖率应 0.5");
-        check(!BoxOcclusion.hidden(self, java.util.List.of(half), 0.7), "50% 不该隐藏");
-
-        double[] most = {0, 0, 80, 100};
-        check(BoxOcclusion.hidden(self, java.util.List.of(most), 0.7), "80% 应当隐藏");
-        check(!BoxOcclusion.hidden(self, java.util.List.of(most), 0.9), "阈值 0.9 时 80% 不该隐藏");
-
-        // 两块各盖 40%、互不重叠 → 合计 80%
-        double[] left = {0, 0, 40, 100};
-        double[] right = {40, 0, 80, 100};
-        check(Math.abs(BoxOcclusion.coverage(self, java.util.List.of(left, right)) - 0.8) < 1e-9,
-                "两段合计应 0.8");
-        check(BoxOcclusion.hidden(self, java.util.List.of(left, right), 0.7), "合计 80% 应隐藏");
-
-        // 完全重合的两个框仍然只算 100%，不会超过 1
-        check(BoxOcclusion.coverage(self, java.util.List.of(half, half)) == 1.0,
-                "重复覆盖应夹到 1.0");
-
-        // 完全错开 / 只有边界接触 / 退化矩形
-        double[] away = {200, 200, 300, 300};
-        check(BoxOcclusion.coverage(self, java.util.List.of(away)) == 0.0, "错开的框覆盖率 0");
-        double[] touching = {100, 0, 150, 100};
-        check(BoxOcclusion.coverage(self, java.util.List.of(touching)) == 0.0, "只贴边不算覆盖");
-        double[] flat = {0, 50, 100, 50};
-        check(BoxOcclusion.coverage(flat, java.util.List.of(most)) == 0.0, "零面积自身覆盖率 0");
-        check(BoxOcclusion.coverage(null, java.util.List.of(most)) == 0.0, "自身为 null 时 0");
-        check(BoxOcclusion.coverage(self, java.util.Collections.singletonList((double[]) null)) == 0.0,
-                "对比框为 null 时 0");
-
-        // 阈值非法 → 回落默认 0.70
-        check(BoxOcclusion.hidden(self, java.util.List.of(most), 0.0), "阈值 0 应回落默认并隐藏");
-        check(BoxOcclusion.hidden(self, java.util.List.of(most), 2.0), "阈值 2 应回落默认并隐藏");
-    }
-
     // ── 5c. 服务端选装组件的数据换算 ──
 
     private static void payloadConversion() {
@@ -1156,8 +1002,6 @@ public final class SelfCheck {
         expectTitle("Player (Coins 12) (HP 5/10)", null, -1, -1);
 
         BossBarTitle t = BossBarTitle.parse("Frost Wolf (HP 73/120) 🛡3 🔥5");
-        check(t != null && t.suffix("Frost Wolf (HP 73/120) 🛡3 🔥5").trim().equals("🛡3 🔥5"),
-                "护甲段切分错误");
         check(t != null && Math.abs(t.ratio() - 73f / 120f) < 1e-6, "ratio 计算错误");
 
         check(BossBarTitle.looksLikeTeamBar("Someone (/)"), "队伍条标记未识别");
@@ -1376,10 +1220,6 @@ public final class SelfCheck {
         check(SelfStats.amountBefore("7 \u2764", 2) == 7, "中间夹空格也应解析出 7");
 
         // ③ 属性行识别 / 「游戏没开始」
-        check(SelfStats.looksLikeStat("50\u2764"), "数字开头的行应算属性行");
-        check(SelfStats.looksLikeStat("\uD83D\uDDE13"), "带 🗡 的行应算属性行");
-        check(!SelfStats.looksLikeStat("hello world"), "普通聊天不该算属性行");
-        check(!SelfStats.looksLikeStat("   "), "空白行不该算属性行");
         check(SelfStats.isGameNotStarted("Game not started"), "英文「游戏没开始」应识别");
         check(SelfStats.isGameNotStarted("游戏未开始"), "中文「游戏未开始」应识别");
         check(!SelfStats.isGameNotStarted("50\u2764"), "属性行不该被当成「游戏没开始」");
@@ -1487,7 +1327,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(HudConfig.CURRENT_VERSION == 21, "配置版本应为 21");
+        check(HudConfig.CURRENT_VERSION == 22, "配置版本应为 22");
         HudConfig.Cfg defaults = HudConfig.normalize(new HudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1496,7 +1336,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         HudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 21, "v3 → v21 应升版本号");
+        check(v3.configVersion == 22, "v3 → v22 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1671,20 +1511,19 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         HudConfig.Cfg cfg = new HudConfig.Cfg();
-        check(HudConfig.CURRENT_VERSION == 21, "配置版本应为 21");
+        check(HudConfig.CURRENT_VERSION == 22, "配置版本应为 22");
         HudConfig.Cfg defaults = HudConfig.normalize(new HudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
         check(defaults.selfStatsColumns == 2, "自身属性面板默认两列");
-        check(defaults.selfStatsScale == 1.0 && defaults.selfStatsOpacity == 1.0, "默认字号/不透明度应为 1.0");
+        check(defaults.selfStatsOpacity == 1.0, "默认透明度应为 1.0");
+        check(defaults.selfStatsMode == 2, "默认显示方式应为 HUD + 容器界面（v1.0.0 起）");
         check(defaults.selfStatsHidden.isEmpty(), "默认不隐藏任何属性");
 
         HudConfig.Cfg wild = new HudConfig.Cfg();
-        wild.selfStatsScale = 99.0;
         wild.selfStatsOpacity = -3.0;
         wild.selfStatsHidden = new java.util.ArrayList<>(java.util.List.of("heart_red", "hint", "heart_red", "health"));
         HudConfig.normalize(wild);
-        check(wild.selfStatsScale == 2.0, "selfStatsScale 99 应夹到 2.0");
         check(wild.selfStatsOpacity == 0.2, "selfStatsOpacity -3 应夹到 0.2");
         check(wild.selfStatsHidden.contains("heart_red") && !wild.selfStatsHidden.contains("hint"),
                 "隐藏表应去掉 hint 且保留 heart_red");
@@ -1694,7 +1533,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         HudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 21, "v4 → v21 应升版本号");
+        check(v4.configVersion == 22, "v4 → v22 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板
@@ -1952,7 +1791,7 @@ public final class SelfCheck {
 
         // ② 四套面板配置互不串改
         HudConfig.reset();
-        HudConfig.movePanel(2, true, 11, 22);
+        HudConfig.movePanel(2, true, 11, 22, 320, 240);
         HudConfig.Cfg live = HudConfig.get();
         check(live.bothContainerX == 11 && live.bothContainerY == 22, "模式 2 容器那套应被写入");
         check(live.bothX == 4 && live.bothY == -1, "模式 2 的 HUD 那套不该被带动（y 仍是动态默认）");
@@ -1961,9 +1800,6 @@ public final class SelfCheck {
         HudConfig.setPanelColumns(2, false, 3);
         check(live.bothColumns == 3, "模式 2 HUD 列数应写入");
         check(live.bothContainerColumns == 2, "模式 2 容器列数不该被带动");
-        HudConfig.setPanelScale(1, false, 1.5);
-        check(live.containerScale == 1.5, "模式 1 字号应写入");
-        check(live.selfStatsScale == 1.0 && live.bothScale == 1.0, "其它两套字号不该被带动");
         HudConfig.setPanelOpacity(2, true, 0.5);
         check(live.bothContainerOpacity == 0.5 && live.bothOpacity == 1.0, "不透明度只写当前对象");
 

@@ -686,23 +686,6 @@ public final class SelfStats {
         }
     }
 
-    /**
-     * 这一行像不像 ViewStats 的属性行（数字开头 / 带心形 / 带属性图标）。
-     *
-     * <p><b>仅 SelfCheck 使用</b>：1.20.24 起线上判定换成 {@link #statGlyphLine(String)} 与翻译键前缀，
-     * 本方法保留为「宽判据」的测试锚点，改动需同步 {@code SelfCheck}。</p>
-     */
-    static boolean looksLikeStat(String flat) {
-        if (flat == null || flat.isBlank()) return false;
-        String s = flat.strip();
-        if (s.isEmpty()) return false;
-        if (Character.isDigit(s.charAt(0))) return true;
-        if (s.indexOf('\u2764') >= 0) return true;
-        for (String icon : new String[]{"\uD83D\uDDE1", "\uD83D\uDEE1", "\u2603", "\u2600", "\u2620", "\u2693"}) {
-            if (s.contains(icon)) return true;
-        }
-        return false;
-    }
 
     /**
      * 地图 ViewStats 里「数字 + 图形」那一类行（{@code ["",{score},{text:"🗡",hover}]} 的形态）。

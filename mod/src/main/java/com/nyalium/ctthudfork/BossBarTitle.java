@@ -31,14 +31,11 @@ public final class BossBarTitle {
     public final String name;
     public final int hp;
     public final int maxHp;
-    /** 护甲段在原始串里的起始下标（右括号之后）。 */
-    public final int suffixStart;
 
-    private BossBarTitle(String name, int hp, int maxHp, int suffixStart) {
+    private BossBarTitle(String name, int hp, int maxHp) {
         this.name = name;
         this.hp = hp;
         this.maxHp = maxHp;
-        this.suffixStart = suffixStart;
     }
 
     /** 解析失败返回 null（这条 bossbar 不是怪物血量条）。 */
@@ -64,13 +61,7 @@ public final class BossBarTitle {
         }
         if (maxHp <= 0) return null;
 
-        return new BossBarTitle(name, hp, maxHp, m.end());
-    }
-
-    /** 右括号之后的护甲段（可能为空串）。 */
-    public String suffix(String text) {
-        if (text == null || suffixStart >= text.length()) return "";
-        return text.substring(suffixStart);
+        return new BossBarTitle(name, hp, maxHp);
     }
 
     /** 是否像玩家 / 队伍状态条（不是要画的怪物条）。 */

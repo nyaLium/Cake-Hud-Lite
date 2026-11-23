@@ -2,10 +2,11 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.20.42**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
-> 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/字号/透明度，
+> 当前版本 **1.0.0（正式版）**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/透明度，
 > 88 个属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
 > 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」（进服后先静默 3 s 再问）；1.20.40 把面板/盾牌的位置改成**相对位置**，窗口大小或 GUI 缩放变化后不再错位；1.20.41 面板默认位置改到**左侧偏上（y = 屏幕高 ÷ 3）**；1.20.42 容器界面那两套的默认位置也一样。
+> **1.0.0 起版本号重新从 1.0.0 起算**（此前的 1.10.0 – 1.20.42 是工作版本线）。
 >
 > **1.20.37 起彻底改名**：仓库 `CTT HUD - Fork`、Gradle 工程 `mod/`、包名 `com.nyalium.ctthudfork`、
 > 入口类 `CttHudForkClient` / `CttHudForkServer`、配置类 `HudConfig`、布局类 `HudLayout`、
@@ -15,11 +16,92 @@
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.20.42` |
+| 版本 | `1.0.0` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/ctt-hud-fork-1.20.42.jar` |
+| 产物 | `build/libs/ctt-hud-fork-1.0.0.jar` |
+
+## 代码导览（每个类做什么）
+
+`mod/src/main/java/com/nyalium/ctthudfork/` 下 39 个类 + 5 个 mixin，按职责分六组：
+
+**入口与生命周期**
+
+| 文件 | 作用 |
+| --- | --- |
+| `CttHudForkClient` | 客户端入口：读配置、注册两个 HUD 元素（属性面板 / 盾牌）、每 tick 触发刷新、`F8` 快捷键、聊天过滤挂载、JOIN / DISCONNECT 生命周期 |
+| `CttHudForkServer` | 服务端入口（**选装**）：每 4 tick 扫描半径 64 格内的怪，按 UUID 推权威数据，无变化时 3 s 发一次 keepalive |
+| `MobHealthPayload` | 上面那个数据包的 schema（`CustomPacketPayload` + `CODEC`），一包最多 32 只怪 |
+| `ClientMobHealthCache` | 客户端侧按 UUID 缓存服务端推来的权威数据，5 s 不刷新就失鲜、自动回落客户端数据 |
+| `ModMenuIntegration` | Mod Menu 的入口，点开就是 `HudConfigScreen` |
+
+**配置与界面**
+
+| 文件 | 作用 |
+| --- | --- |
+| `HudConfig` | 配置 schema（`Cfg`）、读写 / 热重载 / 版本迁移 / 归一化；面板位置换算（相对位置 `scalePos` / `rebase`）、盾牌位置、内容过滤表清洗 |
+| `HudConfigScreen` | 总设置界面：总开关、三个子页入口、恢复默认、完成 |
+| `EntityHudSettingsScreen` | 「血条设置…」：通用 / 敌人 / 玩家三组，单列可滚动 |
+| `SelfStatsSettingsScreen` | 「属性面板设置…」：开关、刷新间隔、列数、透明度、阴影、显示方式、调整位置、显示内容过滤 |
+| `SelfStatsFilterScreen` | 「显示内容过滤…」：按「属性 / 状态效果 / 其它」三节列 88 项，点击切换显示/隐藏 |
+| `SelfStatsLayoutScreen` | 「调整位置…」（面板）：拖动 + 方向键微调，模式 2 下可就地切 HUD / 容器那套 |
+| `ShieldIndicatorSettingsScreen` | 「盾牌指示器设置…」：显示开关、缩放比例、透明度、调整位置 |
+| `ShieldLayoutScreen` | 「调整位置…」（盾牌）：同一套拖动逻辑，预览用 `meter_0` |
+| `ScrollPane` | 滚动区几何（视口 / 内容高 / 最大滚动）、`enableScissor` 裁剪、滚动条绘制与命中（4 px 宽、±5 px 容差） |
+| `Pointer` | 鼠标事件 → GUI 坐标的兼容层（不同输入后端可能给物理像素） |
+
+**头顶血条（世界空间）**
+
+| 文件 | 作用 |
+| --- | --- |
+| `HudTarget` | 判定「这只实体归本模组管吗 / 这一帧可见吗」：计分板数据或队友条 + 距离 + `shouldRender` + 旁观者，带 8 ms 记忆化 |
+| `HudLayout` | 三段布局的**纯计算**：名字 / 心数·护甲 / 血条 的 `Options → Result`，供渲染与自检共用 |
+| `HudWorldRenderer` | 在实体名字的提交点画血条与文字；深度测试、距离缩放全部交给原版 |
+| `HudRenderBridge` | 26.3 渲染拆成 extract / submit 两段，这里把实体挂在 `EntityRenderState` 上，submit 时按 UUID 取数据 |
+| `BossBarTracker` | 读原版 Boss 栏（标题 / 颜色 / 进度），并认领「最近敌人」那一条（同名怪按血量档 + 距离打分） |
+| `BossBarTitle` | Boss 栏标题解析（纯函数）：名字、当前/上限、是否队伍条 |
+| `BossBarTexture` | 原版 `boss_bar` 纹理的「端盖 / 中段」分段几何 |
+| `TeamBarTitle` | 队伍血量条标题解析：从中取出玩家名与血量 |
+| `HeartCounts` | 心数模型：红 / 魂 / 黑 / 蓝 / 碎 / 粉 与「已知心数」换算 |
+| `HeartCycle` | 除红心外「这 2 s 显示哪一种心」的时钟（实体 id 做 salt 错开） |
+| `ArmourCycle` | 元素护甲每页最多 2 项，按时间翻页的时钟 |
+| `ArmourCache` | 数据包的护甲是轮换下发的，按实体累积成 8 个槽，16 s 不再出现才作废 |
+| `EnemyData` | 把计分板 / 服务端 payload / Boss 栏三路数据合成一份 `Snapshot` |
+| `CurseDetector` | 「未知诅咒」期间整块 UI 不画（按翻译键前缀识别，2 s 滞后释放） |
+
+**自身属性面板**
+
+| 文件 | 作用 |
+| --- | --- |
+| `SelfStats` | 数据通道：定时 `/trigger ViewStats` 把地图回的 240 多行截下来、按类过滤、解析心数、进世界静默 3 s、超时收尾 |
+| `SelfStatsKind` | 每一行归到哪个属性（89 个枚举，88 项可过滤，分三节） |
+| `SelfStatsPanel` | 面板绘制：列优先排版、悬停显示官方属性名、HUD 与容器界面共用 |
+| `SelfStatsPanelAccess` | 给 mixin 包用的静态桥（`ContainerPanelMixin` 在别的包） |
+
+**盾牌指示器 / 聊天过滤 / 队伍条**
+
+| 文件 | 作用 |
+| --- | --- |
+| `ShieldIndicatorHud` | 盾牌计量条：判定副手物品 → 按耐久分四档 → 34×86 等比缩放绘制 |
+| `ChatTriggerFilter` | 吞掉「本 Mod 自己发的 trigger」的成功回显与 `commands.trigger.failed` |
+| `PartyBossbarAutoToggle` | 自动 `/trigger TogglePartyBossbar` 打开队伍血量条（3 s 冷却、5 次失败熔断） |
+
+**mixin**（`mixin/`）
+
+| 文件 | 作用 |
+| --- | --- |
+| `NameTagHudMixin` | 在 `EntityRenderer.submitNameDisplay` 末尾插入世界空间 HUD |
+| `NameTagScoreMixin` | 摘掉原版 `below_name` 计分板分数（信息已由血条表达） |
+| `BossBarHudRenderMixin` | 按配置隐藏原版 Boss 栏里的敌人 / 队伍条目 |
+| `BossHealthOverlayAccessor` | 拿到 `BossHealthOverlay` 的 bars 映射 |
+| `ContainerPanelMixin` | 在容器界面（箱子等）上画属性面板 |
+
+**测试**
+
+| 文件 | 作用 |
+| --- | --- |
+| `SelfCheck`（`src/test`） | 纯 JVM 自检：`gradlew selfCheck`，`build` 会自动带上；共 **4786** 条断言 |
 
 ## 绘制方式（1.15.0 起）
 
@@ -29,7 +111,7 @@
 - 血条 → submitCustomGeometry + RenderTypes.text(boss_bar PNG)，同样的 billboard 变换。
 
 结果是遮挡行为**与原版名字一致**：被方块挡住就消失、被更近的模型逐像素裁掉、
-尺寸随距离缩放。hideBehindWalls / hideBehindEntities 只作为「少提交一点」的额外剔除保留。
+尺寸随距离缩放。1.0.0 起不再按方块/实体遮挡剔除（`shouldRender` 之外只按距离判断）。
 
 ## 显示效果
 
@@ -46,7 +128,7 @@
 
 | 行 | 距离锚点 | 说明 |
 | --- | --- | --- |
-| 心数 / 护甲 | -18 ~ -9 像素（折行时上面的行到 -27 起） | `verticalOffset` 可再往上挪 |
+| 心数 / 护甲 | -18 ~ -9 像素（折行时上面的行到 -27 起） | 固定，无垂直微调（1.0.0 起删掉） |
 | 血条 | -7 ~ -2 像素 | 原版 bossbar 纹理，5 像素高 |
 | 名称（原版） | 0 ~ 9 像素 | 分数一摘，原版自己就落回这一行 |
 
@@ -175,18 +257,18 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 ```
 CTT HUD - Fork 设置（F8 或 Mod Menu 打开）
   总开关：开 / 关            ← 关闭时下面三个入口灰掉
-  实体血条设置…              ← 单列可滚动（通用 / 敌人 / 玩家 三组）
-  属性面板设置…              ← 单列可滚动（含显示方式、编辑对象、移动、过滤）
-  盾牌指示器设置…            ← 开关 / 缩放 / 不透明度 / 移动指示器
+  血条设置…                  ← 单列可滚动（通用 / 敌人 / 玩家 三组）
+  属性面板设置…              ← 单列可滚动（含显示方式、编辑对象、调整位置、显示内容过滤）
+  盾牌指示器设置…            ← 显示 / 缩放比例 / 透明度 / 调整位置
   恢复默认
         [ 完成 ]             ← 贴屏幕最底部
 ```
 
 | 入口 | 内容 |
 | --- | --- |
-| 实体血条设置 | 通用：文字阴影（默认**关**，只管头顶血条）/ 隐藏名称下方分数 / 隐藏上方 Boss 栏（最近敌人·队伍血量）/ 透明度；敌人：**显示血条（整块开关：关掉后血条 + 心数/护甲文字都不画）** / 显示距离 / 血条长度 / 整体缩放 / 垂直偏移（服务端数据 1.20.35 起写死优先，界面无开关）；玩家：**显示血条（同上，整块）** / 显示距离 / 血条长度 / 整体缩放 / 垂直偏移 |
-| 属性面板设置 | 开关 / 刷新间隔（现实秒）/ 列数 / 文字大小 / 不透明度 / 文字阴影（1.20.32 独立）/ 显示方式（HUD ↔ 容器界面 ↔ 两者）/ 对象（仅「两者」）/ 移动面板 / 内容过滤（分「属性 / 状态效果 / 其它」三节，1.20.31 起） |
-| 盾牌指示器设置 | 启用 / 缩放（0.5~1.5 倍）/ 不透明度 / 移动指示器 |
+| 血条设置 | 通用：文字阴影（默认**关**，只管头顶血条）/ 隐藏名称下方分数 / 隐藏上方 Boss 栏（最近敌人·队伍血量）/ 透明度；敌人：**显示血条（整块开关：关掉后血条 + 心数/护甲文字都不画）** / 最远显示距离 / 血条长度 / 缩放比例；玩家：**显示血条（同上，整块）** / 最远显示距离 / 血条长度 / 缩放比例（1.0.0 起删掉两处「垂直偏移」）|
+| 属性面板设置 | 开关 / 刷新间隔（1~5 秒，默认 3；1.0.0 起没有「立即」档）/ 列数 / 透明度 / 文字阴影（1.20.32 独立）/ 显示方式（默认 **HUD + 容器界面**）/ 对象（仅「两者」）/ 调整位置… / 显示内容过滤…（分「属性 / 状态效果 / 其它」三节，1.20.31 起）|
+| 盾牌指示器设置 | 显示盾牌指示器 / 缩放比例（0.50 ~ 1.50，步进 0.05）/ 透明度 / 调整位置… |
 | 恢复默认 | 只改内存不落盘，点「完成」才写盘 |
 | 完成 | 归一化后写盘并关闭（总界面 ESC 等同「完成」） |
 
@@ -210,10 +292,10 @@ CTT HUD - Fork 设置（F8 或 Mod Menu 打开）
 
 | 设置项 | 取值 | 说明 |
 | --- | --- | --- |
-| 启用盾牌指示器 | 开 / 关 | 总开关关闭时整栏灰掉 |
-| 缩放 | **0.5 ~ 1.5 倍**（步长 0.1，默认 **0.7**） | 整张纹理等比缩放到 `34k × 86k`，**不是平铺** |
-| 不透明度 | 10% ~ 100%（默认 **65%**；1.20.26 起曾是 75%，1.20.32 改 65%） | 走 `blit` 的 ARGB |
-| 移动指示器 | 拖动 / 方向键 | 坐标存 `shieldX/shieldY`；`-1` = 默认位置（见下）。1.20.40 起坐标是**相对位置**：存的是「量在 `layoutGuiW × layoutGuiH` 那套 GUI 下」的像素，窗口/缩放变化按比例换算 |
+| 显示盾牌指示器 | 开 / 关 | 总开关关闭时整栏灰掉 |
+| 缩放比例 | **0.50 ~ 1.50**（步长 **0.05**，默认 **0.70**，不再带「倍」） | 整张纹理等比缩放到 `34k × 86k`，**不是平铺** |
+| 透明度 | 10% ~ 100%（默认 **65%**；1.20.26 起曾是 75%，1.20.32 改 65%） | 走 `blit` 的 ARGB |
+| 调整位置 | 拖动 / 方向键 | 坐标存 `shieldX/shieldY`；`-1` = 默认位置（见下）。1.20.40 起坐标是**相对位置**：存的是「量在 `layoutGuiW × layoutGuiH` 那套 GUI 下」的像素，窗口/缩放变化按比例换算 |
 
 **默认位置（`shieldX/Y = -1`）**：水平对准**副手物品格的中心** —— 右手玩家副手在快捷栏左侧，
 即 `guiW/2 − 109`；左手玩家自动镜像到 `guiW/2 + 109`。垂直方向**整条指示器的底边**距屏幕底部 **76 px**
@@ -353,8 +435,8 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | `Misc_View_Stats_1/2`（「Your Stats:」「Hover over an icon…」）出现在面板上 | 按 `TranslatableContents#getKey()` 认键，**提示类永不上面板**（不依赖是否装了地图资源包） |
 | 缺地图语言文件时，计时行显示成 `Misc_View_Stats_7800:00:19` | 含**未解析翻译键**的行整行丢弃 |
 | 每次刷新面板先空一下再长出来 | 双缓冲：新数据先进 `PENDING`，这一趟收完再整体替换上屏内容 |
-| 位置只能手改 JSON | 设置界面新增「移动面板」：拖拽 + 实时 `x/y`；另有水平/垂直滑块 |
-| 字号/透明度不能调 | `selfStatsScale`（0.5~2.0）、`selfStatsOpacity`（0.2~1.0） |
+| 位置只能手改 JSON | 设置界面新增「调整位置…」：拖拽 + 实时 `x/y` |
+| 透明度不能调 | `selfStatsOpacity`（0.2~1.0）；「文字大小」在 1.0.0 删掉，面板固定 1.0 倍 |
 | 不能挑内容 | 内容过滤：1.20.4 起 15 类粗类；1.20.5 改成可滚动列表 + 60 个属性逐项开关；1.20.6 换成双列带边框按钮 + 滚轮翻行；**1.20.31 起分三节、共 88 项，1.20.32 定稿为「属性 56 / 状态效果 28（一条一项）/ 其它 4」**（其它 = 游戏时间、难度骷髅、草方块、未识别行） |
 | 刷新间隔的单位 | `System.currentTimeMillis()` → **现实时间**；界面文案写明「秒（现实时间）」，不走游戏刻 |
 | 不同职业想看的东西不同 | ~~职业过滤~~：1.20.5 已按你的要求删除 |
@@ -397,7 +479,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 
 ```json
 {
-  "configVersion": 21,
+  "configVersion": 22,
   "enabled": true,
   "opacity": 0.75,
   "textShadow": false,
@@ -405,24 +487,20 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
   "hideBelowNameScore": true,
   "hideEnemyBossBar": true,
   "showTeammates": true,
-  "autoPartyBossbar": true,
   "hideTeamBossBar": true,
   "teamBarWidth": 75.0,
   "teamScale": 0.9,
-  "teamVerticalOffset": 0,
   "teamMaxDistance": 48.0,
   "maxDistance": 48.0,
   "barWidth": 75.0,
   "scale": 0.9,
-  "verticalOffset": 0,
-  "hideBehindWalls": false,
   "debug": false,
   "showSelfStats": true,
+  "selfStatsMode": 2,
   "selfStatsSeconds": 3,
   "selfStatsColumns": 2,
   "selfStatsX": 4,
   "selfStatsY": -1,
-  "selfStatsScale": 1.0,
   "selfStatsOpacity": 1.0,
   "selfStatsTextShadow": true,
   "selfStatsHidden": [],
@@ -434,7 +512,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | 字段 | 说明 | 范围（越界自动夹回） |
 | --- | --- | --- |
 | `enabled` | 总开关 | — |
-| `opacity` | 文字 + 血条不透明度（名称不吃） | 0.50 ~ 1.00（默认 0.75） |
+| `opacity` | 文字 + 血条透明度（名称不吃） | 0.50 ~ 1.00（默认 0.75） |
 | `textShadow` | 实体血条（名字 / 心数 / 护甲）文字阴影，**默认关闭**（1.20.32 起；以前默认开且与属性面板共用） | — |
 | `selfStatsTextShadow` | 属性面板文字阴影，**默认开启**（1.20.32 独立出来，不再跟着 `textShadow`） | — |
 | `showBar` | 敌人头顶 HUD 的**整块开关**（界面文案「显示血条」）：关掉后血条 + 上方心数/护甲文字都不画，只剩原版名字（1.20.34 前只关血条） | — |
@@ -442,26 +520,21 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | `hideEnemyBossBar` | 隐藏上方 Boss 栏里「最近敌人的信息」 | — |
 | `hideTeamBossBar` | 隐藏上方 Boss 栏里「队伍血量」（数据照常读取） | — |
 | `showTeammates` | 队友头顶 HUD 的**整块开关**（界面文案同样叫「显示血条」，1.20.34 起统一）：关掉后血条 + 心数文字都不画，只剩原版名字；自己永不显示 | — |
-| `autoPartyBossbar` | 自动 `/trigger TogglePartyBossbar` 打开「队伍血量」条（队友血量的纯客户端数据源） | — |
-| `teamBarWidth` / `teamScale` / `teamVerticalOffset` | 玩家血条的长度 / 缩放 / 垂直微调 | 50~150 / 0.75~1.50 / -30~0（默认 75 / 0.9 / 0） |
-| `teamMaxDistance` | 玩家血条显示距离（格） | 4 ~ 256 |
-| `maxDistance` | 敌人血条显示距离（格） | 4 ~ 256 |
+| `teamBarWidth` / `teamScale` | 玩家血条的长度 / 缩放比例 | 50~150 / 0.75~1.50（默认 75 / 0.9） |
+| `teamMaxDistance` | 玩家血条最远显示距离（格） | 4 ~ 256 |
+| `maxDistance` | 敌人血条最远显示距离（格） | 4 ~ 256 |
 | `barWidth` | 敌人血条长度（原版名牌像素） | 50 ~ 150（默认 75） |
-| `scale` | 敌人整体缩放 | 0.75 ~ 1.50（默认 0.9） |
-| `verticalOffset` | 敌人垂直微调，负值更高 | -30 ~ 0 |
-| `hideBehindWalls` | 被方块挡住视线时不画（1.20.15 起写死 false，JSON 改了也无效） | — |
-| `selfStatsMode` | 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，2 = HUD + 容器都显示；共 4 套配置（`selfStats*` / `container*` / `both*` / `bothContainer*`） | 0~2 |
-| `containerX/Y/Columns/Scale/Opacity` | 「在容器界面显示」那一套独立的位置/列数/字号/不透明度 | 0~4000 / 1~3 / 1.0~2.0 / 0.2~1.0 |
-| `hideBehindWalls` / `hideBehindEntities` / `autoPartyBossbar` | **写死**：前两项恒为 false、第三项恒为 true（1.20.15 起 normalize 强制，JSON 改了也无效） | — |
+| `scale` | 敌人缩放比例 | 0.75 ~ 1.50（默认 0.9） |
+| `selfStatsMode` | 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，**2 = HUD + 容器都显示（1.0.0 起默认）**；共 4 套配置（`selfStats*` / `container*` / `both*` / `bothContainer*`） | 0~2 |
+| `containerX/Y/Columns/Opacity` | 「在容器界面显示」那一套独立的位置/列数/透明度 | 0~4000（y 可为 -1）/ 1~3 / 0.2~1.0 |
 | `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，1=立即，默认 3）/ 列数 / 左上角坐标（1.20.9 起界面上只能拖动，JSON 仍生效；**1.20.40 起是「量在 `layoutGuiW × layoutGuiH` 下」的相对位置**）；进他人服务器时强制 3 s 且不改这里；自身与容器的四套 `*Y` 字段 **-1 = 动态默认**（屏幕高 ÷ 3；HUD 那两套 1.20.41、容器那两套 1.20.42） | 1~5 / 1~3 / 0~4000（y 可为 -1） |
 | `layoutGuiW` / `layoutGuiH` | 1.20.40：这些像素坐标是量在多大的 GUI 上的（`0` = 还不知道，第一次绘制时用当时尺寸补上）；窗口大小或 GUI 缩放变化后按比例换算，面板/盾牌不会错位 | 0~10000 |
-| `selfStatsScale` / `selfStatsOpacity` | 属性面板文字大小 / 不透明度 | 0.50~2.00（默认 1.0）/ 0.20~1.00（默认 1.0） |
+| `selfStatsOpacity` | 属性面板透明度 | 0.20 ~ 1.00（默认 1.0） |
 | `selfStatsHidden` | 要隐藏的属性（如 `["heart_red", "mana_recharge"]`）；共 88 项（属性 56 + 状态效果 28 + 其它 4），见 `SelfStatsKind`；旧配置里的粗类（`health`/`attack`/`status`/`misc`/…）会自动展开成细项 | — |
 | `debug` | 左下角打印 `panel x,y cols scale op / lines 显示/总数 / gui WxH fb WxH`（**仅配置文件，界面无此项**） | — |
 
 > 1.13.3 起 `showNumbers` / `showHeartCounts` / `showArmor` 已删除（永久开启），
 > 老配置文件里的这几个键会被忽略，下次「完成」时自动消失。
-> `autoPartyBossbar` 在 1.13.3 一度移除，1.13.4 恢复（默认开）。
 > 1.14.4 加的 `wrapWidth` 已在 1.19.0 删除（布局改固定三段，自动折行），旧配置里的键会被忽略。
 > `configVersion` 现在是 **19**：v1→v2 把血条默认长度 100 改成 75，v2→v3 把默认缩放 1.0 改成 0.9，
 > v3→v4 新增自身属性面板字段，v4→v5 新增字号/透明度/内容过滤，v5→v6 按属性细分过滤项（粗类自动展开），
@@ -475,6 +548,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 > **v20 面板默认位置改成 `y = 屏幕高 ÷ 3`**（左侧偏上；`selfStatsY`/`bothY` 的 `-1` = 动态默认），
 > 只有仍停在旧默认 40 的才跟着改，自己拖过的不动；
 > **v21 容器界面那两套也一样**（`containerY`/`bothContainerY` 旧默认 20 → 动态默认），同样只动仍停在 20 的；
+> **v22 删掉面板「文字大小」（`selfStatsScale` / `containerScale` / `bothScale` / `bothContainerScale`）与实体血条「垂直偏移」（`verticalOffset` / `teamVerticalOffset`），并把「显示方式」默认改成 2**（旧默认 0 → 2，自己选过 1 的不动）；
 > 只在「值仍等于旧默认值」时才迁移，手工调过的值不动，新字段一律有默认值。
 > 手改坏配置文件（类型不对 / JSON 语法错）时**保留上一份可用配置**并在日志里 warn，不再静默恢复默认。
 
@@ -543,14 +617,15 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**5395 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**4786 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
 护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）、
 属性面板（心数解析、88 项属性识别、提示键识别、过滤表清洗与粗类展开、三节 47 行的行结构、计时行/草方块上屏、
 滚动条拖拽的滑块高度/偏移/反解/命中容差、缩放/位置夹取、滚动列表的可见行/最大滚动/滚轮换算/列宽、
 **进世界静默窗口**（3 s 边界 / 实体 tick 门槛 / 窗口内吞掉属性行且不进面板 / 窗口外手动触发照旧显示）、
-局部设置独立性（「显示血条」整块开关的四个 flag、四套面板位置列数字号、两种文字阴影互不串改）、
+局部设置独立性（「显示血条」整块开关的四个 flag、四套面板位置列数与透明度、两种文字阴影互不串改）、
+（1.0.0 删掉「垂直偏移」与面板「文字大小」后，对应的 720 条扫描断言一并删除——这两项已不存在，不再为它们保留测试。）
 
 ## 构建
 
@@ -558,7 +633,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/ctt-hud-fork-1.20.42.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/ctt-hud-fork-1.0.0.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革
@@ -628,6 +703,8 @@ gradlew selfCheck      # gradlew build 会自动带上
 | **1.20.39** | 改为「进存档 / 进服后静默 3 s 再自动问 ViewStats」：这之前不发 trigger、这期间来的 ViewStats 输出既不显示也不收进面板；手动触发照旧显示 |
 | **1.20.40** | 属性面板 / 盾牌指示器的位置改成**相对位置**：坐标连同「量它的那套 GUI 尺寸」（`layoutGuiW/H`）一起存，窗口大小或 GUI 缩放变化后按比例换算，不再错位；配置 v19 |
 | **1.20.41** | 面板**默认位置**改成 x=4、y = 屏幕高 ÷ 3（左侧偏上，随窗口走）；「回到初始位置」写回这个动态默认；配置 v20（只有仍停在旧默认 40 的才迁移） |
+| **1.20.42** | **容器界面**那两套的默认位置也改成 x=4、y = 屏幕高 ÷ 3；配置 v21 |
+| **1.0.0（正式版）** | 界面文案统一：血条设置 / 最远显示距离 / 缩放比例 / 透明度 / 调整位置… / 显示内容过滤… / 显示盾牌指示器；删掉面板「文字大小」与血条「垂直偏移」；面板显示方式默认 **HUD + 容器界面**；盾牌缩放步进 0.05、不再写「倍」；配置 v22；删掉一批死代码（`BoxOcclusion`、未被读取的写死开关、旧调用点重载等） |
 | **1.20.42** | **容器界面**那两套面板的默认位置也改成 x=4、y = 屏幕高 ÷ 3（打开箱子/背包时同样在偏上 1/3）；配置 v21（只有仍停在旧默认 20 的才迁移） |
 
 ## 已知限制
@@ -640,7 +717,7 @@ gradlew selfCheck      # gradlew build 会自动带上
   `below_name = HealthPercent`（红心 ÷ MaxHP）画百分比回退 —— 这条回退**还没在真局里和真人队友一起验证过**。
 - 属性面板的过滤粒度受「客户端能看到的颜色」限制：负值统一是灰色，分不出具体属性
   （灰 `🗡` 可能是职业属性/力量/攻速），落到组内默认项；私有区字形已按码位区分（U+E001/E003/E004/E010/E011/E026/E027）。
-- 「移动面板」的拖拽用的是原版滑块同款增量位移；自动化环境只能验证「面板会动、坐标会更新」，
+- 「调整位置」（原「移动面板」）的拖拽用的是原版滑块同款增量位移；自动化环境只能验证「面板会动、坐标会更新」，
   拖到具体位置的精度没法在无头环境里证明。
 - 1.20.40 的「位置相对化」只在自检里验过换算数学与状态流转（`scalePos` / `rebase` / 四套面板 / 盾牌）；
   真机上「拖好位置 → 改窗口大小 / 改 GUI 缩放 → 是否仍对得上」**没有实机验证**。

@@ -19,7 +19,6 @@ import java.util.List;
  *
  * <h2>1.20.4 新增</h2>
  * <ul>
- *   <li>{@code selfStatsScale}：整块文字缩放（{@link GuiGraphicsExtractor#pose()} 变换）；</li>
  *   <li>{@code selfStatsOpacity}：整块文字透明度；</li>
  *   <li>内容过滤：{@link SelfStats#lines()} 已经把「隐藏类」剔掉了；</li>
  *   <li>同样的绘制代码给「移动面板」界面做预览用（{@link #draw}）。</li>
@@ -57,8 +56,8 @@ final class SelfStatsPanel implements HudElement {
             int guiW = mc.getWindow().getGuiScaledWidth();
             int guiH = mc.getWindow().getGuiScaledHeight();
             String info = String.format(java.util.Locale.ROOT,
-                    "panel %d,%d cols=%d scale=%.2f op=%.2f | lines %d/%d | gui %dx%d fb %dx%d",
-                    panel.x, panel.y, panel.columns, panel.scale, panel.opacity,
+                    "panel %d,%d cols=%d op=%.2f | lines %d/%d | gui %dx%d fb %dx%d",
+                    panel.x, panel.y, panel.columns, panel.opacity,
                     lines.size(), SelfStats.storedLineCount(),
                     guiW, guiH, mc.getWindow().getWidth(), mc.getWindow().getHeight());
             g.text(mc.font, info, 4, Math.max(4, guiH - 12), 0xFFFFFFFF, true);
@@ -94,9 +93,8 @@ final class SelfStatsPanel implements HudElement {
         if (font == null || lines == null || lines.isEmpty() || panel == null) return -1;
         int cols = Math.max(1, Math.min(3, panel.columns));
         int rows = rows(lines.size(), cols);
-        double scale = Math.max(0.25, Math.min(3.0, panel.scale));
-        double lx = (mouseX - panel.x) / scale;
-        double ly = (mouseY - panel.y) / scale;
+        double lx = (mouseX - panel.x);
+        double ly = (mouseY - panel.y);
         if (lx < 0 || ly < 0) return -1;
         int r = (int) (ly / ROW_HEIGHT);
         if (r >= rows) return -1;
@@ -137,13 +135,11 @@ final class SelfStatsPanel implements HudElement {
         }
         int[] offsets = columnOffsets(widths, COLUMN_GAP);
 
-        float scale = (float) Math.max(0.25, Math.min(3.0, panel.scale));
         int alpha = (int) Math.round(255.0 * Math.max(0.0, Math.min(1.0, panel.opacity)));
         int color = (alpha << 24) | 0xFFFFFF;
 
         g.pose().pushMatrix();
         g.pose().translate((float) Math.max(0, panel.x), (float) Math.max(0, panel.y));
-        if (scale != 1.0f) g.pose().scale(scale, scale);
         for (int i = 0; i < lines.size(); i++) {
             int c = columnOf(i, rows);
             int r = i - c * rows;
@@ -183,10 +179,9 @@ final class SelfStatsPanel implements HudElement {
                 if (i > 0) total += COLUMN_GAP;
             }
         }
-        float scale = (float) Math.max(0.25, Math.min(3.0, panel.scale));
         int x = Math.max(0, panel.x);
         int y = Math.max(0, panel.y);
-        return new int[]{x, y, Math.round(total * scale), Math.round(Math.max(0, rowCount) * ROW_HEIGHT * scale)};
+        return new int[]{x, y, total, Math.max(0, rowCount) * ROW_HEIGHT};
     }
 
     /** 把面板坐标夹到屏幕内（1.20.23 起：整块可见）。 */

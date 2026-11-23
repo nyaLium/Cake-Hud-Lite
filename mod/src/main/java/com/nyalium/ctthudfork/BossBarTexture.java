@@ -37,16 +37,6 @@ final class BossBarTexture {
     /** 条颜色（名字就是原版 sprite 的前缀）。 */
     enum Tint {
         RED, YELLOW, PURPLE, BLUE, GREEN;
-
-        Identifier background() {
-            return Identifier.withDefaultNamespace("boss_bar/"
-                    + name().toLowerCase(java.util.Locale.ROOT) + "_background");
-        }
-
-        Identifier progress() {
-            return Identifier.withDefaultNamespace("boss_bar/"
-                    + name().toLowerCase(java.util.Locale.ROOT) + "_progress");
-        }
     }
 
     /** 默认色，也是空槽与填充的兜底色。 */

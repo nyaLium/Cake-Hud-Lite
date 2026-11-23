@@ -21,7 +21,6 @@ import java.nio.file.Path;
  *   <li>自身属性面板的 4 套参数：模式 0 用 `selfStats*`、模式 1 用 `container*`、
  *       模式 2 分 `both*`（HUD）/ `bothContainer*`（容器界面）；</li>
  *   <li>盾牌指示器：`shield*`（`shieldX/Y = -1` = 跟随副手槽）；</li>
- *   <li>2 个写死的开关（见各自注释）：`autoPartyBossbar` / `hideBehindWalls`。
  *       「优先使用服务端数据」1.20.35 起也写死开启，字段已删除。</li>
  * </ul>
  */
@@ -65,16 +64,12 @@ public final class HudConfig {
          * 只剩原版名字。自己永远不显示。</p>
          */
         public boolean showTeammates = true;
-        /** 自动 /trigger TogglePartyBossbar 打开「队伍血量」条（队友血量的数据源，纯客户端）。 */
-        public boolean autoPartyBossbar = true;
         /** 隐藏上方 Boss 栏里「队伍血量」那一条（数据照常读取）。 */
         public boolean hideTeamBossBar = true;
         /** 玩家血条长度（原版名牌像素），默认 75。 */
         public double teamBarWidth = 75.0;
         /** 玩家血条整体缩放。 */
         public double teamScale = 0.9;
-        /** 玩家血条垂直微调。 */
-        public int teamVerticalOffset = 0;
         /** 玩家血条显示距离（格）。 */
         public double teamMaxDistance = 48.0;
         /** 超过这个距离（格）不再绘制。 */
@@ -83,10 +78,6 @@ public final class HudConfig {
         public double barWidth = 75.0;
         /** 整组 UI 的额外缩放，0.75 ~ 1.50，0.9 = 默认（1.19.0 起）。 */
         public double scale = 0.9;
-        /** 整组 UI 的垂直微调（原版名牌像素），-30 ~ 0，负数=更高。 */
-        public int verticalOffset = 0;
-        /** 被方块挡住视线时不绘制（防止隔墙看到血条）。1.20.14 起写死关闭、界面不再提供开关（字段保留以兼容旧配置）。 */
-        public boolean hideBehindWalls = false;
         /** 左上角打印面板调试行（排查用，见 {@code SelfStatsPanel} 里 {@code debug} 分支）。 */
         public boolean debug = false;
         /**
@@ -94,7 +85,7 @@ public final class HudConfig {
          * 抓地图回的那些属性行画成面板，不依赖服务端组件。
          */
         public boolean showSelfStats = true;
-        /** 属性面板自动刷新间隔（秒），1 = 立即（每 tick 刷），1~5；进他人服务器时强制 3 s（不改这里）。 */
+        /** 属性面板自动刷新间隔（秒），1~5（1.0.0 起不再有「立即」档）；进他人服务器时强制 3 s（不改这里）。 */
         public int selfStatsSeconds = 3;
         /** 属性面板列数，1 ~ 3。 */
         public int selfStatsColumns = 2;
@@ -107,32 +98,27 @@ public final class HudConfig {
         public int selfStatsY = DEFAULT_Y_SENTINEL;
         /**
          * 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，2 = HUD + 容器都显示（1.20.16）。
-         * 每种上下文（HUD / 容器）各有一套位置·列数·字号·不透明度。
+         * 每种上下文（HUD / 容器）各有一套位置·列数·透明度。v1.0.0 起默认 2（HUD + 容器界面）。
          */
-        public int selfStatsMode = 0;
+        public int selfStatsMode = 2;
         /** 容器界面那一套配置（模式 1 专用）。 */
         public int containerX = 4;
         /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}；1.20.42）。 */
         public int containerY = DEFAULT_Y_SENTINEL;
         public int containerColumns = 2;
-        public double containerScale = 1.0;
         public double containerOpacity = 1.0;
         /** 模式 2 在 HUD 上的那一套配置。 */
         public int bothX = 4;
         /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}）。 */
         public int bothY = DEFAULT_Y_SENTINEL;
         public int bothColumns = 2;
-        public double bothScale = 1.0;
         public double bothOpacity = 1.0;
         /** 模式 2 在容器界面上的那一套配置（1.20.18 起独立）。 */
         public int bothContainerX = 4;
         /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}）。 */
         public int bothContainerY = DEFAULT_Y_SENTINEL;
         public int bothContainerColumns = 2;
-        public double bothContainerScale = 1.0;
         public double bothContainerOpacity = 1.0;
-        /** 属性面板文字缩放，0.50 ~ 2.00（1.20.4）。 */
-        public double selfStatsScale = 1.0;
         /** 属性面板文字不透明度，0.20 ~ 1.00（1.20.4）。 */
         public double selfStatsOpacity = 1.0;
         /**
@@ -190,14 +176,12 @@ public final class HudConfig {
         public final int x;
         public final int y;
         public final int columns;
-        public final double scale;
         public final double opacity;
 
-        public Panel(int x, int y, int columns, double scale, double opacity) {
+        public Panel(int x, int y, int columns, double opacity) {
             this.x = x;
             this.y = y;
             this.columns = columns;
-            this.scale = scale;
             this.opacity = opacity;
         }
     }
@@ -212,7 +196,7 @@ public final class HudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 21;
+    public static final int CURRENT_VERSION = 22;
 
     /** 1.20.41：面板「默认位置」的哨兵值（{@code -1} = 用动态默认，见 {@link #defaultPanelY}）。 */
     public static final int DEFAULT_Y_SENTINEL = -1;
@@ -316,22 +300,12 @@ public final class HudConfig {
         int x = resolveX(rawX(c, mode, container), c.layoutGuiW, guiW);
         int y = resolveY(rawY(c, mode, container), c.layoutGuiH, guiH);
         return switch (mode) {
-            case 1 -> new Panel(x, y, c.containerColumns, c.containerScale, c.containerOpacity);
+            case 1 -> new Panel(x, y, c.containerColumns, c.containerOpacity);
             case 2 -> container
-                    ? new Panel(x, y, c.bothContainerColumns, c.bothContainerScale, c.bothContainerOpacity)
-                    : new Panel(x, y, c.bothColumns, c.bothScale, c.bothOpacity);
-            default -> new Panel(x, y, c.selfStatsColumns, c.selfStatsScale, c.selfStatsOpacity);
+                    ? new Panel(x, y, c.bothContainerColumns, c.bothContainerOpacity)
+                    : new Panel(x, y, c.bothColumns, c.bothOpacity);
+            default -> new Panel(x, y, c.selfStatsColumns, c.selfStatsOpacity);
         };
-    }
-
-    /** 设置界面默认编辑 HUD 那一套。 */
-    public static Panel panel(int mode) {
-        return panel(mode, false);
-    }
-
-    /** 当前模式 + HUD 上下文（旧调用点/测试用）。 */
-    public static Panel panel() {
-        return panel(get().selfStatsMode, false);
     }
 
     /** 某一套配置里存的（记录尺寸下的）左上角 x。 */
@@ -350,11 +324,6 @@ public final class HudConfig {
             case 2 -> container ? c.bothContainerY : c.bothY;
             default -> c.selfStatsY;
         };
-    }
-
-    /** 写位置（拖动界面用；坐标是**当前 GUI** 下的像素）。 */
-    public static void movePanel(int mode, boolean container, int x, int y) {
-        movePanel(mode, container, x, y, 0, 0);
     }
 
     /**
@@ -503,18 +472,6 @@ public final class HudConfig {
         }
     }
 
-    public static void setPanelScale(int mode, boolean container, double scale) {
-        Cfg c = get();
-        switch (mode) {
-            case 1 -> c.containerScale = scale;
-            case 2 -> {
-                if (container) c.bothContainerScale = scale;
-                else c.bothScale = scale;
-            }
-            default -> c.selfStatsScale = scale;
-        }
-    }
-
     public static void setPanelOpacity(int mode, boolean container, double opacity) {
         Cfg c = get();
         switch (mode) {
@@ -535,53 +492,6 @@ public final class HudConfig {
     /** 当前模式是否要在 HUD 上画（模式 0、2）。 */
     public static boolean hudMode() {
         return get().selfStatsMode != 1;
-    }
-
-    /** 移动当前模式那一套面板（拖动界面用；三种方式互不影响）。 */
-    public static void movePanel(int x, int y) {
-        Cfg c = get();
-        switch (c.selfStatsMode) {
-            case 1 -> {
-                c.containerX = x;
-                c.containerY = y;
-            }
-            case 2 -> {
-                c.bothX = x;
-                c.bothY = y;
-            }
-            default -> {
-                c.selfStatsX = x;
-                c.selfStatsY = y;
-            }
-        }
-    }
-
-    /** 写当前模式那一套的列数 / 缩放 / 不透明度。 */
-    public static void setPanelColumns(int columns) {
-        Cfg c = get();
-        switch (c.selfStatsMode) {
-            case 1 -> c.containerColumns = columns;
-            case 2 -> c.bothColumns = columns;
-            default -> c.selfStatsColumns = columns;
-        }
-    }
-
-    public static void setPanelScale(double scale) {
-        Cfg c = get();
-        switch (c.selfStatsMode) {
-            case 1 -> c.containerScale = scale;
-            case 2 -> c.bothScale = scale;
-            default -> c.selfStatsScale = scale;
-        }
-    }
-
-    public static void setPanelOpacity(double opacity) {
-        Cfg c = get();
-        switch (c.selfStatsMode) {
-            case 1 -> c.containerOpacity = opacity;
-            case 2 -> c.bothOpacity = opacity;
-            default -> c.selfStatsOpacity = opacity;
-        }
     }
 
     /** 当前生效的「隐藏类」集合。 */
@@ -699,7 +609,6 @@ public final class HudConfig {
             cfg.bothContainerX = cfg.bothX;
             cfg.bothContainerY = cfg.bothY;
             cfg.bothContainerColumns = cfg.bothColumns;
-            cfg.bothContainerScale = cfg.bothScale;
             cfg.bothContainerOpacity = cfg.bothOpacity;
         }
         if (version < 8) {
@@ -707,7 +616,6 @@ public final class HudConfig {
             cfg.bothX = cfg.selfStatsX;
             cfg.bothY = cfg.selfStatsY;
             cfg.bothColumns = cfg.selfStatsColumns;
-            cfg.bothScale = cfg.selfStatsScale;
             cfg.bothOpacity = cfg.selfStatsOpacity;
         }
         if (version < 7) {
@@ -715,7 +623,6 @@ public final class HudConfig {
             cfg.containerX = cfg.selfStatsX;
             cfg.containerY = cfg.selfStatsY;
             cfg.containerColumns = cfg.selfStatsColumns;
-            cfg.containerScale = cfg.selfStatsScale;
             cfg.containerOpacity = cfg.selfStatsOpacity;
         }
         if (version < 20) {
@@ -730,6 +637,13 @@ public final class HudConfig {
             // 同样只动仍停在旧默认 20 的那两套。
             if (cfg.containerY == 20) cfg.containerY = DEFAULT_Y_SENTINEL;
             if (cfg.bothContainerY == 20) cfg.bothContainerY = DEFAULT_Y_SENTINEL;
+        }
+        if (version < 22) {
+            // v1.0.0：① 删掉面板「文字大小」（所有面板固定 1.0 倍）与实体血条「垂直偏移」字段；
+            //           旧文件里的这些键读取时直接忽略；
+            //        ② 面板显示方式默认值从「始终显示（HUD）」改成「HUD + 容器界面」——
+            //           只动仍停在旧默认 0 的，自己选过 1 的不动。
+            if (cfg.selfStatsMode == 0) cfg.selfStatsMode = 2;
         }
         cfg.configVersion = CURRENT_VERSION;
     }
@@ -747,15 +661,10 @@ public final class HudConfig {
         // 血条长度：非法值回落默认 75，其余夹在 50~150。
         if (Double.isNaN(read.barWidth)) read.barWidth = HudLayout.BAR_WIDTH_DEFAULT;
         read.barWidth = clamp(read.barWidth, HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX);
-        read.verticalOffset = (int) clamp(read.verticalOffset, -30.0, 0.0);
         if (Double.isNaN(read.teamBarWidth)) read.teamBarWidth = HudLayout.BAR_WIDTH_DEFAULT;
         read.teamBarWidth = clamp(read.teamBarWidth, HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX);
         read.teamScale = clamp(read.teamScale, 0.75, 1.5);
-        read.teamVerticalOffset = (int) clamp(read.teamVerticalOffset, -30.0, 0.0);
         read.teamMaxDistance = clamp(read.teamMaxDistance, 4.0, 256.0);
-        // 1.20.15：这两项写死，不再可配置（hideBehindEntities 在 1.20.25 直接从字段里删掉了）
-        read.autoPartyBossbar = true;
-        read.hideBehindWalls = false;
         // 自身属性面板（1.20.3）：间隔 0~600 s，列 1~3，坐标夹进屏幕范围
         read.selfStatsSeconds = (int) clamp(read.selfStatsSeconds, 1.0, 5.0);
         read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);
@@ -763,24 +672,20 @@ public final class HudConfig {
         // 1.20.41：y = -1 是「动态默认位置」的哨兵，允许保留。
         read.selfStatsY = (int) clamp(read.selfStatsY, -1.0, 4000.0);
         // 1.20.4：文字缩放、不透明度、内容过滤；1.20.14 起字号最小 1.00、范围 1.0~2.0
-        read.selfStatsScale = clamp(read.selfStatsScale, 1.0, 2.0);
         read.selfStatsOpacity = clamp(read.selfStatsOpacity, 0.2, 1.0);
         // 1.20.14：显示方式（0=始终显示 HUD，1=在容器界面显示）+ 容器那一套配置
         read.selfStatsMode = (int) clamp(read.selfStatsMode, 0.0, 2.0);
         read.containerColumns = (int) clamp(read.containerColumns, 1.0, 3.0);
         read.containerX = (int) clamp(read.containerX, 0.0, 4000.0);
         read.containerY = (int) clamp(read.containerY, -1.0, 4000.0);
-        read.containerScale = clamp(read.containerScale, 1.0, 2.0);
         read.containerOpacity = clamp(read.containerOpacity, 0.2, 1.0);
         read.bothColumns = (int) clamp(read.bothColumns, 1.0, 3.0);
         read.bothX = (int) clamp(read.bothX, 0.0, 4000.0);
         read.bothY = (int) clamp(read.bothY, -1.0, 4000.0);
-        read.bothScale = clamp(read.bothScale, 1.0, 2.0);
         read.bothOpacity = clamp(read.bothOpacity, 0.2, 1.0);
         read.bothContainerColumns = (int) clamp(read.bothContainerColumns, 1.0, 3.0);
         read.bothContainerX = (int) clamp(read.bothContainerX, 0.0, 4000.0);
         read.bothContainerY = (int) clamp(read.bothContainerY, -1.0, 4000.0);
-        read.bothContainerScale = clamp(read.bothContainerScale, 1.0, 2.0);
         read.bothContainerOpacity = clamp(read.bothContainerOpacity, 0.2, 1.0);
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
         // 盾牌指示器（1.20.20：可拖动定位 + 透明度；1.20.22：缩放 0.5~1.5 小数倍）

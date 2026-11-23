@@ -90,9 +90,6 @@ public final class EntityHudSettingsScreen extends Screen {
                 v -> key("barWidth", (int) Math.round(v)), v -> HudConfig.get().barWidth = v, 1);
         y = slider("scale", y, 0.75, 1.5, 0.05, () -> HudConfig.get().scale,
                 v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> HudConfig.get().scale = v, 1);
-        y = slider("verticalOffset", y, -30, 0, 1, () -> HudConfig.get().verticalOffset,
-                v -> key("verticalOffset", signed((int) Math.round(v))),
-                v -> HudConfig.get().verticalOffset = (int) Math.round(v), 1);
         // 1.20.35：「优先使用服务端数据」写死开启，界面不再提供开关。
         y = header("ctt_hud_fork.config.header.player", y);
         // 1.20.34：玩家那边只有一个「显示血条」＝整块开关（关掉后血条和文字都不画）。
@@ -104,9 +101,6 @@ public final class EntityHudSettingsScreen extends Screen {
                 v -> key("barWidth", (int) Math.round(v)), v -> HudConfig.get().teamBarWidth = v, 2);
         y = slider("teamScale", y, 0.75, 1.5, 0.05, () -> HudConfig.get().teamScale,
                 v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> HudConfig.get().teamScale = v, 2);
-        y = slider("teamVerticalOffset", y, -30, 0, 1, () -> HudConfig.get().teamVerticalOffset,
-                v -> key("verticalOffset", signed((int) Math.round(v))),
-                v -> HudConfig.get().teamVerticalOffset = (int) Math.round(v), 2);
         lastY = y;
     }
 
@@ -273,10 +267,6 @@ public final class EntityHudSettingsScreen extends Screen {
 
     private static Component key(String id, Object... args) {
         return Component.translatable("ctt_hud_fork.config." + id, args);
-    }
-
-    private static String signed(int v) {
-        return v > 0 ? "+" + v : Integer.toString(v);
     }
 
     private static final class ValueSlider extends net.minecraft.client.gui.components.AbstractSliderButton {

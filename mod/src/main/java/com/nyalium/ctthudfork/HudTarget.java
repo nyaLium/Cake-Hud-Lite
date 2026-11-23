@@ -3,11 +3,8 @@ package com.nyalium.ctthudfork;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityAttachment;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.IdentityHashMap;
@@ -20,7 +17,7 @@ import java.util.Map;
  * <ol>
  *   <li>{@link #managed}：数据包管控的敌人（有 CTT 计分板数据）或队伍条里的队友。
  *       只要为真，原版 {@code below_name} 分数就该被摘掉（信息已由血条表达）；</li>
- *   <li>{@link #visible}：在 {@code managed} 之上再叠加距离 / 遮挡 / 显示项开关，
+ *   <li>{@link #visible}：在 {@code managed} 之上再叠加距离 / 原版渲染可见性（shouldRender），
  *       为真时本 Mod 才会画出数值、血条与<b>名称</b>。</li>
  * </ol>
  *
@@ -43,7 +40,7 @@ public final class HudTarget {
 
     private HudTarget() {}
 
-    /** 本 Mod 接管的实体（有 CTT 数据 / 是队友），不考虑距离与遮挡。 */
+    /** 本 Mod 接管的实体（有 CTT 数据 / 是队友），不考虑距离与渲染可见性。 */
     public static boolean managed(Minecraft mc, Entity entity) {
         if (mc == null || entity == null) return false;
         HudConfig.Cfg cfg = HudConfig.get();
@@ -101,8 +98,7 @@ public final class HudTarget {
         double limit = entity instanceof Player ? cfg.teamMaxDistance : cfg.maxDistance;
         if (distance > limit) return false;
 
-        if (!entity.shouldRender(camPos.x, camPos.y, camPos.z)) return false;
-        return !cfg.hideBehindWalls || !occluded(mc, entity, camPos);
+        return entity.shouldRender(camPos.x, camPos.y, camPos.z);
     }
 
     /** 相机位置；拿不到时退回玩家眼睛位置。 */
@@ -118,32 +114,4 @@ public final class HudTarget {
         return mc.player != null ? mc.player.getEyePosition() : Vec3.ZERO;
     }
 
-    /**
-     * 原版名牌锚点，与 {@code SubmitNodeCollection.submitNameTag} 一致：
-     * 实体位置 + {@code EntityAttachment.NAME_TAG} 局部偏移 + 0.5 格。
-     */
-    public static Vec3 nameTagAnchor(Entity entity, Vec3 pos, float partialTick) {
-        Vec3 attachment = null;
-        try {
-            attachment = entity.getAttachments()
-                    .getNullable(EntityAttachment.NAME_TAG, 0, entity.getYRot(partialTick));
-        } catch (Throwable ignored) {
-            // 没有该挂点 / 版本差异时退回原版经典值。
-        }
-        if (attachment == null) {
-            attachment = new Vec3(0.0, entity.getBbHeight(), 0.0);
-        }
-        return pos.add(attachment.x, attachment.y + 0.5, attachment.z);
-    }
-
-    private static boolean occluded(Minecraft mc, Entity entity, Vec3 from) {
-        try {
-            Vec3 to = nameTagAnchor(entity, entity.position(), 0.0f);
-            HitResult hit = mc.level.clip(new ClipContext(
-                    from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity));
-            return hit != null && hit.getType() != HitResult.Type.MISS;
-        } catch (Throwable t) {
-            return false;
-        }
-    }
 }

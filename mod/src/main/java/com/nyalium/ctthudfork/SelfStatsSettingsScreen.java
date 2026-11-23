@@ -9,7 +9,6 @@ import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 
@@ -60,7 +59,6 @@ public final class SelfStatsSettingsScreen extends Screen {
         y = toggle("showSelfStats", y);
         y = slider("selfStatsSeconds", y, 1, 5, 1, cfg.selfStatsSeconds, mode);
         y = slider("selfStatsColumns", y, 1, 3, 1, panel.columns, mode);
-        y = slider("selfStatsScale", y, 1.0, 2.0, 0.05, panel.scale, mode);
         y = slider("selfStatsOpacity", y, 0.2, 1.0, 0.05, panel.opacity, mode);
         y = toggle("selfStatsTextShadow", y);
         y = button("selfStatsMode", y, "mode");
@@ -165,10 +163,8 @@ public final class SelfStatsSettingsScreen extends Screen {
                                         return Component.translatable("ctt_hud_fork.config.selfStatsSecondsForced",
                                                 SelfStats.FORCED_SERVER_SECONDS);
                                     }
-                                    return Math.round(v) <= 1
-                                            ? Component.translatable("ctt_hud_fork.config.refreshNow")
-                                            : Component.translatable("ctt_hud_fork.config.selfStatsSeconds",
-                                                    (int) Math.round(v));
+                                    return Component.translatable(
+                                            "ctt_hud_fork.config.selfStatsSeconds", (int) Math.round(v));
                                 },
                                 v -> HudConfig.get().selfStatsSeconds = (int) Math.round(v));
                         widget.active = enabled && !forced;
@@ -177,11 +173,6 @@ public final class SelfStatsSettingsScreen extends Screen {
                                 v -> Component.translatable("ctt_hud_fork.config.selfStatsColumns",
                                         (int) Math.round(v)),
                                 v -> HudConfig.setPanelColumns(mode, editContainer, (int) Math.round(v)));
-                    } else if (id.equals("selfStatsScale")) {
-                        widget = new ValueSlider(x, y, width, ROW_HEIGHT, 1.0, 2.0, 0.05, panel.scale,
-                                v -> Component.translatable("ctt_hud_fork.config.selfStatsScale",
-                                        String.format(Locale.ROOT, "%.2f", v)),
-                                v -> HudConfig.setPanelScale(mode, editContainer, v));
                     } else {
                         widget = new ValueSlider(x, y, width, ROW_HEIGHT, 0.2, 1.0, 0.05, panel.opacity,
                                 v -> Component.translatable("ctt_hud_fork.config.selfStatsOpacity",
