@@ -100,7 +100,11 @@ public final class HudConfig {
         public int selfStatsColumns = 2;
         /** 属性面板左上角屏幕坐标（GUI 像素，量在 {@link #layoutGuiW}/{@link #layoutGuiH} 这套尺寸下）。 */
         public int selfStatsX = 4;
-        public int selfStatsY = 40;
+        /**
+         * 1.20.41：{@code -1} = **动态默认位置**「x=4、y = 屏幕高 ÷ {@value #DEFAULT_Y_DENOM}」
+         * （左侧偏上），窗口大小变了也跟着走；拖动后这里存实际像素。
+         */
+        public int selfStatsY = DEFAULT_Y_SENTINEL;
         /**
          * 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，2 = HUD + 容器都显示（1.20.16）。
          * 每种上下文（HUD / 容器）各有一套位置·列数·字号·不透明度。
@@ -114,7 +118,8 @@ public final class HudConfig {
         public double containerOpacity = 1.0;
         /** 模式 2 在 HUD 上的那一套配置。 */
         public int bothX = 4;
-        public int bothY = 40;
+        /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}）。 */
+        public int bothY = DEFAULT_Y_SENTINEL;
         public int bothColumns = 2;
         public double bothScale = 1.0;
         public double bothOpacity = 1.0;
@@ -205,7 +210,24 @@ public final class HudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 19;
+    public static final int CURRENT_VERSION = 20;
+
+    /** 1.20.41：面板「默认位置」的哨兵值（{@code -1} = 用动态默认，见 {@link #defaultPanelY}）。 */
+    public static final int DEFAULT_Y_SENTINEL = -1;
+    /** 面板默认位置的左边距（GUI 像素）。 */
+    public static final int DEFAULT_X = 4;
+    /** 面板默认位置：{@code y = 屏幕高 ÷ 3}（顶部往下三分之一，左侧偏上）。 */
+    public static final int DEFAULT_Y_DENOM = 3;
+
+    /**
+     * 面板默认 y（GUI 像素）：屏幕高 ÷ {@value #DEFAULT_Y_DENOM}。
+     *
+     * @param guiH 屏幕 GUI 高；{@code <=0}（尺寸未知，测试/设置页只取其它字段时）返回 0
+     */
+    public static int defaultPanelY(int guiH) {
+        if (guiH <= 0) return 0;
+        return Math.max(0, Math.round((float) guiH / DEFAULT_Y_DENOM));
+    }
 
     /** 盾牌指示器的缩放范围（倍）。1.20.22 起是小数倍，纹理整张等比缩放。 */
     public static final double SHIELD_SCALE_MIN = 0.5;
@@ -289,8 +311,8 @@ public final class HudConfig {
      */
     public static Panel panel(int mode, boolean container, int guiW, int guiH) {
         Cfg c = withLayoutRef(get(), guiW, guiH);
-        int x = scalePos(rawX(c, mode, container), c.layoutGuiW, guiW);
-        int y = scalePos(rawY(c, mode, container), c.layoutGuiH, guiH);
+        int x = resolveX(rawX(c, mode, container), c.layoutGuiW, guiW);
+        int y = resolveY(rawY(c, mode, container), c.layoutGuiH, guiH);
         return switch (mode) {
             case 1 -> new Panel(x, y, c.containerColumns, c.containerScale, c.containerOpacity);
             case 2 -> container
@@ -385,6 +407,18 @@ public final class HudConfig {
         return c;
     }
 
+    /** 存的 x → 当前 GUI 下的 x；{@code <0} = 默认左边距。 */
+    static int resolveX(int raw, int storedGui, int guiNow) {
+        if (raw < 0) return DEFAULT_X;
+        return scalePos(raw, storedGui, guiNow);
+    }
+
+    /** 存的 y → 当前 GUI 下的 y；{@code <0} = 动态默认（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}）。 */
+    static int resolveY(int raw, int storedGui, int guiNow) {
+        if (raw < 0) return defaultPanelY(guiNow);
+        return scalePos(raw, storedGui, guiNow);
+    }
+
     /**
      * 把「记录尺寸」改到 {@code guiW × guiH}，并先把已存的坐标换算过去（1.20.40）。
      *
@@ -396,12 +430,13 @@ public final class HudConfig {
         int oldW = c.layoutGuiW;
         int oldH = c.layoutGuiH;
         if (oldW > 0 && oldH > 0 && (oldW != guiW || oldH != guiH)) {
+            // 哨兵值（-1 = 动态默认）不参与换算，否则会变成 -2 之类。
             c.selfStatsX = scalePos(c.selfStatsX, oldW, guiW);
-            c.selfStatsY = scalePos(c.selfStatsY, oldH, guiH);
+            if (c.selfStatsY >= 0) c.selfStatsY = scalePos(c.selfStatsY, oldH, guiH);
             c.containerX = scalePos(c.containerX, oldW, guiW);
             c.containerY = scalePos(c.containerY, oldH, guiH);
             c.bothX = scalePos(c.bothX, oldW, guiW);
-            c.bothY = scalePos(c.bothY, oldH, guiH);
+            if (c.bothY >= 0) c.bothY = scalePos(c.bothY, oldH, guiH);
             c.bothContainerX = scalePos(c.bothContainerX, oldW, guiW);
             c.bothContainerY = scalePos(c.bothContainerY, oldH, guiH);
             if (c.shieldX >= 0) c.shieldX = scalePos(c.shieldX, oldW, guiW);
@@ -425,6 +460,35 @@ public final class HudConfig {
         if (x >= 0 && y >= 0) rebase(c, guiW, guiH);
         c.shieldX = x;
         c.shieldY = y;
+    }
+
+    /**
+     * 「回到初始位置」：写回**动态默认** —— {@code x=4}、{@code y = 屏幕高 ÷ 3}（左侧偏上，1.20.41）。
+     *
+     * <p>存哨兵而不是当场算一个像素值，这样以后窗口怎么变，默认位置都保持在「偏上三分之一」。</p>
+     */
+    public static void resetPanelPosition(int mode, boolean container) {
+        Cfg c = get();
+        switch (mode) {
+            case 1 -> {
+                // 容器界面那套的默认位置没变（贴着屏幕顶部 y=20）。
+                c.containerX = 4;
+                c.containerY = 20;
+            }
+            case 2 -> {
+                if (container) {
+                    c.bothContainerX = 4;
+                    c.bothContainerY = 20;
+                } else {
+                    c.bothX = DEFAULT_X;
+                    c.bothY = DEFAULT_Y_SENTINEL;
+                }
+            }
+            default -> {
+                c.selfStatsX = DEFAULT_X;
+                c.selfStatsY = DEFAULT_Y_SENTINEL;
+            }
+        }
     }
 
     public static void setPanelColumns(int mode, boolean container, int columns) {        Cfg c = get();
@@ -653,6 +717,13 @@ public final class HudConfig {
             cfg.containerScale = cfg.selfStatsScale;
             cfg.containerOpacity = cfg.selfStatsOpacity;
         }
+        if (version < 20) {
+            // 1.20.41：面板「初始位置」从 y=40 改成「y = 屏幕高 ÷ 3」（左侧偏上）。
+            // 只动仍停在旧默认 40 的那两套（HUD / 模式 2 的 HUD 那套）；自己拖过的位置保留。
+            // 写成哨兵 -1 之后，窗口大小变化时默认位置也跟着按 1/3 走。
+            if (cfg.selfStatsY == 40) cfg.selfStatsY = DEFAULT_Y_SENTINEL;
+            if (cfg.bothY == 40) cfg.bothY = DEFAULT_Y_SENTINEL;
+        }
         cfg.configVersion = CURRENT_VERSION;
     }
 
@@ -682,7 +753,8 @@ public final class HudConfig {
         read.selfStatsSeconds = (int) clamp(read.selfStatsSeconds, 1.0, 5.0);
         read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);
         read.selfStatsX = (int) clamp(read.selfStatsX, 0.0, 4000.0);
-        read.selfStatsY = (int) clamp(read.selfStatsY, 0.0, 4000.0);
+        // 1.20.41：y = -1 是「动态默认位置」的哨兵，允许保留。
+        read.selfStatsY = (int) clamp(read.selfStatsY, -1.0, 4000.0);
         // 1.20.4：文字缩放、不透明度、内容过滤；1.20.14 起字号最小 1.00、范围 1.0~2.0
         read.selfStatsScale = clamp(read.selfStatsScale, 1.0, 2.0);
         read.selfStatsOpacity = clamp(read.selfStatsOpacity, 0.2, 1.0);
@@ -695,7 +767,7 @@ public final class HudConfig {
         read.containerOpacity = clamp(read.containerOpacity, 0.2, 1.0);
         read.bothColumns = (int) clamp(read.bothColumns, 1.0, 3.0);
         read.bothX = (int) clamp(read.bothX, 0.0, 4000.0);
-        read.bothY = (int) clamp(read.bothY, 0.0, 4000.0);
+        read.bothY = (int) clamp(read.bothY, -1.0, 4000.0);
         read.bothScale = clamp(read.bothScale, 1.0, 2.0);
         read.bothOpacity = clamp(read.bothOpacity, 0.2, 1.0);
         read.bothContainerColumns = (int) clamp(read.bothContainerColumns, 1.0, 3.0);

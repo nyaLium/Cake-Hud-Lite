@@ -1487,7 +1487,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(HudConfig.CURRENT_VERSION == 19, "配置版本应为 19");
+        check(HudConfig.CURRENT_VERSION == 20, "配置版本应为 20");
         HudConfig.Cfg defaults = HudConfig.normalize(new HudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1496,7 +1496,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         HudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 19, "v3 → v19 应升版本号");
+        check(v3.configVersion == 20, "v3 → v20 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1671,7 +1671,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         HudConfig.Cfg cfg = new HudConfig.Cfg();
-        check(HudConfig.CURRENT_VERSION == 19, "配置版本应为 19");
+        check(HudConfig.CURRENT_VERSION == 20, "配置版本应为 20");
         HudConfig.Cfg defaults = HudConfig.normalize(new HudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1694,7 +1694,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         HudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 19, "v4 → v19 应升版本号");
+        check(v4.configVersion == 20, "v4 → v20 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板
@@ -1955,8 +1955,8 @@ public final class SelfCheck {
         HudConfig.movePanel(2, true, 11, 22);
         HudConfig.Cfg live = HudConfig.get();
         check(live.bothContainerX == 11 && live.bothContainerY == 22, "模式 2 容器那套应被写入");
-        check(live.bothX == 4 && live.bothY == 40, "模式 2 的 HUD 那套不该被带动");
-        check(live.selfStatsX == 4 && live.selfStatsY == 40, "模式 0 那套不该被带动");
+        check(live.bothX == 4 && live.bothY == -1, "模式 2 的 HUD 那套不该被带动（y 仍是动态默认）");
+        check(live.selfStatsX == 4 && live.selfStatsY == -1, "模式 0 那套不该被带动（y 仍是动态默认）");
         check(live.containerX == 4 && live.containerY == 20, "模式 1 那套不该被带动");
         HudConfig.setPanelColumns(2, false, 3);
         check(live.bothColumns == 3, "模式 2 HUD 列数应写入");
@@ -1976,9 +1976,10 @@ public final class SelfCheck {
                 "面板/实体设置不该动盾牌默认值");
         HudConfig.reset();
 
-        // ④ 「回到初始位置」按当前对象取默认 y
-        check(SelfStatsLayoutScreen.defaultY(true) == 20, "容器面板默认 y = 20（与配置默认值一致）");
-        check(SelfStatsLayoutScreen.defaultY(false) == 40, "HUD 面板默认 y = 40");
+        // ④ 「回到初始位置」按当前对象取默认 y（1.20.41：HUD 那套是屏幕高 ÷ 3）
+        check(SelfStatsLayoutScreen.defaultY(true, 720) == 20, "容器面板默认 y = 20（与配置默认值一致）");
+        check(SelfStatsLayoutScreen.defaultY(false, 720) == 240, "HUD 面板默认 y = 屏幕高 ÷ 3");
+        check(SelfStatsLayoutScreen.defaultY(false, 360) == 120, "屏幕矮一半 → 默认 y 也跟着减半");
     }
 
     /**
@@ -2055,6 +2056,50 @@ public final class SelfCheck {
         bad.layoutGuiH = 0;
         HudConfig.normalize(bad);
         check(bad.layoutGuiW == 0 && bad.layoutGuiH == 0, "半套基准也当归零");
+
+        // ⑦ 1.20.41：面板默认位置 = x 4 / y 屏幕高 ÷ 3（左侧偏上），并且随窗口走
+        check(HudConfig.defaultPanelY(720) == 240, "720 高 → 默认 y 240");
+        check(HudConfig.defaultPanelY(360) == 120, "360 高 → 默认 y 120");
+        check(HudConfig.defaultPanelY(361) == 120, "361 高 → 四舍五入到 120");
+        check(HudConfig.defaultPanelY(0) == 0, "尺寸未知 → 0（不抛异常）");
+        HudConfig.reset();
+        c = HudConfig.get();
+        check(c.selfStatsY == -1 && c.bothY == -1, "新配置的面板 y 应是动态默认哨兵");
+        HudConfig.Panel defBig = HudConfig.panel(0, false, 1280, 720);
+        check(defBig.x == 4 && defBig.y == 240,
+                "默认位置 x=4、y=240（720 高），实际 " + defBig.x + "," + defBig.y);
+        check(HudConfig.panel(0, false, 640, 360).y == 120, "窗口矮一半 → 默认 y 也到 120");
+        HudConfig.movePanel(0, false, 10, 500, 640, 360);
+        check(HudConfig.panel(0, false, 640, 360).y == 500, "拖到 500 应显示 500");
+        HudConfig.resetPanelPosition(0, false);
+        check(c.selfStatsY == -1, "回到初始位置应写回哨兵");
+        check(HudConfig.panel(0, false, 640, 360).y == 120, "回到初始位置 → 屏幕高 ÷ 3");
+        HudConfig.resetPanelPosition(1, false);
+        check(c.containerY == 20, "容器那套「回到初始位置」仍是 y=20");
+        HudConfig.resetPanelPosition(2, false);
+        check(c.bothY == -1, "模式 2 的 HUD 那套回到动态默认");
+        HudConfig.resetPanelPosition(2, true);
+        check(c.bothContainerY == 20, "模式 2 的容器那套回到 y=20");
+
+        // ⑧ v19 → v20 迁移：只有仍停在旧默认 40 的才换成哨兵
+        HudConfig.Cfg m1 = new HudConfig.Cfg();
+        m1.configVersion = 19;
+        m1.selfStatsY = 40;
+        m1.bothY = 40;
+        HudConfig.migrate("{\"configVersion\":19}", m1);
+        check(m1.selfStatsY == -1 && m1.bothY == -1, "旧默认 40 → 动态默认哨兵");
+        HudConfig.Cfg m2 = new HudConfig.Cfg();
+        m2.configVersion = 19;
+        m2.selfStatsY = 123;
+        m2.bothY = 77;
+        HudConfig.migrate("{\"configVersion\":19}", m2);
+        check(m2.selfStatsY == 123 && m2.bothY == 77, "自己拖过的位置不该被迁移改掉");
+        check(m2.containerY == 20 && m2.bothContainerY == 20, "容器那两套不该被迁移碰");
+        HudConfig.Cfg neg = new HudConfig.Cfg();
+        neg.selfStatsY = -5;
+        neg.bothY = -3;
+        HudConfig.normalize(neg);
+        check(neg.selfStatsY == -1 && neg.bothY == -1, "小于 -1 的 y 应夹到 -1（动态默认）");
         HudConfig.reset();
     }
 
