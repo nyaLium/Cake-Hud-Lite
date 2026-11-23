@@ -5,17 +5,20 @@
 > （`/trigger ViewStats`，88 个属性逐项开关，分「属性 / 状态效果 / 其它」三节）。
 >
 > **客户端必装、服务端选装**：服务端只装 Fabric API 也能用完整功能。
+>
+> **1.20.37 起彻底改名**：仓库 `CTT HUD - Fork`、工程 `mod/`、包名 `com.nyalium.ctthudfork`、
+> 产物 `ctt-hud-fork-x.y.z.jar`、翻译键前缀 `ctt_hud_fork.*`。旧配置 `ctt-enemy-hud.json` 仍会自动迁移。
 
 ## 目录结构
 
 | 路径 | 内容 |
 | --- | --- |
-| `Cake Team Tower HUD Fork/` | 源码工程（Gradle + Loom，Minecraft 26.3 / Fabric） |
+| `mod/` | 源码工程（Gradle + Loom，Minecraft 26.3 / Fabric） |
 | `versions/vX.Y.Z/` | **每个版本的归档**：jar、sources、README、RELEASE、实机证据图 |
 | `versions/ARCHIVE.md` | 全部版本的清单（大小 / SHA-256 / 内嵌版本号 / git 标签） |
 | `versions/VERSIONING.md` | 版本保留规则（每版必留档，不覆盖、不删除） |
 | `versions/tools/archive_audit.py` | 归档审计：重新生成 `ARCHIVE.md` 并校验 |
-| `cake_team_tower_hud_fork-1.20.36.jar` | 最新版 jar（与 `versions/v1.20.36/` 中的字节一致） |
+| `ctt-hud-fork-1.20.37.jar` | 最新版 jar（与 `versions/v1.20.37/` 中的字节一致） |
 
 ## 安装
 
@@ -33,6 +36,6 @@
 
 ## 主要文档
 
-- 功能与配置：`Cake Team Tower HUD Fork/README.md`
+- 功能与配置：`mod/README.md`
 - 版本沿革：`CHANGELOG.md`
-- 最新版说明：`versions/v1.20.36/RELEASE.md`
+- 最新版说明：`versions/v1.20.37/RELEASE.md`

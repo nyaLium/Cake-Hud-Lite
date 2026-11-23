@@ -1,4 +1,4 @@
-# CHANGELOG · Cake Team Tower HUD - Fork
+# CHANGELOG · CTT HUD - Fork
 
 > 这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud)（作者 TheHolyLord，MIT）的 Fork 版。
 > 版本保留规则见 [versions/VERSIONING.md](versions/VERSIONING.md)：**每个版本都必须留档，不覆盖、不删除。**
@@ -9,7 +9,8 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
-| **1.20.36** | 准备大厅（还没选职业）不再先闪面板：`visible()` 加「选过职业」门控 —— `ClassPassive`（客户端读得到时）→ 职业被动道具 → ViewStats「职业点」行依次回退 | `versions/v1.20.36/` |
+| **1.20.37** | 回退 1.20.36 的「选过职业」门控（行为同 1.20.35）；**项目与产物彻底改名 CTT HUD - Fork**（目录、包名、类名、产物名、翻译键、Mixin 前缀） | `versions/v1.20.37/` |
+| 1.20.36 | 准备大厅（还没选职业）不再先闪面板：`visible()` 加「选过职业」门控 —— `ClassPassive`（客户端读得到时）→ 职业被动道具 → ViewStats「职业点」行依次回退（**已回退**） | `versions/v1.20.36/` |
 | 1.20.35 | 「优先使用服务端数据」默认保持开启且不再可改：界面去掉开关、`useServerData` 字段删除（配置 v18），代码写死优先使用服务端组件数据 | `versions/v1.20.35/` |
 | 1.20.34 | 敌人 / 玩家各一个「显示血条」整块开关（关掉后血条 + 上方文字都消失，只剩原版名字）；删掉 `teamShowBar`（配置 v17）；滚动提示不再写「滚动条可点可拖」 | `versions/v1.20.34/` |
 | 1.20.33 | 所有滚动页的滚动条都能点/拖（命中 ±5 px、悬停提亮）；队友血条独立成 `teamShowBar`；实体设置页滑块重建不回弹；「回到初始位置」按对象取默认 y；配置 v16 | `versions/v1.20.33/` |
@@ -80,7 +81,56 @@
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
 
-## 1.20.36（当前）
+## 1.20.37（当前）
+
+### ① 回退 1.20.36
+
+1.20.36 的「选过职业」门控（`ClassPassive` → 职业被动道具 → ViewStats「职业点」行）整段删掉，
+`SelfStats.visible(...)` 恢复成 1.20.35 的签名与判定：
+
+```java
+public static boolean visible() {
+    return !notStarted && !timeFrozen && !SHOWN.isEmpty();
+}
+```
+
+`EnemyData.classPassiveOf(...)`、`hasClassPassiveItem/isClassPassiveItem`、`pendingHadClassStat` /
+`lastCaptureHadClassStat` / `classChosen` 缓存、调试行里的 `class yes/no` 一并删除；
+`SelfCheck` 里那 12 条 `classGate()` 断言也删掉。**行为与 1.20.35 完全一致（`checks=5337`）。**
+
+> 1.20.36 里关于「`ClassPassive` 客户端读不到」的结论仍然成立，只是不拿它做门控了 —— 详见下一节。
+
+### ② 彻底改名：CTT HUD - Fork
+
+| 类别 | 旧 | 新 |
+| --- | --- | --- |
+| 仓库目录 | `CTT - Enemy HUD/` | `CTT HUD - Fork/` |
+| Gradle 工程目录 | `Cake Team Tower HUD Fork/` | `mod/` |
+| `rootProject.name` | `ctt-enemy-hud` | `ctt-hud-fork` |
+| 产物名（jar / sources） | `cake_team_tower_hud_fork-1.20.36.jar` | `ctt-hud-fork-1.20.37.jar` |
+| Java 包 | `com.nyalium.cttenemyhud` | `com.nyalium.ctthudfork` |
+| 入口类 | `CttEnemyHudClient` / `CttEnemyHudServer` | `CttHudForkClient` / `CttHudForkServer` |
+| 配置 / 布局类 | `EnemyHudConfig` / `EnemyHudConfigScreen` / `EnemyHudLayout` | `HudConfig` / `HudConfigScreen` / `HudLayout` |
+| 翻译键前缀 | `ctt_enemy_hud.*`（约 160 个键） | `ctt_hud_fork.*` |
+| 键位名 | `key.ctt_enemy_hud.open_config` | `key.ctt_hud_fork.open_config` |
+| Mixin 注入前缀 | `cttEnemyHud$…` | `cttHudFork$…` |
+
+- 保留：`fabric.mod.json` 的 `id = ctt-hud-fork`、配置文件名 `ctt-hud-fork.json`、Mixin 配置文件名
+  `ctt_hud_fork.mixins.json`（本来就是新名）。
+- **刻意保留**：`LEGACY_FILE_NAME = "ctt-enemy-hud.json"` —— 那是玩家磁盘上可能还存在的旧配置文件名，
+  改了就没法自动迁移。
+- 归档 `versions/` 与 `CODE-AUDIT-1.20.24.md` 是历史记录，**不改写**；`versions/tools/archive_audit.py`
+  已改成两种产物名都认（老版本 `cake_team_tower_hud_fork-*`、新版本 `ctt-hud-fork-*`）。
+- 副作用：`options.txt` 里旧的 `key_key.ctt_enemy_hud.open_config` 行会失效，键位名变了、默认仍是 `F8`；
+  旧的 `ctt-hud-fork.json` 照常读取（配置字段没变），无需手工迁移。
+
+### 自检
+
+`checks=5337 failures=0`（回到 1.20.35 的断言数）；`gradlew build` 在 `CTT HUD - Fork/mod` 下通过。
+
+## 1.20.36
+
+> **1.20.37 已回退本节的门控**（保留此条目作为历史记录）。
 
 ### ① 问题
 
@@ -157,7 +207,7 @@
 - 敌人、玩家设置里**各只有一个「显示血条」**：开 / 关；
 - **关掉后血条和上方文本都消失**，只剩原版名字：
   - 敌人：`HudWorldRenderer.options()` 把 `showNumbers / showHearts / showArmor / showBar`
-    四个 flag 全跟着 `showBar` 走 → `EnemyHudLayout.compute` 返回空 → 渲染直接 return；
+    四个 flag 全跟着 `showBar` 走 → `HudLayout.compute` 返回空 → 渲染直接 return；
   - 玩家：`showTeammates` 关掉时 `HudTarget.managed()` 直接 false，整块不画（本来就如此），
     界面标签改成「显示血条」；
 - `teamShowBar` 删掉（它就是为了「只关条」存在的，和「关掉整块」冲突）。配置 v17：旧键读取时忽略。
@@ -322,8 +372,8 @@
 ## 1.20.30
 
 - **F8 键位本来就在「按键控制」里**：`KeyMappingHelper.registerKeyMapping` 把
-  `key.ctt_enemy_hud.open_config`（默认 F8）注册进 `Options.keyMappings`，证据是
-  `options.txt` 里有 `key_key.ctt_enemy_hud.open_config:key.keyboard.f8`（这一行只有注册过的绑定才会被写出）；
+  `key.ctt_hud_fork.open_config`（默认 F8）注册进 `Options.keyMappings`，证据是
+  `options.txt` 里有 `key_key.ctt_hud_fork.open_config:key.keyboard.f8`（这一行只有注册过的绑定才会被写出）；
   之前它挂在 `KeyMapping.Category.MISC`（杂项），跟一堆调试键混在一起不好找。
 - **改成独立分类**：`KeyMapping.Category.register(ctt-hud-fork:main)`，显示名走
   `key.category.ctt-hud-fork.main`（中英都补了）→ 现在「按键控制」里会看到一栏「CTT HUD - Fork」。
@@ -333,7 +383,7 @@
 
 ## 1.20.29
 
-- 拖动界面的操作方式写进界面提示（`ctt_enemy_hud.config.selfStatsMove.dragHint`）：
+- 拖动界面的操作方式写进界面提示（`ctt_hud_fork.config.selfStatsMove.dragHint`）：
   中文「按住拖动；也可用方向键微调（按住 Shift 每次 16 px）」/ 英文「Drag to move; arrow keys nudge (Shift = 16 px per press)」。
   「移动面板」和「移动指示器」共用这条文案，画在标题下方一行（黄色），显示「当前正在调整」那行下移到 y=50。
 - 自检：`checks=5198 failures=0`（纯文案/布局）。
@@ -372,7 +422,7 @@
 
 ## 1.20.25
 
-- **死代码清理**（审计 `CODE-AUDIT-1.20.24.md` 第四节）：删除 `EnemyHudConfig.copy/restore/panelFor`、
+- **死代码清理**（审计 `CODE-AUDIT-1.20.24.md` 第四节）：删除 `HudConfig.copy/restore/panelFor`、
   `BossBarTexture.drawBackground/drawProgress`、`ClientMobHealthCache.serverComponentPresent/payloadType`、
   `ScrollPane.scrollToTop`、`SelfStats.displayName/storedLinesOf/windowEndMs/CAPTURE_WINDOW_MS`、
   `SelfStatsPanel.clampX/clampY/EDGE_KEEP`（拖动早已改用 `fitInScreen`），以及随之失效的 `KIND_HOVER`/`rememberHover`。
@@ -381,7 +431,7 @@
 - **自检专用成员**：`looksLikeStat`、`heartsOf`、`NAME_TOP`、`NATIVE_HEIGHT` 等加「仅 SelfCheck 使用」注释，防误删。
 - **文档**：README 新增「内部常量一览」（属性面板/渲染判定/网络聊天三张表，共 30+ 个常量）；
   「设置界面」整节重写为 1.20.25 现状；「版本沿革」补 1.20.11–1.20.25 共 15 行；
-  `EnemyHudConfig` / `EnemyHudConfigScreen` / `CttEnemyHudClient` / `PartyBossbarAutoToggle` / `BoxOcclusion` 的类注释订正。
+  `HudConfig` / `HudConfigScreen` / `CttHudForkClient` / `PartyBossbarAutoToggle` / `BoxOcclusion` 的类注释订正。
 - 自检：`checks=5175 failures=0`（版本断言 11→12，其余不变）。
 
 ## 1.20.24
@@ -620,7 +670,7 @@
 
 ## 1.20.7
 
-- **纯客户端也显示百分比数字**：`EnemyHudLayout` 的 `percentOnly` 分支以前不产出文字
+- **纯客户端也显示百分比数字**：`HudLayout` 的 `percentOnly` 分支以前不产出文字
   （只有血条），现在写 `40%`（`round(hp*100/maxHp)` 夹 0~100，`maxHp<=0` 按 100%）。
   受影响的是「只有 `below_name = HealthPercent`」的两类：服务端没装本 Mod 时的敌人，
   以及队伍条里没有条目的队友（绿条 + `63%`）。
@@ -745,7 +795,7 @@
   - 玩家：`❤当前/上限` + 魂 ↔ 黑。
   实测 6 帧：敌人 `💛50` ↔ `💔2`；玩家 `💛40` ↔ `🖤30`（`versions/v1.20.0/*-cycle.png`）。
 - **玩家碎心/粉心 + 蓝心固定在最上面一行**（同时显示，不参与轮换）。
-- **护甲与元素护甲之间两个空格**（`EnemyHudLayout.ARMOUR_GAP`）：`🛡5  🔥3 ☃1`。
+- **护甲与元素护甲之间两个空格**（`HudLayout.ARMOUR_GAP`）：`🛡5  🔥3 ☃1`。
 - **取消 1.19.0 的玩家心数换行**：行数回到固定（敌人 1~2 行、玩家 1~2 行），
   `Options.wrapHearts` 与换行代码/断言一起删除。
 - 自检：`checks=1580 failures=0`（+14：`HeartCycle` 各分支、单一轮换心、两空格、玩家特殊心置顶）。
@@ -783,9 +833,9 @@
 
 - **护甲分页**：`🛡 防御` 常驻，七种元素护甲每页最多 **2 项**、**2 s** 翻一页（5 种 = 2+2+1）。
   新增纯函数 `ArmourCycle.page(armor, nowMs, salt)`，`salt` 用实体 id 错开，避免满屏同时翻。
-  `EnemyHudLayout` 新增 `ARMOUR_PAGE_SIZE / armourPageCount() / clampArmourPage()` 与 `Options.armourPage`。
+  `HudLayout` 新增 `ARMOUR_PAGE_SIZE / armourPageCount() / clampArmourPage()` 与 `Options.armourPage`。
   实测逐帧：`🛡5 🔥3 ☃1` → `🛡5 ☠2 ☀4` → `🛡5 ⚓6`（`versions/v1.17.0/armour-pages.png`）。
-- **大数值缩写**：`999999` 实测会把整行拉出屏幕。新增 `EnemyHudLayout.num()`：< 100000 原样，
+- **大数值缩写**：`999999` 实测会把整行拉出屏幕。新增 `HudLayout.num()`：< 100000 原样，
   再大改 `k / m / b` 且小数截断（`999k`、`1.2m`、`123.4m`、`2.1b`）。心数 / 上限 / 防御 / 元素护甲统一走它。
   实测 `999999 × 5` → 每段 `999k`，整行缩到约 1/3 并折两行（`versions/v1.17.0/big-numbers.png`）。
 - **着火不再盖住血条**：燃烧是不透明几何（`solid`、写深度），火焰盒子向相机一侧伸出
@@ -799,7 +849,7 @@
 ## 1.16.3
 
 - **队友只画心与血条，护甲段不再显示**：`HudWorldRenderer.teamOptions()` 里 `showArmor = false`。
-  `EnemyHudLayout` 的护甲段与 `|` 分隔符都写在 `if (opt.showArmor && hasArmor(...))` 内，
+  `HudLayout` 的护甲段与 `|` 分隔符都写在 `if (opt.showArmor && hasArmor(...))` 内，
   关掉这一个开关就同时去掉分隔符 + 防御 + 七档元素护甲，不会留下孤零零的 `|`。
 - payload 的 `defence / armour` 字段照旧收下（协议与数据结构不动），只是不给玩家那一套布局用；
   敌人仍是 `showArmor = true`，`🛡5 🔥3` 照常显示。
@@ -813,7 +863,7 @@
 - **死亡 / 观战（旁观模式）的玩家不再显示头顶 HUD**：CTT 里死掉的玩家就是 `/gamemode spectator`，
   所以一条规则同时管住两种状态。
   - 客户端 `HudTarget.computeVisible()`：`player.isSpectator()` → 这一帧不画（心数行 + 血条）；
-  - 服务端 `CttEnemyHudServer.collect()`：旁观模式的玩家不进 payload。
+  - 服务端 `CttHudForkServer.collect()`：旁观模式的玩家不进 payload。
 - 检查放在 `computeVisible()` 而不是 `managed()`：`managed` 还负责摘掉原版 `below_name` 分数，
   旁观者那条 `0%` 同样不该冒出来，所以分数照摘、HUD 不画。
 - 客户端游戏模式来自玩家列表（`PlayerInfo.getGameMode()`），原版会同步，**纯客户端也判得准**。
@@ -830,7 +880,7 @@
   敌人不受影响，仍是分层进度。
 - **两行文字中间的重叠暗带**：原版文字背景框是 `y - 1 ~ y + 9`（10 像素），行距却用了字体行高 9，
   两行背景重叠 1 像素、两层 25% 黑叠成一条深色横带。新增
-  `EnemyHudLayout.TEXT_BOX_HEIGHT = 10`，`ROW_STEP` 由 9 改为 10；折行时上面那一行从 -27 变成 -28。
+  `HudLayout.TEXT_BOX_HEIGHT = 10`，`ROW_STEP` 由 9 改为 10；折行时上面那一行从 -27 变成 -28。
 - 实测（Carpet 假人 + 白墙背景，同一机位 A/B）：交界两行亮度 旧 96.3 / 新 128.0（单层背景 128.0）；
   截图 `versions/v1.16.1/rows-before-after.png`、`versions/v1.16.1/teammates-progress.png`。
 - 自检：`checks=1589 failures=0`（+63：行距/背景框不重叠、`fromPayloadPlayer` 的红心口径与边界）。
@@ -838,9 +888,9 @@
 ## 1.16.0
 
 - **队友（玩家）也能显示完整心数**：魂心 / 黑心 / 蓝心 / 碎心 / 粉心，与敌人同一套渲染。
-  `CttEnemyHudServer.collect()` 不再跳过玩家（附近的其他玩家按 UUID 一起推，自己不推）；
+  `CttHudForkServer.collect()` 不再跳过玩家（附近的其他玩家按 UUID 一起推，自己不推）；
   客户端 `resolveData` 对玩家也优先用 payload，拿不到才回退队伍条的 `AllHearts/MaxHP`。
-- `teamOptions` 改为 `showHearts/showArmor = true`：没有心数时 `EnemyHudLayout` 自动退回 `当前/最大`。
+- `teamOptions` 改为 `showHearts/showArmor = true`：没有心数时 `HudLayout` 自动退回 `当前/最大`。
 - 实测（Carpet 假人）：Bot1 `❤60/150` + `💛40 🖤30 💙20 💔2`；Bot2 `❤100/100 💗3`。
 - 自检：`checks=1526 failures=0`（+4：队友无心数回退、队友五色心折两行）。
 
@@ -864,7 +914,7 @@
   仍是原版 182×5 纹理（直接采文件、UV 铺满），资源包替换照常生效。
 - 新增 `HudWorldRenderer`（取代并删除 `EnemyHudElement`）、`HudRenderBridge`
   （`FabricRenderState` + `RenderStateDataKey<Entity>`，解决 submit 阶段拿不到实体）。
-- `CttEnemyHudClient` 不再注册 `HudElement`；`BossBarTexture` 增加世界空间用的纹理 id 与 `argb`。
+- `CttHudForkClient` 不再注册 `HudElement`；`BossBarTexture` 增加世界空间用的纹理 id 与 `argb`。
 - 文字行带上了原版名字那种深色背景框；`hideBehindWalls` / `hideBehindEntities`
   降级为「少提交一点」的额外剔除，真正的遮挡交给深度测试。
 - 自检：`checks=1522 failures=0`（布局逻辑未改）。
@@ -885,7 +935,7 @@
 - **新增「换行阈值」配置**：`wrapWidth`，40 ~ 200 像素，**拉到最右 = 自动**（= 不超过血条长度）。
   设置页在「敌人设置」左列第三行，最右端标签显示「换行阈值：自动」。
 - 阈值只在「整行宽度 > 阈值」且「红心之后还有别的段」时才折行；自动模式下血条关掉时兜底 100。
-- `EnemyHudLayout` 去掉硬编码的 `MIN_ROW_WIDTH=90`，改为 `Options.wrapWidth` + `resolveWrapWidth()`；
+- `HudLayout` 去掉硬编码的 `MIN_ROW_WIDTH=90`，改为 `Options.wrapWidth` + `resolveWrapWidth()`；
   新增 `WRAP_MIN` / `WRAP_MAX` / `WRAP_AUTO` 常量。
 - 自检：`checks=1504 failures=0`（+13 条：阈值解析 5 条、阈值 60 折行 3 条、配置归一化 5 条）。
 
@@ -895,7 +945,7 @@
 - **文字可折成两行**：整行宽度超过 `max(血条长度, MIN_ROW_WIDTH=90)` 时，
   红心单独占上面一行，其余心与护甲留在下面一行（换行代替 `|`）。
   第二行仍贴 `TEXT_TOP=-18`，第一行抬到 `-27`；血条位置不变。
-- `EnemyHudLayout` 新增 `Row(lines, width, top)` 与 `ROW_STEP` / `MIN_ROW_WIDTH`；
+- `HudLayout` 新增 `Row(lines, width, top)` 与 `ROW_STEP` / `MIN_ROW_WIDTH`；
   `Result` 增加 `rows` / `rowCount()`，`textTop` 语义保持「最底一行」。
 - 修护甲分隔符判定：红心搬进 `head` 后，原判据只看 `rest` 非空，会漏掉 `|`。
 - 自检：`checks=1491 failures=0`（红心 `/上限`、上限未知、不折行、折两行、两行 top 位置）。
@@ -917,7 +967,7 @@
 - **心数行合并成一组**：各类心之间由 `" | "` 改为只隔一个空格，整组算一段；
   `|` 现在只出现在「心组 ↔ 护甲」之间。
   例：`❤160 💗2 | 🛡3 ☃5`（1.14.0 是 `❤160 | 💗2 | 🛡3 ☃5`）。
-- 新增常量 `EnemyHudLayout.HEART_GAP = " "`，与 `SEPARATOR = " | "` 区分开；
+- 新增常量 `HudLayout.HEART_GAP = " "`，与 `SEPARATOR = " | "` 区分开；
   顺序与配色不变（红 → 魂 → 黑 → 蓝 → 碎，各用各的颜色）。
 - 协议、配置项、界面位置均未改动，可与 1.14.0 服务端混用。
 - 自检：`checks=1479 failures=0`（+3 条：组内无分隔符 / 组间有分隔符 / 两色心精确相等）。
@@ -925,7 +975,7 @@
 ## 1.14.0
 
 - **服务端选装组件**：新增 `MobHealthPayload`（S2C `ctt-hud-fork:mob_health`），
-  服务端 `CttEnemyHudServer` 每 4 tick（5 Hz）按玩家周围最近的 32 只怪推
+  服务端 `CttHudForkServer` 每 4 tick（5 Hz）按玩家周围最近的 32 只怪推
   `uuid / AllHearts / MaxHP / 魂 / 黑 / 蓝 / 碎 / MaxSoul / MaxBlack / MaxBlue / 防御 / 元素护甲×7 / targetted`。
   差量（内容一致不重发）+ 每 3 s keepalive；`canSend` 为假（客户端没装）完全不发。
 - **客户端优先使用**：`ClientMobHealthCache`（UUID → Entry，5 s 失鲜，断线清空），
