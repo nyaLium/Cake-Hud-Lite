@@ -10,10 +10,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * 配置文件 {@code config/ctt-enemy-hud.json}。
+ * 配置文件 {@code config/ctt-hud-fork.json}（1.20.6 起改名；旧文件 {@code ctt-enemy-hud.json} 只在迁移时读一次）。
  *
  * <p>三条写入路径：① 首次启动写默认值；② Mod Menu 里改完点「完成」写回；
  * ③ 直接在磁盘上手改，游戏每 2 秒检查一次修改时间并热加载。</p>
+ *
+ * <p>字段分四组：</p>
+ * <ul>
+ *   <li>头顶条通用 / 敌人 / 队友（`opacity`、`barWidth`、`scale`、`team*`、`show*`…）；</li>
+ *   <li>自身属性面板的 4 套参数：模式 0 用 `selfStats*`、模式 1 用 `container*`、
+ *       模式 2 分 `both*`（HUD）/ `bothContainer*`（容器界面）；</li>
+ *   <li>盾牌指示器：`shield*`（`shieldX/Y = -1` = 跟随副手槽）；</li>
+ *   <li>3 个写死的开关（见各自注释）：`autoPartyBossbar` / `hideBehindWalls`。</li>
+ * </ul>
  */
 public final class EnemyHudConfig {
 
@@ -63,11 +72,9 @@ public final class EnemyHudConfig {
         public double scale = 0.9;
         /** 整组 UI 的垂直微调（原版名牌像素），-30 ~ 0，负数=更高。 */
         public int verticalOffset = 0;
-        /** 被方块挡住视线时不绘制（防止隔墙看到血条）。1.20.14 起默认关闭、界面不再提供开关。 */
+        /** 被方块挡住视线时不绘制（防止隔墙看到血条）。1.20.14 起写死关闭、界面不再提供开关（字段保留以兼容旧配置）。 */
         public boolean hideBehindWalls = false;
-        /** 被更近的实体挡住时不绘制（防止后方血条压住前面的名字和模型）。 */
-        public boolean hideBehindEntities = true;
-        /** 左上角打印每帧统计（排查用）。 */
+        /** 左上角打印面板调试行（排查用，见 {@code SelfStatsPanel} 里 {@code debug} 分支）。 */
         public boolean debug = false;
         /**
          * 自身属性面板（1.20.3）。纯客户端：定时 {@code /trigger ViewStats}，
@@ -159,7 +166,7 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 11;
+    public static final int CURRENT_VERSION = 12;
 
     /** 盾牌指示器的缩放范围（倍）。1.20.22 起是小数倍，纹理整张等比缩放。 */
     public static final double SHIELD_SCALE_MIN = 0.5;
@@ -253,11 +260,6 @@ public final class EnemyHudConfig {
     /** 当前模式 + HUD 上下文（旧调用点/测试用）。 */
     public static Panel panel() {
         return panel(get().selfStatsMode, false);
-    }
-
-    /** 当前模式 + 当前编辑目标（模式 2 可能是容器界面）。 */
-    public static Panel panelFor(int mode, boolean container) {
-        return panel(mode, container);
     }
 
     /** 写位置（拖动界面用）。 */
@@ -388,17 +390,6 @@ public final class EnemyHudConfig {
         return get().selfStatsHidden;
     }
 
-    /** 当前配置的深拷贝，用作设置界面「取消」的回滚点（不落盘）。 */
-    public static Cfg copy() {
-        Cfg copy = GSON.fromJson(GSON.toJson(cfg), Cfg.class);
-        return normalize(copy);
-    }
-
-    /** 换回给定配置（「取消」用；不落盘）。 */
-    public static void restore(Cfg snapshot) {
-        cfg = normalize(snapshot);
-    }
-
     private static void reloadIfChanged() {
         if (file == null || writing) return;
         try {
@@ -459,6 +450,10 @@ public final class EnemyHudConfig {
             // 越界值在 normalize() 里统一夹取，这里只保证版本号被写上。
             cfg.shieldScale = Math.max(SHIELD_SCALE_MIN, Math.min(SHIELD_SCALE_MAX, cfg.shieldScale));
         }
+        if (version < 12) {
+            // 1.20.25：删掉了从未被读取的 hideBehindEntities 字段；旧文件里的这个键读取时直接忽略，
+            // 下次写盘就不再出现。这里只保证版本号被写上。
+        }
         if (version < 9) {
             // 模式 2 的容器那套从「模式 2 的 HUD 那套」复制。
             cfg.bothContainerX = cfg.bothX;
@@ -505,10 +500,9 @@ public final class EnemyHudConfig {
         read.teamScale = clamp(read.teamScale, 0.75, 1.5);
         read.teamVerticalOffset = (int) clamp(read.teamVerticalOffset, -30.0, 0.0);
         read.teamMaxDistance = clamp(read.teamMaxDistance, 4.0, 256.0);
-        // 1.20.15：这三项写死，不再可配置
+        // 1.20.15：这两项写死，不再可配置（hideBehindEntities 在 1.20.25 直接从字段里删掉了）
         read.autoPartyBossbar = true;
         read.hideBehindWalls = false;
-        read.hideBehindEntities = false;
         // 自身属性面板（1.20.3）：间隔 0~600 s，列 1~3，坐标夹进屏幕范围
         read.selfStatsSeconds = (int) clamp(read.selfStatsSeconds, 1.0, 5.0);
         read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);

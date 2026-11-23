@@ -1,7 +1,6 @@
 package com.nyalium.cttenemyhud;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -80,15 +79,5 @@ final class ClientMobHealthCache {
                         client.execute(() -> accept(payload));
                     }
                 });
-    }
-
-    /** 供调试：当前是否收到了本 Mod 的服务端组件（不影响任何功能，只是标记）。 */
-    static boolean serverComponentPresent() {
-        return isFresh();
-    }
-
-    /** 未使用但保留：类型常量引用，避免某些编译器把 import 判成冗余。 */
-    static CustomPacketPayload.Type<MobHealthPayload> payloadType() {
-        return MobHealthPayload.TYPE;
     }
 }

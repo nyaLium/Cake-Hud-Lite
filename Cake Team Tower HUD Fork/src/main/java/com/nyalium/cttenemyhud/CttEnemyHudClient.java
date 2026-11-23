@@ -13,7 +13,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 
 /**
- * CTT Enemy HUD · 客户端入口。
+ * 客户端入口（Mod 名：<b>CTT HUD - Fork</b>，mod id {@code ctt-hud-fork}；类名沿用早期的 CTT Enemy HUD）。
  *
  * <p><b>客户端必装、服务端选装</b>：所有基础数据都从客户端可见的渠道取
  * （计分板展示槽、原版 Boss 栏标题 / 颜色 / 进度、实体、玩家列表），服务端<b>不需要</b>安装任何东西。
@@ -22,7 +22,7 @@ import net.minecraft.resources.Identifier;
  *
  * <p>1.20.3 起多了<b>自身属性面板</b>（{@link SelfStats}）：它同样纯客户端——
  * 定时 {@code /trigger ViewStats} 问地图，再把地图回的属性行画成面板。
- * 1.20.4 起面板支持内容过滤 / 按职业过滤 / 拖动定位，并可用 {@code F8} 直接打开设置。</p>
+ * 1.20.4 起面板支持内容过滤 / 拖动定位，并可用 {@code F8} 直接打开设置。</p>
  */
 public final class CttEnemyHudClient implements ClientModInitializer {
 

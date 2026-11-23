@@ -12,7 +12,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * 自身属性面板的数据源：<b>纯客户端</b>，照抄上游 Cake Tower HUD Plus 的做法。
+ * 自身属性面板的数据源：<b>纯客户端</b>，做法照上游 Cake-Hud（mod id {@code ctt-health-display}）的
+ * {@code StatsData.processMessage}：标题行开一趟、逐行收、计时行收尾，只有自己发的命令才吞聊天。
  *
  * <h2>原理</h2>
  * <ol>
@@ -45,8 +46,6 @@ import java.util.Set;
  */
 public final class SelfStats {
 
-    /** 采集窗口：触发后这么久之内到达的 chat 都算本次 ViewStats 的输出（上游 3000 ms 同款）。 */
-    static final long CAPTURE_WINDOW_MS = 3000L;
     /** 一趟最快什么时候可以收尾（等计时行；等不到就按这个超时收）。 */
     static final long CAPTURE_TIMEOUT_MS = 3000L;
     /** 一次爆发最长持续多久（地图一趟 ViewStats 是分多个 tick 发的）。 */
@@ -83,7 +82,6 @@ public final class SelfStats {
     private static final int[] PENDING_HEARTS = new int[7];
 
     private static boolean capturing;
-    private static long windowEndMs = 0L;
     private static long hardEndMs = 0L;
     private static long nextTriggerMs = 0L;
     private static boolean notStarted = false;
@@ -127,9 +125,6 @@ public final class SelfStats {
         }
     }
 
-    /** 每种属性最近一次看到的官方 hover 文本（来自 ViewStats 的行）。 */
-    private static final java.util.Map<SelfStatsKind, Component> KIND_HOVER = new java.util.HashMap<>();
-
     /** 从组件树里找第一个 {@code show_text} hover。 */
     static Component findHover(Component component) {
         if (component == null) return null;
@@ -142,20 +137,6 @@ public final class SelfStats {
             if (found != null) return found;
         }
         return null;
-    }
-
-    /** 过滤界面用的官方名称：优先用 ViewStats 里看到的 hover（= 官方翻译），没有则回退到内置翻译。 */
-    static Component displayName(SelfStatsKind kind) {
-        Component hoverName = KIND_HOVER.get(kind);
-        if (hoverName != null) return hoverName;
-        return Component.translatable("ctt_enemy_hud.kind." + kind.id);
-    }
-
-    /** 记下这一行对应的官方 hover。 */
-    private static void rememberHover(SelfStatsKind kind, Component message) {
-        if (kind == null || kind == SelfStatsKind.HINT) return;
-        Component hover = findHover(message);
-        if (hover != null) KIND_HOVER.putIfAbsent(kind, hover);
     }
 
     // ── 触发 ──
@@ -278,7 +259,6 @@ public final class SelfStats {
         captureStartMs = now;
         notStarted = false;
         pendingTimeText = null;
-        windowEndMs = now + CAPTURE_TIMEOUT_MS;
         hardEndMs = now + CAPTURE_HARD_MS;
     }
 
@@ -374,8 +354,6 @@ public final class SelfStats {
         selfTriggered = false;
         captureStartMs = 0L;
         emptyCaptures = 0;
-        KIND_HOVER.clear();
-        windowEndMs = 0L;
         hardEndMs = 0L;
         nextTriggerMs = 0L;
         notStarted = false;
@@ -456,7 +434,6 @@ public final class SelfStats {
         SelfStatsKind kind = classify(a);
         // 提示性文本（标题 / 悬停说明）不上面板；缺地图语言文件时整行原文也不上屏。
         boolean panelWorthy = kind != SelfStatsKind.HINT && !a.unresolvedKey;
-        if (panelWorthy) rememberHover(kind, message);
         if (panelWorthy && PENDING.size() < MAX_LINES && !containsSameText(PENDING, message)) {
             PENDING.add(new Line(message, kind));
         }
@@ -492,15 +469,6 @@ public final class SelfStats {
     /** 不受过滤影响的完整行数（自检 / 调试用）。 */
     static int storedLineCount() {
         return SHOWN.size();
-    }
-
-    /** 某一类在上一趟里出现了几行（自检用）。 */
-    static int storedLinesOf(SelfStatsKind kind) {
-        int n = 0;
-        for (Line line : SHOWN) {
-            if (line.kind == kind) n++;
-        }
-        return n;
     }
 
     /** 解析出来的心数：索引 1~6 = 红/魂/黑/蓝/碎/粉；全 0 表示没解析到。 */
@@ -616,7 +584,12 @@ public final class SelfStats {
         }
     }
 
-    /** 这一行像不像 ViewStats 的属性行（数字开头 / 带心形 / 带属性图标）。 */
+    /**
+     * 这一行像不像 ViewStats 的属性行（数字开头 / 带心形 / 带属性图标）。
+     *
+     * <p><b>仅 SelfCheck 使用</b>：1.20.24 起线上判定换成 {@link #statGlyphLine(String)} 与翻译键前缀，
+     * 本方法保留为「宽判据」的测试锚点，改动需同步 {@code SelfCheck}。</p>
+     */
     static boolean looksLikeStat(String flat) {
         if (flat == null || flat.isBlank()) return false;
         String s = flat.strip();
@@ -877,7 +850,7 @@ public final class SelfStats {
         }
     }
 
-    /** 一行里能解析出的心数（纯函数，selfCheck 用）。 */
+    /** 一行里能解析出的心数（纯函数，<b>仅 selfCheck 使用</b>）。 */
     static int[] heartsOf(Component message) {
         int[] out = new int[7];
         addHearts(analyze(message), out);

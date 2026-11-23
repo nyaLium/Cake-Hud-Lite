@@ -31,8 +31,6 @@ final class SelfStatsPanel implements HudElement {
     static final int ROW_HEIGHT = 10;
     /** 列间距。 */
     static final int COLUMN_GAP = 8;
-    /** 拖拽界面里至少留多少像素在屏幕内。 */
-    private static final int EDGE_KEEP = 16;
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, DeltaTracker delta) {
@@ -114,7 +112,8 @@ final class SelfStatsPanel implements HudElement {
         return -1;
     }
 
-    /** 画整块面板（HUD 元素与「移动面板」预览共用）。 */    static void draw(GuiGraphicsExtractor g, Font font, List<Component> lines,
+    /** 画整块面板（HUD 元素与「移动面板」预览共用）。 */
+    static void draw(GuiGraphicsExtractor g, Font font, List<Component> lines,
                      EnemyHudConfig.Panel panel, boolean shadow) {
         if (g == null || font == null || lines == null || lines.isEmpty() || panel == null) return;
         int cols = Math.max(1, Math.min(3, panel.columns));
@@ -182,23 +181,7 @@ final class SelfStatsPanel implements HudElement {
         return new int[]{x, y, Math.round(total * scale), Math.round(Math.max(0, rowCount) * ROW_HEIGHT * scale)};
     }
 
-    /** 把面板坐标夹到屏幕内（拖拽用；至少留 {@value #EDGE_KEEP} px 可见）。 */
-    static int clampX(int x, int panelWidth, int screenWidth) {
-        int max = Math.max(0, screenWidth - Math.min(EDGE_KEEP, Math.max(1, panelWidth)));
-        return Math.max(0, Math.min(max, x));
-    }
-
-    static int clampY(int y, int panelHeight, int screenHeight) {
-        int max = Math.max(0, screenHeight - Math.min(EDGE_KEEP, Math.max(1, panelHeight)));
-        return Math.max(0, Math.min(max, y));
-    }
-
-    /**
-     * 拖动时的硬夹取：整块面板留在屏幕内（1.20.23，上游 Cake-Hud 的 {@code clamp(0, width - panelW)} 同款）。
-     *
-     * <p>和 {@link #clampX} 的区别：那个只保证「至少露 16 px」，
-     * 用于「面板已经贴边、别再往外跑」的旧场景；拖动界面现在要求整块可见。</p>
-     */
+    /** 把面板坐标夹到屏幕内（1.20.23 起：整块可见）。 */
     static int fitInScreen(int pos, int size, int screen) {
         return Math.max(0, Math.min(Math.max(0, screen - Math.max(1, size)), pos));
     }

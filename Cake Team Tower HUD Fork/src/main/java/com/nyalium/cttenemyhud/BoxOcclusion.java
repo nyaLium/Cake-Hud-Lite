@@ -10,6 +10,10 @@ import java.util.List;
  * 被更近的实体盖住超过阈值就当作「看不见」，不画它头顶的 HUD。</p>
  *
  * <p>纯几何、无 Minecraft 依赖，可在普通 JVM 里穷举测试。</p>
+ *
+ * <p><b>当前没有调用者</b>：「被其它实体挡住时隐藏」从 1.20.15 起写死关闭
+ * （见 {@code EnemyHudConfig.normalize}），本类只保留几何算法与 {@code SelfCheck} 的 20+ 条断言，
+ * 将来要重新开放这个开关时直接接回 {@code HudTarget} 即可。</p>
  */
 public final class BoxOcclusion {
 

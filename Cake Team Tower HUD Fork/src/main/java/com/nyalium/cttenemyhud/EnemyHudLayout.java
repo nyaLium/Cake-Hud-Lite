@@ -40,7 +40,7 @@ public final class EnemyHudLayout {
     public static final int BAR_TOP = -7;
     /** 血条高度 = 原版 bossbar 纹理高度。 */
     public static final int BAR_HEIGHT = 5;
-    /** 名称行顶部。与原版「没有 below_name 分数时」的位置逐像素一致。 */
+    /** 名称行顶部。与原版「没有 below_name 分数时」的位置逐像素一致。<b>仅自检使用</b>（线上由渲染端固定 0）。 */
     public static final int NAME_TOP = 0;
     /** 名称行高度（原版字体行高）。 */
     public static final int NAME_HEIGHT = 9;

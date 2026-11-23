@@ -467,15 +467,13 @@ public final class SelfCheck {
         check(defaults.opacity == 0.75, "默认透明度应为 0.75");
         check(defaults.showBar, "默认应画血条");
         check(!defaults.hideBehindWalls, "1.20.14 起默认不再按墙隐藏");
-        check(!defaults.hideBehindEntities, "1.20.15 起被其它实体挡住时不再隐藏（写死关闭）");
         check(defaults.autoPartyBossbar, "1.20.15 起自动开队伍条写死开启");
         EnemyHudConfig.Cfg forcedCfg = new EnemyHudConfig.Cfg();
         forcedCfg.hideBehindWalls = true;
-        forcedCfg.hideBehindEntities = true;
         forcedCfg.autoPartyBossbar = false;
         EnemyHudConfig.normalize(forcedCfg);
-        check(!forcedCfg.hideBehindWalls && !forcedCfg.hideBehindEntities && forcedCfg.autoPartyBossbar,
-                "normalize 应把这三项写死");
+        check(!forcedCfg.hideBehindWalls && forcedCfg.autoPartyBossbar,
+                "normalize 应把这两项写死（hideBehindEntities 字段已在 1.20.25 删除）");
         check(defaults.hideBelowNameScore, "默认应隐藏 below_name 分数");
         check(defaults.hideEnemyBossBar, "默认应隐藏上方 Boss 栏里的最近敌人信息");
         check(defaults.hideTeamBossBar, "默认应隐藏上方 Boss 栏里的队伍血量");
@@ -1325,9 +1323,9 @@ public final class SelfCheck {
         check(SelfStats.isViewStatsLine("Misc_View_Stats_1"), "ViewStats 标题行应被识别");
         check(SelfStats.isViewStatsLine("Misc_View_Stats_78"), "ViewStats 计时行应被识别");
         check(!SelfStats.isViewStatsLine("50\u2764"), "属性行不算 ViewStats 标题行");
-        check(SelfStats.CAPTURE_WINDOW_MS > 0
-                && SelfStats.CAPTURE_HARD_MS > SelfStats.CAPTURE_WINDOW_MS,
-                "采集窗口应大于 0 且硬上限大于窗口");
+        check(SelfStats.CAPTURE_TIMEOUT_MS > 0
+                && SelfStats.CAPTURE_HARD_MS > SelfStats.CAPTURE_TIMEOUT_MS,
+                "采集超时应大于 0 且硬上限大于它");
 
         // ④ 端到端：把地图那种「数字 + 彩色心」的 Component 喂进解析器
         SelfStats.reset();
@@ -1383,7 +1381,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(EnemyHudConfig.CURRENT_VERSION == 11, "配置版本应为 11");
+        check(EnemyHudConfig.CURRENT_VERSION == 12, "配置版本应为 12");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1392,7 +1390,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 11, "v3 → v11 应升版本号");
+        check(v3.configVersion == 12, "v3 → v12 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1528,7 +1526,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
-        check(EnemyHudConfig.CURRENT_VERSION == 11, "配置版本应为 11");
+        check(EnemyHudConfig.CURRENT_VERSION == 12, "配置版本应为 12");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1551,7 +1549,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 11, "v4 → v11 应升版本号");
+        check(v4.configVersion == 12, "v4 → v12 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板

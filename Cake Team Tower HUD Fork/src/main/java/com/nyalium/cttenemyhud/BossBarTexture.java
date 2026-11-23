@@ -1,7 +1,5 @@
 package com.nyalium.cttenemyhud;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
 /**
@@ -24,7 +22,7 @@ final class BossBarTexture {
 
     /** 原版血条纹理尺寸。 */
     static final int NATIVE_WIDTH = 182;
-    static final int NATIVE_HEIGHT = 5;
+    static final int NATIVE_HEIGHT = 5;   // 仅自检使用（线上条高由布局常量决定）
 
     /**
      * 两端「端盖」的宽度（纹素）。
@@ -72,20 +70,6 @@ final class BossBarTexture {
             case BLUE -> Tint.BLUE;
             default -> Tint.RED;
         };
-    }
-
-    /** 空槽。tint 为 null 时用红。 */
-    static void drawBackground(GuiGraphicsExtractor g, int x, int y, int w, int h, int color, Tint tint) {
-        if (w <= 0 || h <= 0) return;
-        g.blitSprite(RenderPipelines.GUI_TEXTURED, (tint == null ? DEFAULT : tint).background(),
-                x, y, w, h, color);
-    }
-
-    /** 已填充段；{@code w} 是这段占的像素宽。 */
-    static void drawProgress(GuiGraphicsExtractor g, int x, int y, int w, int h, int color, Tint tint) {
-        if (w <= 0 || h <= 0) return;
-        g.blitSprite(RenderPipelines.GUI_TEXTURED, (tint == null ? DEFAULT : tint).progress(),
-                x, y, w, h, color);
     }
 
     /**

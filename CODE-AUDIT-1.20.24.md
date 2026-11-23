@@ -118,13 +118,13 @@
 | 代码事实 | 文档里怎么写的 |
 | --- | --- |
 | `ArmourCache`：`SLOT_TTL_MS=18 s`、`ENTRY_TTL_MS=30 s` | 只说「护甲段缓存」，没写 TTL |
-| `REOPEN_DELAY_MS=10 s`、`MAX_SENDS=20`（自动开队伍条） | README 只写「3 s 冷却 / 5 次失败 / 10 分钟熔断」，**这两条从未写** |
+| `REOPEN_DELAY_MS=10 s`、`MAX_SENDS=20`（自动开队伍条） | README 的表格里**有**这两条行为；但 CHANGELOG / RELEASE 从未提过，常量名也没出现（1.20.25 已补进 README 常量表） |
 | `NUM_EXACT_LIMIT=100000` | 只说「大数值 k/m/b」，没说从 10 万开始缩写 |
 | `MAX_ENTRIES=32` / `INTERVAL_TICKS=4` | 只说「5 Hz 差量 + 3 s keepalive」，没说一次最多 32 条 |
 | `EDGE_KEEP=16`（旧拖拽夹取） | 1.20.23 说明里提了「整块留屏内」，旧的 16 px 规则没写，且已被 `fitInScreen` 取代 |
 | `demoLines()`（移动面板的示例行） | 文档只写「用示例行撑预览」，没写是哪几行 |
 | `STICKY_BONUS=4.0`（=2 格²） | 只写「粘性 2 格」，没写是**平方格**单位 |
-| `writeSigned` zigzag 变长编码 | 完全没写协议细节 |
+| `writeSigned` zigzag 变长编码 | README 协议节提到 zigzag，但没写具体编码方式 |
 | `COARSE_KINDS` 粗类展开表 | 只写「旧粗类自动展开」，没写映射内容 |
 | `columnOf/columnOffsets`（列优先填充） | 只写「1~3 列」，没写填充顺序 |
 | 透视副本 alpha ≈ 128/255（≈50%）、背景 25% | 只写「恢复文字透视副本」，没写透明度 |

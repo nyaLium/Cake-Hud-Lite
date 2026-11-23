@@ -25,6 +25,7 @@ import net.minecraft.client.Minecraft;
  *   <li>两次发送至少间隔 {@value #COOLDOWN_MS} ms；</li>
  *   <li>连续 {@value #MAX_ATTEMPTS} 次尝试都没出现（多半是触发项没 enable，例如不在 CTT 标签里）→
  *       进入 {@value #FAILSAFE_MS} ms 熔断，期间完全不发，聊天栏也就不会再刷「无法触发该计分项」；</li>
+ *   <li>单局最多发 {@value #MAX_SENDS} 次（{@code MAX_SENDS}，1.20.25 才写进文档的兜底上限）；</li>
  *   <li>暂停 / 开着界面（背包、聊天、ESC）时一律不发；</li>
  *   <li>换世界 / 换服务器状态清零。</li>
  * </ul>

@@ -76,10 +76,6 @@ final class ScrollPane {
         scroll = clamp(scroll + deltaPixels);
     }
 
-    void scrollToTop() {
-        scroll = 0;
-    }
-
     private int clamp(int v) {
         return Math.max(0, Math.min(maxScroll(), v));
     }

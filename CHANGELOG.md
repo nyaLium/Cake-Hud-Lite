@@ -9,7 +9,8 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
-| **1.20.24** | 手动 `/trigger ViewStats` 不再被吞（对齐上游 `hideCapture`）+ 计时行当收尾；删掉「回到初始位置」那句提示；内容过滤列表多一行 | `versions/v1.20.24/` |
+| **1.20.25** | 代码审计落地：删 9 处死代码、移除 `hideBehindEntities`（配置 v12）、补「内部常量一览」+「设置界面」现状表 + 版本沿革 15 行、修 8 处文档/代码不一致 | `versions/v1.20.25/` |
+| 1.20.24 | 手动 `/trigger ViewStats` 不再被吞（对齐上游 `hideCapture`）+ 计时行当收尾；删掉「回到初始位置」那句提示；内容过滤列表多一行 | `versions/v1.20.24/` |
 | 1.20.23 | 拖动改上游式绝对定位（+方向键微调、就地切对象）；「重置位置」→「回到初始位置」；聊天不再被误吞；游戏时间冻住不显示面板 | `versions/v1.20.23/` |
 | 1.20.22 | 盾牌缩放改「0.5~1.5 倍」且真缩放（修掉平铺）；滚动列表改真裁剪，最后一行不再越过屏幕 | `versions/v1.20.22/` |
 | 1.20.21 | 盾牌尺寸改为「倍」+整数倍（不拉伸）；滚动边界统一；模式 2 拖动标题写明 HUD/容器 | `versions/v1.20.21/` |
@@ -68,7 +69,21 @@
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
 
-## 1.20.24（当前）
+## 1.20.25（当前）
+
+- **死代码清理**（审计 `CODE-AUDIT-1.20.24.md` 第四节）：删除 `EnemyHudConfig.copy/restore/panelFor`、
+  `BossBarTexture.drawBackground/drawProgress`、`ClientMobHealthCache.serverComponentPresent/payloadType`、
+  `ScrollPane.scrollToTop`、`SelfStats.displayName/storedLinesOf/windowEndMs/CAPTURE_WINDOW_MS`、
+  `SelfStatsPanel.clampX/clampY/EDGE_KEEP`（拖动早已改用 `fitInScreen`），以及随之失效的 `KIND_HOVER`/`rememberHover`。
+- **僵尸配置**：`hideBehindEntities` 字段删除（默认 true 却没人读、normalize 又强制 false）；
+  旧配置里的这个键读取时忽略、下次写盘消失；配置版本 11 → 12。`hideBehindWalls` / `autoPartyBossbar` 保留并注明写死原因。
+- **自检专用成员**：`looksLikeStat`、`heartsOf`、`NAME_TOP`、`NATIVE_HEIGHT` 等加「仅 SelfCheck 使用」注释，防误删。
+- **文档**：README 新增「内部常量一览」（属性面板/渲染判定/网络聊天三张表，共 30+ 个常量）；
+  「设置界面」整节重写为 1.20.25 现状；「版本沿革」补 1.20.11–1.20.25 共 15 行；
+  `EnemyHudConfig` / `EnemyHudConfigScreen` / `CttEnemyHudClient` / `PartyBossbarAutoToggle` / `BoxOcclusion` 的类注释订正。
+- 自检：`checks=5175 failures=0`（版本断言 11→12，其余不变）。
+
+## 1.20.24
 
 - **手动 `/trigger ViewStats` 不再被吞**：照抄上游 `StatsData` 的 `hideCapture` ——
   `markAutoTriggered()` 只在本模组自己发命令时置位，`processMessage` 每条都 `return hideCapture`。
