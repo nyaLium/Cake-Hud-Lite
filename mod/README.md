@@ -527,11 +527,11 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | `scale` | 敌人缩放比例 | 0.75 ~ 1.50（默认 0.9） |
 | `selfStatsMode` | 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，**2 = HUD + 容器都显示（1.0.0 起默认）**；共 4 套配置（`selfStats*` / `container*` / `both*` / `bothContainer*`） | 0~2 |
 | `containerX/Y/Columns/Opacity` | 「在容器界面显示」那一套独立的位置/列数/透明度 | 0~4000（y 可为 -1）/ 1~3 / 0.2~1.0 |
-| `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，1=立即，默认 3）/ 列数 / 左上角坐标（1.20.9 起界面上只能拖动，JSON 仍生效；**1.20.40 起是「量在 `layoutGuiW × layoutGuiH` 下」的相对位置**）；进他人服务器时强制 3 s 且不改这里；自身与容器的四套 `*Y` 字段 **-1 = 动态默认**（屏幕高 ÷ 3；HUD 那两套 1.20.41、容器那两套 1.20.42） | 1~5 / 1~3 / 0~4000（y 可为 -1） |
+| `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，1~5，默认 3；1.0.0 起没有「立即」档）/ 列数 / 左上角坐标（1.20.9 起界面上只能拖动，JSON 仍生效；**1.20.40 起是「量在 `layoutGuiW × layoutGuiH` 下」的相对位置**）；进他人服务器时强制 3 s 且不改这里；自身与容器的四套 `*Y` 字段 **-1 = 动态默认**（屏幕高 ÷ 3；HUD 那两套 1.20.41、容器那两套 1.20.42） | 1~5 / 1~3 / 0~4000（y 可为 -1） |
 | `layoutGuiW` / `layoutGuiH` | 1.20.40：这些像素坐标是量在多大的 GUI 上的（`0` = 还不知道，第一次绘制时用当时尺寸补上）；窗口大小或 GUI 缩放变化后按比例换算，面板/盾牌不会错位 | 0~10000 |
 | `selfStatsOpacity` | 属性面板透明度 | 0.20 ~ 1.00（默认 1.0） |
 | `selfStatsHidden` | 要隐藏的属性（如 `["heart_red", "mana_recharge"]`）；共 88 项（属性 56 + 状态效果 28 + 其它 4），见 `SelfStatsKind`；旧配置里的粗类（`health`/`attack`/`status`/`misc`/…）会自动展开成细项 | — |
-| `debug` | 左下角打印 `panel x,y cols scale op / lines 显示/总数 / gui WxH fb WxH`（**仅配置文件，界面无此项**） | — |
+| `debug` | 左下角打印 `panel x,y cols op / lines 显示/总数 / gui WxH fb WxH`（**仅配置文件，界面无此项**） | — |
 
 > 1.13.3 起 `showNumbers` / `showHeartCounts` / `showArmor` 已删除（永久开启），
 > 老配置文件里的这几个键会被忽略，下次「完成」时自动消失。
