@@ -96,11 +96,9 @@ public final class EntityHudSettingsScreen extends Screen {
         y = toggle("useServerData", y, 0, () -> EnemyHudConfig.get().useServerData,
                 v -> EnemyHudConfig.get().useServerData = v);
         y = header("ctt_enemy_hud.config.header.player", y);
+        // 1.20.34：玩家那边只有一个「显示血条」＝整块开关（关掉后血条和文字都不画）。
         y = toggle("showTeammates", y, 0, () -> EnemyHudConfig.get().showTeammates,
                 v -> EnemyHudConfig.get().showTeammates = v);
-        // 1.20.33：队友条自己的开关（原来借用了「敌人设置 → 显示血条」）。
-        y = toggle("teamShowBar", y, 2, () -> EnemyHudConfig.get().teamShowBar,
-                v -> EnemyHudConfig.get().teamShowBar = v);
         y = slider("teamMaxDistance", y, 4, 128, 4, () -> EnemyHudConfig.get().teamMaxDistance,
                 v -> key("maxDistance", (int) Math.round(v)), v -> EnemyHudConfig.get().teamMaxDistance = v, 2);
         y = slider("teamBarWidth", y, 50, 150, 1, () -> EnemyHudConfig.get().teamBarWidth,

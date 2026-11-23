@@ -388,14 +388,16 @@ public final class HudWorldRenderer {
      * <p>{@code showArmor = false}（1.16.3 起）：队友**只画心与血条**，不画护甲段 ——
      * 玩家那一行没有分隔符、没有 🛡 / 🔥 / ☃ 这类护甲段。payload 里的 defence / armour
      * 照旧收下（数据结构不用改），只是不给布局用。</p>
+     *
+     * <p>1.20.34：队友整块由 {@code showTeammates} 管（关掉时 {@link HudTarget#managed} 直接返回
+     * false，根本不会走到这里），所以能画的时候血条一定画。</p>
      */
     static EnemyHudLayout.Options teamOptions(EnemyHudConfig.Cfg cfg) {
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
         o.showNumbers = true;
         o.showHearts = true;
         o.showArmor = false;
-        // 1.20.33：队友条用自己的开关，不再被「敌人设置 → 显示血条」连带关掉。
-        o.showBar = cfg.teamShowBar;
+        o.showBar = true;
         o.barWidth = cfg.teamBarWidth;
         o.verticalOffset = cfg.teamVerticalOffset;
         o.textShadow = cfg.textShadow;
@@ -403,12 +405,17 @@ public final class HudWorldRenderer {
         return o;
     }
 
-    /** 敌人：心数、护甲永久显示，只有血条可关。 */
+    /**
+     * 敌人：{@code showBar} 是**整块**开关（1.20.34）。
+     *
+     * <p>关掉后血条和上方的心数 / 护甲文字一起不画：四个 flag 全跟着它走，
+     * {@link EnemyHudLayout#compute} 会得到空结果，渲染直接返回——只剩原版名字。</p>
+     */
     static EnemyHudLayout.Options options(EnemyHudConfig.Cfg cfg) {
         EnemyHudLayout.Options o = new EnemyHudLayout.Options();
-        o.showNumbers = true;
-        o.showHearts = true;
-        o.showArmor = true;
+        o.showNumbers = cfg.showBar;
+        o.showHearts = cfg.showBar;
+        o.showArmor = cfg.showBar;
         o.showBar = cfg.showBar;
         o.barWidth = cfg.barWidth;
         o.verticalOffset = cfg.verticalOffset;

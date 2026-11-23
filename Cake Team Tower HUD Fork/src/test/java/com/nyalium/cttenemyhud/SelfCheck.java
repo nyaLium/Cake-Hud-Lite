@@ -1443,7 +1443,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(EnemyHudConfig.CURRENT_VERSION == 16, "配置版本应为 16");
+        check(EnemyHudConfig.CURRENT_VERSION == 17, "配置版本应为 17");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1452,7 +1452,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 16, "v3 → v16 应升版本号");
+        check(v3.configVersion == 17, "v3 → v17 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1627,7 +1627,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
-        check(EnemyHudConfig.CURRENT_VERSION == 16, "配置版本应为 16");
+        check(EnemyHudConfig.CURRENT_VERSION == 17, "配置版本应为 17");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1650,7 +1650,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 16, "v4 → v16 应升版本号");
+        check(v4.configVersion == 17, "v4 → v17 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板
@@ -1879,24 +1879,32 @@ public final class SelfCheck {
     }
 
     /**
-     * 1.20.33：局部设置不许影响全局设置。
+     * 1.20.33 / 1.20.34：局部设置不许影响全局设置。
      *
-     * <p>这轮修掉的三处「串台」：① 队友血条跟着敌人的 {@code showBar} 走；
+     * <p>1.20.33 修掉的三处「串台」：① 队友血条跟着敌人的 {@code showBar} 走；
      * ② 实体设置页的滑块在 {@code rebuildWidgets()} 时回弹到建表时的旧值；
-     * ③ 「回到初始位置」对容器面板用了 HUD 的默认 y。另外锁住几组本来就该独立的配置。</p>
+     * ③ 「回到初始位置」对容器面板用了 HUD 的默认 y。</p>
+     *
+     * <p>1.20.34：「显示血条」升级成<strong>整块开关</strong> —— 敌人关掉后血条 + 上方心数/护甲
+     * 全不画（布局为空），队友则由 {@code showTeammates} 整块管。</p>
      */
     private static void scopedSettings() {
-        // ① 队友条的显示开关和敌人分开
+        // ① 「显示血条」= 整块：关掉敌人后布局为空，队友不受它影响
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
         cfg.showBar = false;
-        cfg.teamShowBar = true;
-        check(!HudWorldRenderer.options(cfg).showBar, "关掉敌人血条后敌人确实不画条");
-        check(HudWorldRenderer.teamOptions(cfg).showBar, "关掉敌人血条不该连带队友条");
+        EnemyHudLayout.Options off = HudWorldRenderer.options(cfg);
+        check(!off.showBar && !off.showNumbers && !off.showHearts && !off.showArmor,
+                "关掉「显示血条」后敌人四个开关都应关（血条 + 文字）");
+        EnemyHudLayout.Result empty = EnemyHudLayout.compute(100, 100, false, 5,
+                new int[]{0, 0, 0, 0, 0, 0, 0}, HeartCounts.forMob(100, 100), off, String::length);
+        check(empty.isEmpty(), "关掉「显示血条」后敌人整块布局应为空（只剩原版名字）");
+        check(HudWorldRenderer.teamOptions(cfg).showBar, "关掉敌人「显示血条」不该连带队友");
         cfg.showBar = true;
-        cfg.teamShowBar = false;
-        check(!HudWorldRenderer.teamOptions(cfg).showBar, "队友条可以自己关");
-        check(HudWorldRenderer.options(cfg).showBar, "关队友条不该连带敌人");
-        check(EnemyHudConfig.normalize(new EnemyHudConfig.Cfg()).teamShowBar, "队友条默认开");
+        check(HudWorldRenderer.options(cfg).showBar, "打开后敌人血条应回来");
+        EnemyHudLayout.Result on = EnemyHudLayout.compute(100, 100, false, 5,
+                new int[]{0, 0, 0, 0, 0, 0, 0}, HeartCounts.forMob(100, 100), HudWorldRenderer.options(cfg),
+                String::length);
+        check(!on.isEmpty(), "打开后敌人布局应有内容");
 
         // ② 四套面板配置互不串改
         EnemyHudConfig.reset();
