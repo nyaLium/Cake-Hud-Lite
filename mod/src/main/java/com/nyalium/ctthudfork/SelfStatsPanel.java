@@ -24,6 +24,10 @@ import java.util.List;
  *   <li>内容过滤：{@link SelfStats#lines()} 已经把「隐藏类」剔掉了；</li>
  *   <li>同样的绘制代码给「移动面板」界面做预览用（{@link #draw}）。</li>
  * </ul>
+ *
+ * <p>1.20.40：位置从「绝对 GUI 像素」改成<b>相对位置</b> —— 配置里存的是量在
+ * {@code layoutGuiW × layoutGuiH} 那套 GUI 下的坐标，这里按当前 {@code guiWidth/guiHeight}
+ * 换算（{@link HudConfig#panel(int, boolean, int, int)}），窗口大小或 GUI 缩放变化时不会错位。</p>
  */
 final class SelfStatsPanel implements HudElement {
 
@@ -43,7 +47,9 @@ final class SelfStatsPanel implements HudElement {
         if (!SelfStats.visible()) return;
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
-        HudConfig.Panel panel = HudConfig.panel(HudConfig.get().selfStatsMode, false);
+        // 1.20.40：位置按当前 GUI 尺寸换算（存的是「相对位置」，窗口一变不会错位）。
+        HudConfig.Panel panel = HudConfig.panel(HudConfig.get().selfStatsMode, false,
+                g.guiWidth(), g.guiHeight());
         // 1.20.32：面板文字阴影有自己的开关，不再跟着实体血条的 textShadow。
         draw(g, mc.font, lines, panel, cfg.selfStatsTextShadow);
         if (cfg.debug) {
@@ -69,7 +75,8 @@ final class SelfStatsPanel implements HudElement {
         if (!SelfStats.visible()) return;
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
-        HudConfig.Panel panel = HudConfig.panel(HudConfig.get().selfStatsMode, true);
+        HudConfig.Panel panel = HudConfig.panel(HudConfig.get().selfStatsMode, true,
+                g.guiWidth(), g.guiHeight());
         draw(g, mc.font, lines, panel, cfg.selfStatsTextShadow);
         // 1.20.15：光标停在某一行上时，显示这一行的官方 hover（和原版 ViewStats 聊天里一样）。
         int index = lineAt(mc.font, lines, panel, mouseX, mouseY);

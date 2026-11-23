@@ -40,6 +40,7 @@ public final class SelfCheck {
         panelTimerAndGrass();
         scrollbarDrag();
         scopedSettings();
+        relativePositions();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -1486,7 +1487,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(HudConfig.CURRENT_VERSION == 18, "配置版本应为 18");
+        check(HudConfig.CURRENT_VERSION == 19, "配置版本应为 19");
         HudConfig.Cfg defaults = HudConfig.normalize(new HudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1495,7 +1496,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         HudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 18, "v3 → v18 应升版本号");
+        check(v3.configVersion == 19, "v3 → v19 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1670,7 +1671,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         HudConfig.Cfg cfg = new HudConfig.Cfg();
-        check(HudConfig.CURRENT_VERSION == 18, "配置版本应为 18");
+        check(HudConfig.CURRENT_VERSION == 19, "配置版本应为 19");
         HudConfig.Cfg defaults = HudConfig.normalize(new HudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1693,7 +1694,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         HudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 18, "v4 → v18 应升版本号");
+        check(v4.configVersion == 19, "v4 → v19 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板
@@ -1978,6 +1979,83 @@ public final class SelfCheck {
         // ④ 「回到初始位置」按当前对象取默认 y
         check(SelfStatsLayoutScreen.defaultY(true) == 20, "容器面板默认 y = 20（与配置默认值一致）");
         check(SelfStatsLayoutScreen.defaultY(false) == 40, "HUD 面板默认 y = 40");
+    }
+
+    /**
+     * 1.20.40：面板 / 盾牌的位置是**相对位置**。
+     *
+     * <p>以前存的是绝对 GUI 像素，窗口大小或 GUI 缩放一变，同一个数字就落到屏幕的另一处
+     * （「窗口一变就错位」）。现在坐标连同「量它的那套 GUI 尺寸」一起存
+     * （{@code layoutGuiW/H}），绘制时按 {@code 当前 ÷ 记录} 换算。</p>
+     */
+    private static void relativePositions() {
+        // ① 纯换算
+        check(HudConfig.scalePos(100, 400, 800) == 200, "尺寸放大一倍 → 坐标也翻倍");
+        check(HudConfig.scalePos(100, 400, 400) == 100, "同一尺寸 → 原样");
+        check(HudConfig.scalePos(100, 0, 800) == 100, "基准未知 → 原样（老配置第一次进游戏）");
+        check(HudConfig.scalePos(100, 400, 0) == 100, "当前尺寸未知 → 原样");
+        check(HudConfig.scalePos(-5, 400, 800) == -10, "负坐标同样按比例换算");
+        check(HudConfig.scalePos(1, 3, 2) == 1, "三分之一缩到三分之二 → 四舍五入到 1");
+
+        // ② 面板：窗口变大变小，面板留在同一个相对位置
+        HudConfig.reset();
+        HudConfig.Cfg c = HudConfig.get();
+        c.layoutGuiW = 400;
+        c.layoutGuiH = 300;
+        c.selfStatsX = 200;
+        c.selfStatsY = 150;
+        HudConfig.Panel big = HudConfig.panel(0, false, 800, 600);
+        check(big.x == 400 && big.y == 300,
+                "窗口 2 倍 → 面板坐标也 2 倍（相对位置守恒），实际 " + big.x + "," + big.y);
+        HudConfig.Panel same = HudConfig.panel(0, false, 400, 300);
+        check(same.x == 200 && same.y == 150, "同尺寸读取应原样");
+
+        // ③ 拖动：参考尺寸跟着换；换完别的窗口尺寸按新比例算
+        HudConfig.movePanel(0, false, 100, 120, 800, 600);
+        check(c.layoutGuiW == 800 && c.layoutGuiH == 600, "拖动后参考尺寸应更新为当前 GUI");
+        check(c.selfStatsX == 100 && c.selfStatsY == 120, "拖动写入的就是当前 GUI 下的坐标");
+        HudConfig.Panel half = HudConfig.panel(0, false, 400, 300);
+        check(half.x == 50 && half.y == 60,
+                "换回一半的窗口 → 坐标也减半，实际 " + half.x + "," + half.y);
+
+        // ④ 盾牌：同一套换算；未设置时仍然是「跟随副手槽」
+        HudConfig.reset();
+        c = HudConfig.get();
+        c.layoutGuiW = 400;
+        c.layoutGuiH = 300;
+        c.shieldX = 100;
+        c.shieldY = 50;
+        int[] shieldBig = HudConfig.shieldPosition(800, 600);
+        check(shieldBig[0] == 200 && shieldBig[1] == 100, "盾牌同样按比例换算，实际 "
+                + shieldBig[0] + "," + shieldBig[1]);
+        check(HudConfig.shieldPosition(400, 300)[0] == 100, "盾牌同尺寸原样");
+        c.shieldX = -1;
+        c.shieldY = -1;
+        check(HudConfig.shieldPosition(800, 600)[0] == -1, "未设置 → -1（跟随副手槽）");
+        HudConfig.setShieldPosition(60, 30, 400, 300);
+        check(c.shieldX == 60 && c.layoutGuiW == 400, "写盾牌位置时也记录当前 GUI 尺寸");
+        check(HudConfig.shieldPosition(200, 150)[0] == 30, "盾牌换到一半窗口 → 坐标减半");
+
+        // ⑤ 老配置没有基准（0）：第一次绘制时用当时的尺寸补上，之后才开始按比例
+        HudConfig.reset();
+        c = HudConfig.get();
+        check(c.layoutGuiW == 0 && c.layoutGuiH == 0, "新配置的基准应是「未知」");
+        HudConfig.panel(0, false, 640, 360);
+        check(c.layoutGuiW == 640 && c.layoutGuiH == 360, "第一次绘制应用当前尺寸补上基准");
+        check(HudConfig.panel(0, false, 1280, 720).x == c.selfStatsX * 2,
+                "补上基准之后，放大一倍窗口 → 坐标翻倍");
+
+        // ⑥ 非法基准按「未知」处理（0/负数/NaN 都别把位置算飞）
+        HudConfig.Cfg bad = new HudConfig.Cfg();
+        bad.layoutGuiW = -5;
+        bad.layoutGuiH = 99999;
+        HudConfig.normalize(bad);
+        check(bad.layoutGuiW == 0 && bad.layoutGuiH == 0, "非法基准应归零（当作未知）");
+        bad.layoutGuiW = 400;
+        bad.layoutGuiH = 0;
+        HudConfig.normalize(bad);
+        check(bad.layoutGuiW == 0 && bad.layoutGuiH == 0, "半套基准也当归零");
+        HudConfig.reset();
     }
 
     /**

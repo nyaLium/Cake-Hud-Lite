@@ -2,10 +2,10 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.20.39**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.20.40**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/字号/透明度，
 > 88 个属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
-> 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」：进存档 / 进服后先静默 3 s 再自动问 ViewStats。
+> 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」（进服后先静默 3 s 再问）；1.20.40 把面板/盾牌的位置改成**相对位置**，窗口大小或 GUI 缩放变化后不再错位。
 >
 > **1.20.37 起彻底改名**：仓库 `CTT HUD - Fork`、Gradle 工程 `mod/`、包名 `com.nyalium.ctthudfork`、
 > 入口类 `CttHudForkClient` / `CttHudForkServer`、配置类 `HudConfig`、布局类 `HudLayout`、
@@ -15,11 +15,11 @@
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.20.39` |
+| 版本 | `1.20.40` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/ctt-hud-fork-1.20.39.jar` |
+| 产物 | `build/libs/ctt-hud-fork-1.20.40.jar` |
 
 ## 绘制方式（1.15.0 起）
 
@@ -213,11 +213,17 @@ CTT HUD - Fork 设置（F8 或 Mod Menu 打开）
 | 启用盾牌指示器 | 开 / 关 | 总开关关闭时整栏灰掉 |
 | 缩放 | **0.5 ~ 1.5 倍**（步长 0.1，默认 **0.7**） | 整张纹理等比缩放到 `34k × 86k`，**不是平铺** |
 | 不透明度 | 10% ~ 100%（默认 **65%**；1.20.26 起曾是 75%，1.20.32 改 65%） | 走 `blit` 的 ARGB |
-| 移动指示器 | 拖动 / 方向键 | 坐标存 `shieldX/shieldY`；`-1` = 默认位置（见下） |
+| 移动指示器 | 拖动 / 方向键 | 坐标存 `shieldX/shieldY`；`-1` = 默认位置（见下）。1.20.40 起坐标是**相对位置**：存的是「量在 `layoutGuiW × layoutGuiH` 那套 GUI 下」的像素，窗口/缩放变化按比例换算 |
 
 **默认位置（`shieldX/Y = -1`）**：水平对准**副手物品格的中心** —— 右手玩家副手在快捷栏左侧，
 即 `guiW/2 − 109`；左手玩家自动镜像到 `guiW/2 + 109`。垂直方向**整条指示器的底边**距屏幕底部 **76 px**
 （`guiH − 76 − h`）。1.20.26 修掉了「移动指示器」预览固定用 `+109` 的 bug（预览显示在右侧、实际 HUD 在左侧）。
+
+**1.20.40 起位置是相对的**：`shieldX/Y` 与面板的 `selfStatsX/Y` 一样，都是「在 `layoutGuiW × layoutGuiH`
+这套 GUI 下量的像素」，绘制时按 `当前尺寸 ÷ 记录尺寸` 换算
+（`HudConfig.scalePos` / `shieldPosition` / `panel(..., guiW, guiH)`）。窗口放大一倍，指示器也到两倍远处；
+靠边的因 `clampInto` 贴边（夹取只影响绘制，不改存储值）。拖动时 `setShieldPosition(..., guiW, guiH)`
+会先把坐标换算到新参考系并记下新尺寸，所以不会越拖越偏。
 
 > 1.20.22 修的核心：之前用 10 参数 `blit(pipeline, tex, x, y, u, v, w, h, texW, texH, color)`，
 > 它的 `w/h` **同时是源区尺寸**，放大到 k 倍时 UV 跨了 k 张纹理 → 画成 k×k 平铺
@@ -337,7 +343,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | 采集 | 触发后 3 s 收尾（等不到计时行才用它），单次上限 8 s；只收「带 `Misc_View_Stats_*` 键 / 数字 + 图形（🗡🏹🛡❤…）/ 草方块 `□`」的行（1.20.23 起改用这条窄判据，不再「数字开头就算」） |
 | 防刷屏 | 收下的行**不显示**在聊天栏（和上游一样）；1.20.39 起「进存档 / 进服后 3 s 内」既不自动问、也不显示任何 ViewStats 输出（那批只可能是我们自己问出来的迟到回答） |
 | 解析 | `heartKindOf(字形, 颜色)`：❤+红/黄/黑/蓝 → 红/魂/黑/蓝；私有区字形 + 暗红/亮紫 → 碎/粉；`amountBefore` 取字形前紧邻的数字 |
-| 面板 | 列优先排版，列数 1~3，位置 `selfStatsX/Y`（**GUI 像素**，界面上用「移动面板」拖动），支持字号/透明度 |
+| 面板 | 列优先排版，列数 1~3，位置 `selfStatsX/Y`（**相对位置**：像素量在 `layoutGuiW × layoutGuiH` 那套 GUI 下，1.20.40 起按当前尺寸换算），界面上用「移动面板」拖动，支持字号/透明度 |
 | 门控 | 地图回「Game not started」时整块不画（1.20.36 的「选过职业」门控已在 1.20.37 回退） |
 
 ### 1.20.4：提示行、闪烁、可调与过滤（职业过滤已在 1.20.5 移除）
@@ -391,7 +397,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 
 ```json
 {
-  "configVersion": 18,
+  "configVersion": 19,
   "enabled": true,
   "opacity": 0.75,
   "textShadow": false,
@@ -419,7 +425,9 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
   "selfStatsScale": 1.0,
   "selfStatsOpacity": 1.0,
   "selfStatsTextShadow": true,
-  "selfStatsHidden": []
+  "selfStatsHidden": [],
+  "layoutGuiW": 0,
+  "layoutGuiH": 0
 }
 ```
 
@@ -445,7 +453,8 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 | `selfStatsMode` | 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，2 = HUD + 容器都显示；共 4 套配置（`selfStats*` / `container*` / `both*` / `bothContainer*`） | 0~2 |
 | `containerX/Y/Columns/Scale/Opacity` | 「在容器界面显示」那一套独立的位置/列数/字号/不透明度 | 0~4000 / 1~3 / 1.0~2.0 / 0.2~1.0 |
 | `hideBehindWalls` / `hideBehindEntities` / `autoPartyBossbar` | **写死**：前两项恒为 false、第三项恒为 true（1.20.15 起 normalize 强制，JSON 改了也无效） | — |
-| `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，1=立即，默认 3）/ 列数 / 左上角 GUI 坐标（1.20.9 起界面上只能拖动，JSON 仍生效）；进他人服务器时强制 3 s 且不改这里 | 1~5 / 1~3 / 0~4000 |
+| `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，1=立即，默认 3）/ 列数 / 左上角坐标（1.20.9 起界面上只能拖动，JSON 仍生效；**1.20.40 起是「量在 `layoutGuiW × layoutGuiH` 下」的相对位置**）；进他人服务器时强制 3 s 且不改这里 | 1~5 / 1~3 / 0~4000 |
+| `layoutGuiW` / `layoutGuiH` | 1.20.40：这些像素坐标是量在多大的 GUI 上的（`0` = 还不知道，第一次绘制时用当时尺寸补上）；窗口大小或 GUI 缩放变化后按比例换算，面板/盾牌不会错位 | 0~10000 |
 | `selfStatsScale` / `selfStatsOpacity` | 属性面板文字大小 / 不透明度 | 0.50~2.00（默认 1.0）/ 0.20~1.00（默认 1.0） |
 | `selfStatsHidden` | 要隐藏的属性（如 `["heart_red", "mana_recharge"]`）；共 88 项（属性 56 + 状态效果 28 + 其它 4），见 `SelfStatsKind`；旧配置里的粗类（`health`/`attack`/`status`/`misc`/…）会自动展开成细项 | — |
 | `debug` | 左下角打印 `panel x,y cols scale op / lines 显示/总数 / gui WxH fb WxH`（**仅配置文件，界面无此项**） | — |
@@ -454,13 +463,15 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 > 老配置文件里的这几个键会被忽略，下次「完成」时自动消失。
 > `autoPartyBossbar` 在 1.13.3 一度移除，1.13.4 恢复（默认开）。
 > 1.14.4 加的 `wrapWidth` 已在 1.19.0 删除（布局改固定三段，自动折行），旧配置里的键会被忽略。
-> `configVersion` 现在是 **18**：v1→v2 把血条默认长度 100 改成 75，v2→v3 把默认缩放 1.0 改成 0.9，
+> `configVersion` 现在是 **19**：v1→v2 把血条默认长度 100 改成 75，v2→v3 把默认缩放 1.0 改成 0.9，
 > v3→v4 新增自身属性面板字段，v4→v5 新增字号/透明度/内容过滤，v5→v6 按属性细分过滤项（粗类自动展开），
 > v12 删除 `hideBehindEntities`，v13 把盾牌默认缩放/不透明度改成 0.7 / 75%，
 > v14 内容过滤改三节分组、状态效果拆成 28 条（旧配置里的 `status` 粗类读取时展开），
 > v15 属性面板文字阴影独立成 `selfStatsTextShadow`（新字段用自己的默认值「开」，不继承旧的 `textShadow`）、实体血条那个「文字阴影」改为默认关、盾牌不透明度默认 75% → 65%，
 > v16 曾把队友血条拆成 `teamShowBar`，**v17 又删掉**（队友整块由 `showTeammates` 管，「显示血条」关掉时血条和文字一起消失），
 > **v18 删掉 `useServerData`**（服务端组件数据写死优先，界面不再提供开关）；
+> **v19 新增 `layoutGuiW/layoutGuiH`**（面板 / 盾牌的位置改成相对位置：坐标量在这套尺寸下，绘制时按当前尺寸换算；
+> 老文件里没有这两个键 → 0 = 未知，第一次绘制时用当时尺寸补上，坐标值不用改）；
 > 只在「值仍等于旧默认值」时才迁移，手工调过的值不动，新字段一律有默认值。
 > 手改坏配置文件（类型不对 / JSON 语法错）时**保留上一份可用配置**并在日志里 warn，不再静默恢复默认。
 
@@ -529,7 +540,7 @@ A/B 对照图：`versions/v1.20.2/bar-caps.png`（旧=方头 / 新=圆头 / 40% 
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**5353 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
+**5374 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、垂直偏移 4 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
 护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）、
@@ -544,7 +555,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/ctt-hud-fork-1.20.39.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/ctt-hud-fork-1.20.40.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革
@@ -612,6 +623,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 | **1.20.37** | 回退 1.20.36 的门控（行为同 1.20.35）；**项目与产物彻底改名 CTT HUD - Fork**：仓库/工程目录、包名 `com.nyalium.ctthudfork`、类名 `CttHudFork*` / `HudConfig*` / `HudLayout`、产物 `ctt-hud-fork-x.y.z.jar`、翻译键 `ctt_hud_fork.*`、Mixin 前缀 `cttHudFork$` |
 | **1.20.38** | 进存档那一刻刷进聊天栏的属性行：采集 3 s 超时收尾后，自己 trigger 的迟到输出仍在 20 s 认领窗口内按自动吞掉 —— **已在 1.20.39 回退**（会误吞玩家手动触发的输出） |
 | **1.20.39** | 改为「进存档 / 进服后静默 3 s 再自动问 ViewStats」：这之前不发 trigger、这期间来的 ViewStats 输出既不显示也不收进面板；手动触发照旧显示 |
+| **1.20.40** | 属性面板 / 盾牌指示器的位置改成**相对位置**：坐标连同「量它的那套 GUI 尺寸」（`layoutGuiW/H`）一起存，窗口大小或 GUI 缩放变化后按比例换算，不再错位；配置 v19 |
 
 ## 已知限制
 
@@ -625,4 +637,6 @@ gradlew selfCheck      # gradlew build 会自动带上
   （灰 `🗡` 可能是职业属性/力量/攻速），落到组内默认项；私有区字形已按码位区分（U+E001/E003/E004/E010/E011/E026/E027）。
 - 「移动面板」的拖拽用的是原版滑块同款增量位移；自动化环境只能验证「面板会动、坐标会更新」，
   拖到具体位置的精度没法在无头环境里证明。
+- 1.20.40 的「位置相对化」只在自检里验过换算数学与状态流转（`scalePos` / `rebase` / 四套面板 / 盾牌）；
+  真机上「拖好位置 → 改窗口大小 / 改 GUI 缩放 → 是否仍对得上」**没有实机验证**。
 

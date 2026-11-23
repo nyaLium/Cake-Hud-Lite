@@ -49,9 +49,10 @@ public final class SelfStatsLayoutScreen extends Screen {
         this.containerConfig = containerConfig;
     }
 
-    /** 当前模式的布局参数（跟随 {@link #containerConfig}）。 */
+    /** 当前模式的布局参数（跟随 {@link #containerConfig}；1.20.40 起按本界面 GUI 尺寸换算位置）。 */
     private HudConfig.Panel currentPanel() {
-        return HudConfig.panel(HudConfig.get().selfStatsMode, this.containerConfig);
+        return HudConfig.panel(HudConfig.get().selfStatsMode, this.containerConfig,
+                this.width, this.height);
     }
 
     @Override
@@ -82,7 +83,7 @@ public final class SelfStatsLayoutScreen extends Screen {
     /** 「回到初始位置」：只重置当前这一套。 */
     private void resetPosition() {
         HudConfig.movePanel(HudConfig.get().selfStatsMode, this.containerConfig,
-                DEFAULT_X, defaultY(this.containerConfig));
+                DEFAULT_X, defaultY(this.containerConfig), this.width, this.height);
         this.dragging = false;
         this.rebuildWidgets();
     }
@@ -239,11 +240,12 @@ public final class SelfStatsLayoutScreen extends Screen {
                 bounds);
     }
 
-    /** 写位置 + 夹进屏幕（整块留在屏内，拖不出边界）。 */
+    /** 写位置 + 夹进屏幕（整块留在屏内，拖不出边界）；1.20.40 起连同当前 GUI 尺寸一起写。 */
     private void moveTo(int x, int y, int[] bounds) {
         HudConfig.movePanel(HudConfig.get().selfStatsMode, this.containerConfig,
                 SelfStatsPanel.fitInScreen(x, bounds[2], this.width),
-                SelfStatsPanel.fitInScreen(y, bounds[3], this.height));
+                SelfStatsPanel.fitInScreen(y, bounds[3], this.height),
+                this.width, this.height);
     }
 
     /** 左键（0）为主；部分 SDL/新输入链会把左键报成 1，一并接受。 */

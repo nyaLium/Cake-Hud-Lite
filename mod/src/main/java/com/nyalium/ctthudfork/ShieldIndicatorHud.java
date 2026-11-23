@@ -18,7 +18,9 @@ import net.minecraft.world.item.component.CustomData;
  * <p>判定：副手物品非空、{@code custom_data} 里 {@code shield:1b}/{@code shieldAbility:1b} 为真、
  * 可损坏且耐久未满；耐久满（damage=0）不画。</p>
  *
- * <p>位置：{@code shieldX/Y} 是屏幕 GUI 坐标（左上角）；未设置（-1）时走
+ * <p>位置：{@code shieldX/Y} 是屏幕 GUI 坐标（左上角），量在 {@code layoutGuiW/H} 那套尺寸下；
+ * 1.20.40 起按<b>相对位置</b>换算到当前 GUI（见 {@link HudConfig#shieldPosition}）。
+ * 未设置（-1）时走
  * {@link #defaultX}/{@link #defaultY} 的<b>默认位置</b>：</p>
  * <ul>
  *   <li>水平：对准副手**物品格**的中心 —— 右手玩家副手在快捷栏左侧，即 {@code guiW/2 - 109}；
@@ -124,8 +126,11 @@ final class ShieldIndicatorHud implements HudElement {
         int w = scaledWidth(cfg.shieldScale);
         int h = scaledHeight(cfg.shieldScale);
 
-        int x = cfg.shieldX;
-        int y = cfg.shieldY;
+        // 1.20.40：位置是「相对位置」—— 配置里存的是量在 layoutGuiW/H 那套 GUI 下的像素，
+        // 这里换算到当前尺寸，窗口/缩放变化时不会错位。
+        int[] pos = HudConfig.shieldPosition(guiW, guiH);
+        int x = pos[0];
+        int y = pos[1];
         if (x < 0 || y < 0) {
             boolean offhandOnLeft = mc.player.getMainArm().getOpposite() == HumanoidArm.LEFT;
             x = defaultX(offhandOnLeft, guiW, w);

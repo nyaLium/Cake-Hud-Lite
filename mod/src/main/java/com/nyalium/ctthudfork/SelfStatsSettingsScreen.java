@@ -54,7 +54,8 @@ public final class SelfStatsSettingsScreen extends Screen {
         if (!rows.isEmpty()) return;
         HudConfig.Cfg cfg = HudConfig.get();
         int mode = cfg.selfStatsMode;
-        HudConfig.Panel panel = HudConfig.panel(mode, mode == 1 || (mode == 2 && editContainer));
+        HudConfig.Panel panel = HudConfig.panel(mode, mode == 1 || (mode == 2 && editContainer),
+                this.width, this.height);
         int y = 0;
         y = toggle("showSelfStats", y);
         y = slider("selfStatsSeconds", y, 1, 5, 1, cfg.selfStatsSeconds, mode);
@@ -138,7 +139,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         boolean editContainer = mode == 1 || (mode == 2 && this.editContainer);
         boolean enabled = cfg.showSelfStats;
         boolean forced = SelfStats.forcedByServer(this.minecraft);
-        HudConfig.Panel panel = HudConfig.panel(mode, editContainer);
+        HudConfig.Panel panel = HudConfig.panel(mode, editContainer, this.width, this.height);
         int width = Math.max(140, Math.min(WIDTH_MAX, this.width - 60));
         int x = this.width / 2 - width / 2;
         List<AbstractWidget> dependent = new ArrayList<>();

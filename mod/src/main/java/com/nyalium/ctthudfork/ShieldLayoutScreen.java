@@ -49,8 +49,7 @@ public final class ShieldLayoutScreen extends Screen {
     protected void init() {
         int y = this.height - ROW_HEIGHT - 8;
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.selfStatsMove.reset"), b -> {
-            HudConfig.get().shieldX = -1;
-            HudConfig.get().shieldY = -1;
+            HudConfig.setShieldPosition(-1, -1, this.width, this.height);
             this.dragging = false;
             this.rebuildWidgets();
         }).bounds(this.width / 2 - BUTTON_WIDTH - GAP / 2, y, BUTTON_WIDTH, ROW_HEIGHT).build());
@@ -100,8 +99,10 @@ public final class ShieldLayoutScreen extends Screen {
     private int[] position(HudConfig.Cfg cfg) {
         int w = ShieldIndicatorHud.scaledWidth(cfg.shieldScale);
         int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
-        int x = cfg.shieldX;
-        int y = cfg.shieldY;
+        // 1.20.40：配置里存的是「相对位置」，这里换算到本界面的 GUI 尺寸。
+        int[] stored = HudConfig.shieldPosition(this.width, this.height);
+        int x = stored[0];
+        int y = stored[1];
         if (x < 0 || y < 0) {
             boolean offhandOnLeft = this.minecraft.player == null
                     || this.minecraft.player.getMainArm().getOpposite() == net.minecraft.world.entity.HumanoidArm.LEFT;
@@ -185,8 +186,9 @@ public final class ShieldLayoutScreen extends Screen {
         HudConfig.Cfg cfg = HudConfig.get();
         int w = ShieldIndicatorHud.scaledWidth(cfg.shieldScale);
         int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
-        cfg.shieldX = ShieldIndicatorHud.clampInto(x, w, this.width);
-        cfg.shieldY = ShieldIndicatorHud.clampInto(y, h, this.height);
+        // 1.20.40：连同「量它的 GUI 尺寸」一起写，之后窗口变化按比例换算。
+        HudConfig.setShieldPosition(ShieldIndicatorHud.clampInto(x, w, this.width),
+                ShieldIndicatorHud.clampInto(y, h, this.height), this.width, this.height);
     }
 
     private static boolean accept(MouseButtonEvent event) {

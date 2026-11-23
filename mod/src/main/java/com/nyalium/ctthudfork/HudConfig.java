@@ -98,7 +98,7 @@ public final class HudConfig {
         public int selfStatsSeconds = 3;
         /** 属性面板列数，1 ~ 3。 */
         public int selfStatsColumns = 2;
-        /** 属性面板左上角屏幕坐标（GUI 像素）。 */
+        /** 属性面板左上角屏幕坐标（GUI 像素，量在 {@link #layoutGuiW}/{@link #layoutGuiH} 这套尺寸下）。 */
         public int selfStatsX = 4;
         public int selfStatsY = 40;
         /**
@@ -158,6 +158,20 @@ public final class HudConfig {
         public double shieldScale = 0.7;
         /** 不透明度 0.1~1.0（1.20.26 起默认 0.75；1.20.32 起默认 0.65）。 */
         public double shieldOpacity = 0.65;
+
+        /**
+         * 1.20.40：这些「像素坐标」是量在多大的 GUI 上的（{@code 0} = 还不知道）。
+         *
+         * <p>面板 / 盾牌的位置以前是**绝对 GUI 像素**，窗口或 GUI 缩放一变，同一个像素数就落到
+         * 屏幕的另一处相对位置（「窗口一变就错位」）。现在把坐标连同「量它的那套 GUI 尺寸」一起存，
+         * 绘制时按 {@code 当前尺寸 ÷ 记录尺寸} 换算，等于把位置变成了<b>相对位置</b>：
+         * 窗口放大一倍，面板也到两倍远处；靠边的则会因为夹进而贴边，不会跑到屏幕外。</p>
+         *
+         * <p>记录尺寸只在**拖动**时更新（那时坐标就是在当前尺寸下量的）；
+         * 平时窗口怎么变都不改它，这样换算才有基准。</p>
+         */
+        public int layoutGuiW = 0;
+        public int layoutGuiH = 0;
     }
 
     /**
@@ -191,7 +205,7 @@ public final class HudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 18;
+    public static final int CURRENT_VERSION = 19;
 
     /** 盾牌指示器的缩放范围（倍）。1.20.22 起是小数倍，纹理整张等比缩放。 */
     public static final double SHIELD_SCALE_MIN = 0.5;
@@ -264,16 +278,25 @@ public final class HudConfig {
 
     /** 当前显示方式 + 上下文对应的布局；{@code container=true} 取容器界面那一套。 */
     public static Panel panel(int mode, boolean container) {
-        Cfg c = get();
+        return panel(mode, container, 0, 0);
+    }
+
+    /**
+     * 当前显示方式 + 上下文对应的布局，位置按当前 GUI 尺寸换算（1.20.40）。
+     *
+     * @param guiW 当前 GUI 宽；{@code <=0} = 不换算（只取列数/缩放/不透明度的调用点用）
+     * @param guiH 当前 GUI 高
+     */
+    public static Panel panel(int mode, boolean container, int guiW, int guiH) {
+        Cfg c = withLayoutRef(get(), guiW, guiH);
+        int x = scalePos(rawX(c, mode, container), c.layoutGuiW, guiW);
+        int y = scalePos(rawY(c, mode, container), c.layoutGuiH, guiH);
         return switch (mode) {
-            case 1 -> new Panel(c.containerX, c.containerY, c.containerColumns,
-                    c.containerScale, c.containerOpacity);
+            case 1 -> new Panel(x, y, c.containerColumns, c.containerScale, c.containerOpacity);
             case 2 -> container
-                    ? new Panel(c.bothContainerX, c.bothContainerY, c.bothContainerColumns,
-                            c.bothContainerScale, c.bothContainerOpacity)
-                    : new Panel(c.bothX, c.bothY, c.bothColumns, c.bothScale, c.bothOpacity);
-            default -> new Panel(c.selfStatsX, c.selfStatsY, c.selfStatsColumns,
-                    c.selfStatsScale, c.selfStatsOpacity);
+                    ? new Panel(x, y, c.bothContainerColumns, c.bothContainerScale, c.bothContainerOpacity)
+                    : new Panel(x, y, c.bothColumns, c.bothScale, c.bothOpacity);
+            default -> new Panel(x, y, c.selfStatsColumns, c.selfStatsScale, c.selfStatsOpacity);
         };
     }
 
@@ -287,9 +310,38 @@ public final class HudConfig {
         return panel(get().selfStatsMode, false);
     }
 
-    /** 写位置（拖动界面用）。 */
+    /** 某一套配置里存的（记录尺寸下的）左上角 x。 */
+    private static int rawX(Cfg c, int mode, boolean container) {
+        return switch (mode) {
+            case 1 -> c.containerX;
+            case 2 -> container ? c.bothContainerX : c.bothX;
+            default -> c.selfStatsX;
+        };
+    }
+
+    /** 某一套配置里存的（记录尺寸下的）左上角 y。 */
+    private static int rawY(Cfg c, int mode, boolean container) {
+        return switch (mode) {
+            case 1 -> c.containerY;
+            case 2 -> container ? c.bothContainerY : c.bothY;
+            default -> c.selfStatsY;
+        };
+    }
+
+    /** 写位置（拖动界面用；坐标是**当前 GUI** 下的像素）。 */
     public static void movePanel(int mode, boolean container, int x, int y) {
+        movePanel(mode, container, x, y, 0, 0);
+    }
+
+    /**
+     * 写位置（拖动界面用；坐标是当前 GUI 下的像素，1.20.40）。
+     *
+     * <p>顺手把「记录尺寸」更新到当前这一套 —— 之后窗口/缩放变化时按比例换算，
+     * 面板就留在同一个相对位置上。</p>
+     */
+    public static void movePanel(int mode, boolean container, int x, int y, int guiW, int guiH) {
         Cfg c = get();
+        rebase(c, guiW, guiH);
         switch (mode) {
             case 1 -> {
                 c.containerX = x;
@@ -311,8 +363,71 @@ public final class HudConfig {
         }
     }
 
-    public static void setPanelColumns(int mode, boolean container, int columns) {
+    // ── 1.20.40：位置按「记录尺寸 → 当前尺寸」换算，变成相对位置 ──
+
+    /**
+     * 纯函数：把「{@code storedGui} 这套尺寸下量的坐标」换算到 {@code guiNow}（selfCheck 直接打）。
+     *
+     * <p>任何一边未知（{@code <=0}）就原样返回 —— 老配置第一次进游戏前走的就是这条路，
+     * 不会因为缺基准把位置算飞。这里只按比例换算、不夹取；夹进屏幕由绘制方负责。</p>
+     */
+    static int scalePos(int pos, int storedGui, int guiNow) {
+        if (storedGui <= 0 || guiNow <= 0 || storedGui == guiNow) return pos;
+        return (int) Math.round((double) pos * (double) guiNow / (double) storedGui);
+    }
+
+    /** 老配置 / 首次运行：把当前 GUI 尺寸记成「坐标是在这上面量的」。 */
+    private static Cfg withLayoutRef(Cfg c, int guiW, int guiH) {
+        if (c != null && guiW > 0 && guiH > 0 && (c.layoutGuiW <= 0 || c.layoutGuiH <= 0)) {
+            c.layoutGuiW = guiW;
+            c.layoutGuiH = guiH;
+        }
+        return c;
+    }
+
+    /**
+     * 把「记录尺寸」改到 {@code guiW × guiH}，并先把已存的坐标换算过去（1.20.40）。
+     *
+     * <p>拖动时调用：新坐标是在当前 GUI 下量的，之前存的那几套（其它显示方式的、盾牌的）
+     * 必须先按旧比例换算到新尺寸下，否则会被当成「也是在这个尺寸下量的」而整体偏掉。</p>
+     */
+    static void rebase(Cfg c, int guiW, int guiH) {
+        if (c == null || guiW <= 0 || guiH <= 0) return;
+        int oldW = c.layoutGuiW;
+        int oldH = c.layoutGuiH;
+        if (oldW > 0 && oldH > 0 && (oldW != guiW || oldH != guiH)) {
+            c.selfStatsX = scalePos(c.selfStatsX, oldW, guiW);
+            c.selfStatsY = scalePos(c.selfStatsY, oldH, guiH);
+            c.containerX = scalePos(c.containerX, oldW, guiW);
+            c.containerY = scalePos(c.containerY, oldH, guiH);
+            c.bothX = scalePos(c.bothX, oldW, guiW);
+            c.bothY = scalePos(c.bothY, oldH, guiH);
+            c.bothContainerX = scalePos(c.bothContainerX, oldW, guiW);
+            c.bothContainerY = scalePos(c.bothContainerY, oldH, guiH);
+            if (c.shieldX >= 0) c.shieldX = scalePos(c.shieldX, oldW, guiW);
+            if (c.shieldY >= 0) c.shieldY = scalePos(c.shieldY, oldH, guiH);
+        }
+        c.layoutGuiW = guiW;
+        c.layoutGuiH = guiH;
+    }
+
+    /** 盾牌指示器位置（当前 GUI 尺寸下；{@code {-1,-1}} = 跟随副手槽的自动位置）。 */
+    public static int[] shieldPosition(int guiW, int guiH) {
+        Cfg c = withLayoutRef(get(), guiW, guiH);
+        if (c.shieldX < 0 || c.shieldY < 0) return new int[]{-1, -1};
+        return new int[]{scalePos(c.shieldX, c.layoutGuiW, guiW),
+                scalePos(c.shieldY, c.layoutGuiH, guiH)};
+    }
+
+    /** 写盾牌位置（当前 GUI 下的像素；{@code -1} = 恢复自动位置）。 */
+    public static void setShieldPosition(int x, int y, int guiW, int guiH) {
         Cfg c = get();
+        if (x >= 0 && y >= 0) rebase(c, guiW, guiH);
+        c.shieldX = x;
+        c.shieldY = y;
+    }
+
+    public static void setPanelColumns(int mode, boolean container, int columns) {        Cfg c = get();
         switch (mode) {
             case 1 -> c.containerColumns = columns;
             case 2 -> {
@@ -495,6 +610,12 @@ public final class HudConfig {
             // （服务端没装本 Mod 时本来就会回落到客户端 Boss 栏 / HealthPercent）。
             // 旧文件里的这个键读取时直接忽略。
         }
+        if (version < 19) {
+            // 1.20.40：面板 / 盾牌的位置改成「相对位置」—— 坐标连同「量它的那套 GUI 尺寸」
+            // （layoutGuiW/layoutGuiH）一起存，绘制时按比例换算到当前尺寸。
+            // 老文件没有这两个字段（0 = 未知），第一次绘制时用当时的尺寸补上，
+            // 所以这里不用改任何坐标值。
+        }
         if (version < 17) {
             // 1.20.34：删掉 1.20.33 短暂存在的 teamShowBar —— 队友整块由 showTeammates 管，
             // 「显示血条」关掉时血条和文字一起消失。旧文件里的这个键读取时直接忽略。
@@ -586,6 +707,13 @@ public final class HudConfig {
         // 盾牌指示器（1.20.20：可拖动定位 + 透明度；1.20.22：缩放 0.5~1.5 小数倍）
         read.shieldX = (int) clamp(read.shieldX, -1.0, 4000.0);
         read.shieldY = (int) clamp(read.shieldY, -1.0, 4000.0);
+        // 1.20.40：位置换算的基准尺寸；0 = 还不知道（第一次绘制时补），非法值（负数/超大）同样按未知处理。
+        read.layoutGuiW = (int) clamp(read.layoutGuiW, 0.0, 10000.0);
+        read.layoutGuiH = (int) clamp(read.layoutGuiH, 0.0, 10000.0);
+        if (read.layoutGuiW == 0 || read.layoutGuiH == 0) {
+            read.layoutGuiW = 0;
+            read.layoutGuiH = 0;
+        }
         read.shieldScale = clamp(read.shieldScale, SHIELD_SCALE_MIN, SHIELD_SCALE_MAX);
         read.shieldOpacity = clamp(read.shieldOpacity, 0.1, 1.0);
         return read;
