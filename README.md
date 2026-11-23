@@ -29,9 +29,9 @@
 
 | 版本 | 文件 | 说明 |
 | --- | --- | --- |
-| **1.0.2**（正式版 · 最新） | [`versions/v1.0.2/ctt-hud-fork-1.0.2.jar`](versions/v1.0.2/ctt-hud-fork-1.0.2.jar) | 修正 LICENSE 里的上游版权署名（Kirin0321／麒麟），jar 内嵌的 LICENSE 同步更新 |
-| 1.0.1 | [`versions/v1.0.1/ctt-hud-fork-1.0.1.jar`](versions/v1.0.1/ctt-hud-fork-1.0.1.jar) | 首个公开上传的正式版 |
-| 1.0.0 | [`versions/v1.0.0/ctt-hud-fork-1.0.0.jar`](versions/v1.0.0/ctt-hud-fork-1.0.0.jar) | 首个正式版 |
+| **1.0.2**（正式版 · 唯一可用） | [`versions/v1.0.2/ctt-hud-fork-1.0.2.jar`](versions/v1.0.2/ctt-hud-fork-1.0.2.jar) | 客户端必装；同一个 jar 放服务端即启用权威数据推送（选装） |
+
+> **1.0.0 / 1.0.1 已撤回**：这两个版本的 `LICENSE` 把上游版权人写成了仓库账号名（实际为 `Copyright (c) 2026 Kirin0321 (麒麟)`）。为免分发署名错误的产物，它们的 jar、归档与 tag 已从本仓库移除，**请只使用 1.0.2**。
 
 依赖：Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；Mod Menu 可选（装了就有设置入口）。
 配置：`config/ctt-hud-fork.json`；旧的 `ctt-enemy-hud.json` 会自动复制迁移。
@@ -66,7 +66,7 @@ cd mod
 | 路径 | 内容 |
 | --- | --- |
 | `mod/` | 源码工程（Gradle + Loom，Minecraft 26.3 / Fabric） |
-| `versions/vX.Y.Z/` | **正式版的归档**（当前 v1.0.0 / v1.0.1 / v1.0.2）：jar、sources、README、RELEASE；发布前的测试版（1.10.0 – 1.20.42）**只在本地**，已被 `.gitignore` 排除 |
+| `versions/vX.Y.Z/` | **正式版的归档**（当前只有 v1.0.2）：jar、sources、README、RELEASE；发布前的测试版（1.10.0 – 1.20.42）**只在本地**，已被 `.gitignore` 排除 |
 | `versions/ARCHIVE.md` | 全部版本的清单（大小 / SHA-256 / 内嵌版本号 / git 标签） |
 | `versions/VERSIONING.md` | 版本保留规则（每版必留档，不覆盖、不删除）与上传流程 |
 | `versions/tools/archive_audit.py` | 归档审计：重新生成 `ARCHIVE.md` 并校验 |
