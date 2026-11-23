@@ -124,7 +124,9 @@ public final class EnemyHudConfig {
          * 属性面板文字阴影（1.20.32 起独立）。
          *
          * <p>以前面板跟着 {@link #textShadow}（实体血条那个）走，改一边会连带改另一边；现在分开，
-         * 默认<b>开启</b> —— 和升级前的观感一致（那时候 {@code textShadow} 默认 true）。</p>
+         * 默认<b>开启</b> —— 和升级前的观感一致（那时候 {@code textShadow} 默认 true）。
+         * v14→v15 迁移时<b>不继承</b>旧的 {@code textShadow}：为了关头顶阴影而关掉它的人，
+         * 面板不该被一起带走。</p>
          */
         public boolean selfStatsTextShadow = true;
         /**
@@ -481,10 +483,11 @@ public final class EnemyHudConfig {
             if (cfg.shieldOpacity == 1.0) cfg.shieldOpacity = 0.75;
         }
         if (version < 15) {
-            // 1.20.32：① 属性面板文字阴影独立出来 —— 面板保持升级前的观感（= 旧 textShadow），
-            // 实体血条那个「文字阴影」跟到新默认值「关」；
-            // ② 盾牌默认不透明度 75% → 65%（放在 <13 之后：v12 的旧默认 1.0 先落到 0.75，再落到 0.65）。
-            cfg.selfStatsTextShadow = cfg.textShadow;
+            // 1.20.32：① 实体血条的「文字阴影」跟到新默认值「关」；
+            // ② 属性面板文字阴影是**新字段**，用它自己的默认值（开）——
+            //    以前面板是被 textShadow 顺带影响的，不该把那个副作用继承下来
+            //    （不然「为了关头顶阴影而关掉 textShadow」的人，面板阴影也跟着没了）；
+            // ③ 盾牌默认不透明度 75% → 65%（放在 <13 之后：v12 的旧默认 1.0 先落到 0.75，再落到 0.65）。
             if (cfg.textShadow) cfg.textShadow = false;
             if (cfg.shieldOpacity == 0.75) cfg.shieldOpacity = 0.65;
         }

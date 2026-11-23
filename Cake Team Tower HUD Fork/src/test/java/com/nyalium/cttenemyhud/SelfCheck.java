@@ -424,14 +424,14 @@ public final class SelfCheck {
         v14Shadow.shieldOpacity = 0.75;   // 旧默认值
         EnemyHudConfig.migrate("{\"configVersion\":14}", v14Shadow);
         check(!v14Shadow.textShadow, "v14 的实体血条文字阴影（旧默认 true）应跟到关闭");
-        check(v14Shadow.selfStatsTextShadow, "v14 升级后属性面板文字阴影应接住旧的 textShadow");
+        check(v14Shadow.selfStatsTextShadow, "v14 升级后属性面板文字阴影应保持新默认（开）");
         check(Math.abs(v14Shadow.shieldOpacity - 0.65) < 1e-9, "v14 的 75% 应跟到 65%");
         EnemyHudConfig.Cfg v14NoShadow = new EnemyHudConfig.Cfg();
         v14NoShadow.configVersion = 14;
         v14NoShadow.textShadow = false;
         EnemyHudConfig.migrate("{\"configVersion\":14}", v14NoShadow);
-        check(!v14NoShadow.selfStatsTextShadow,
-                "v14 里已关掉文字阴影的，面板也应保持关闭（别突然长阴影）");
+        check(v14NoShadow.selfStatsTextShadow,
+                "关掉实体血条阴影的人，面板也用新字段的默认值（开）—— 不继承那个副作用");
         EnemyHudConfig.Cfg v14CustomOpacity = new EnemyHudConfig.Cfg();
         v14CustomOpacity.configVersion = 14;
         v14CustomOpacity.shieldOpacity = 0.4;

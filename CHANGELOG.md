@@ -116,8 +116,9 @@
 - `textShadow`：只管实体血条（名字 / 心数 / 护甲），**默认关闭**（按你的要求）；
 - `selfStatsTextShadow`：新的属性面板开关，**默认开启**（= 升级前 `textShadow=true` 的观感），
   加在「属性面板设置」页的第 6 行（不透明度下面），`SelfStatsPanel` 的 HUD / 容器面板 / 移动预览都读它；
-- 迁移 v14→v15：`selfStatsTextShadow = 旧 textShadow`（面板观感不变），实体血条那个 `textShadow`
-  跟到新默认「关」。
+- 迁移 v14→v15：实体血条那个 `textShadow` 跟到新默认「关」；`selfStatsTextShadow` 是新字段，
+  直接用它的默认值「开」—— **不继承**旧的 `textShadow`。因为以前面板是被它顺带影响的，
+  为了关头顶阴影而关掉它的人，面板不该被一起带走。
 
 ### 自检与验证
 
