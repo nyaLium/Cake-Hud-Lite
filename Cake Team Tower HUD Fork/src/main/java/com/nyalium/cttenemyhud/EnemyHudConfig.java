@@ -141,7 +141,7 @@ public final class EnemyHudConfig {
     /**
      * 属性面板的布局快照（绘制用）。位置 / 列数 / 缩放 / 透明度对所有职业统一 ——
      * 这属于「屏幕布局」，跟职业无关；按职业分开的只有「看什么」，见
-     * {@link Cfg#selfStatsClassHidden}。
+     * {@link Cfg#selfStatsHidden}。
      */
     public static final class Panel {
         public final int x;
@@ -169,7 +169,7 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 13;
+    public static final int CURRENT_VERSION = 14;
 
     /** 盾牌指示器的缩放范围（倍）。1.20.22 起是小数倍，纹理整张等比缩放。 */
     public static final double SHIELD_SCALE_MIN = 0.5;
@@ -457,6 +457,11 @@ public final class EnemyHudConfig {
             // 1.20.25：删掉了从未被读取的 hideBehindEntities 字段；旧文件里的这个键读取时直接忽略，
             // 下次写盘就不再出现。这里只保证版本号被写上。
         }
+        if (version < 14) {
+            // 1.20.31：内容过滤列表改成三节分组（属性 / 状态效果 / 其它），状态效果从「一条粗类」
+            // 拆成 28 条、其它拆成「草方块 + 未识别行」。旧配置里写下的 "status" 粗类由
+            // normalize() 里的 COARSE_KINDS 在**读取时**展开，这里只保证版本号被写上。
+        }
         if (version < 13) {
             // 1.20.26：盾牌换成 34×86 的新纹理，默认缩放 0.7、默认不透明度 75%。
             // 沿用本文件的惯例：**只有仍停在旧默认值 1.0 时才跟着改**，自己调过的不覆盖。
@@ -565,8 +570,21 @@ public final class EnemyHudConfig {
         m.put("time", new String[]{"timer"});
         m.put("misc", new String[]{"active_charge", "max_charge", "active_speed", "summoning",
                 "size", "gravity", "towers_regen", "skulls", "bitches", "fishing", "bee", "ant",
-                "karma_light", "karma_neutral", "karma_dark", "karma_celestial", "misc"});
+                "karma_light", "karma_neutral", "karma_dark", "karma_celestial",
+                "grass", "misc"});
+        // 1.20.31：状态效果从一条粗类拆成 28 条，旧配置里的 "status" 展开成全部 28 条。
+        m.put("status", statusIds());
         return java.util.Map.copyOf(m);
+    }
+
+    /** 28 条状态效果的 id（{@code Misc_View_Stats_49..76}，顺序同地图）。 */
+    private static String[] statusIds() {
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        for (int i = 49; i <= 76; i++) {
+            SelfStatsKind kind = SelfStatsKind.status(i);
+            if (kind != null) ids.add(kind.id);
+        }
+        return ids.toArray(new String[0]);
     }
 
     /** 只留下真正可过滤的类 id，去掉 null / 未知 / 重复；粗类先展开成细类。 */

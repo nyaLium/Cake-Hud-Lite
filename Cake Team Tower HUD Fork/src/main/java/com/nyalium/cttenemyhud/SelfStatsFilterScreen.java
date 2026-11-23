@@ -7,20 +7,34 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.TextColor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 「内容过滤」界面（1.20.6）：<b>双列按钮 + 滚动</b>，每个属性一个按钮。
+ * 「内容过滤」界面（1.20.6 起双列按钮 + 滚动；<b>1.20.31 起分三节</b>）。
  *
- * <p>1.20.5 的列表没有边框，容易点岔；现在改成两列真正的 {@link Button}（原版按钮纹理 =
- * 有边框、有悬停高亮、可聚焦），一屏放不下就滚轮翻行。列表项是
- * {@link SelfStatsKind#FILTERABLE} 的全部属性（四色心、碎/粉心、最大生命、各类倍率、
- * 力量/攻速/攻击距离/耐力/弓术、防御/真伤、七种元素护甲、速度/跳跃、法力、
- * 充能/召唤/体型/重力/骷髅、钓鱼/蜂/蚁/因果…、状态效果、计时）。</p>
+ * <p>以前是「一大串属性 + 状态效果 + 其它」平铺：状态效果 28 条挤在一个按钮里、
+ * 「其它」把草方块和认不出的行混在一起，太粗。现在按
+ * {@link SelfStatsKind.Group} 分成三节，节与节之间画一条标题
+ * （和实体血条设置里「── 通用 ── / ── 敌人设置 ──」是同一种观感）：</p>
  *
- * <p>布局与滚动的数学都是纯函数（{@link #rowCount} / {@link #visibleRows} /
- * {@link #maxScroll} / {@link #clampScroll} / {@link #scrollByWheel} / {@link #itemAt}），
- * selfCheck 直接打。</p>
+ * <pre>
+ *   ── 属性 ──
+ *   [✔ 游戏时间]        [✔ 红心]
+ *   [✔ 魂心]            [✔ 黑心]
+ *   …
+ *   ── 状态效果 ──
+ *   [✔ 斗志昂扬]        [✔ 食物专家]
+ *   …（28 条，一条一项）
+ *   ── 其它 ──
+ *   [✔ 草方块]          [✔ 未识别行]
+ * </pre>
+ *
+ * <p>列表项仍是真正的 {@link Button}（原版按钮纹理 = 有边框、有悬停高亮、可聚焦）：
+ * 一屏放不下就滚轮翻行，右侧有滚动条。标题行不占按钮位、不可点。</p>
+ *
+ * <p>布局与滚动的数学都是纯函数（{@link #buildRows} / {@link #visibleRows} /
+ * {@link #maxScroll} / {@link #clampScroll} / {@link #scrollByWheel}），selfCheck 直接打。</p>
  */
 public final class SelfStatsFilterScreen extends Screen {
 
@@ -30,8 +44,10 @@ public final class SelfStatsFilterScreen extends Screen {
     static final int COLUMN_WIDTH = 200;
     /** 按钮高度。 */
     static final int ROW_HEIGHT = 20;
-    /** 行间距。 */
+    /** 行间距（标题行也用同样的步长）。 */
     static final int ROW_GAP = 5;
+    /** 一行的纵向步长。 */
+    static final int STEP = ROW_HEIGHT + ROW_GAP;
     /** 列间距。 */
     static final int COLUMN_GAP = 8;
     /** 列表上边（GUI 像素）：标题 + 名称 + 统计/提示合成一行，占掉的部分。 */
@@ -41,15 +57,55 @@ public final class SelfStatsFilterScreen extends Screen {
     /** 左右边距 + 滚动条宽度。 */
     static final int SIDE = 10;
     static final int SCROLLBAR_WIDTH = 3;
+    /** 分组标题文字相对行顶的下移量（行高 20、字高 8 → 居中）。 */
+    static final int HEADER_TEXT_DY = 6;
+    /** 分组标题颜色（和设置界面里的分节标题一致）。 */
+    static final int HEADER_COLOR = 0xFFFFD060;
 
     private final Screen parent;
     private List<String> hidden;
-    /** 第一个可见<b>行</b>（一行 = 两个属性）。 */
+    /** 第一个可见<b>行</b>（一行 = 一个标题，或两个属性按钮）。 */
     private int scroll;
+    /** 整个列表的行结构（不随滚动变化）。 */
+    private final List<Row> rows = buildRows();
+
+    /**
+     * 列表里的一行。
+     *
+     * @param header 非 null = 这一行是分节标题（{@code left/right} 都为 null）
+     * @param left   左边的项（null = 空位）
+     * @param right  右边的项（null = 空位）
+     */
+    record Row(SelfStatsKind.Group header, SelfStatsKind left, SelfStatsKind right) {
+        boolean isHeader() {
+            return header != null;
+        }
+    }
 
     public SelfStatsFilterScreen(Screen parent) {
         super(Component.translatable("ctt_enemy_hud.config.selfStatsFilter"));
         this.parent = parent;
+    }
+
+    /**
+     * 把三节的项排成行（纯函数）。
+     *
+     * <p>每节先插一行标题，再把这一节的项两个一行地排；<b>不跨节合并</b>
+     * （否则「状态效果」的第一项会和「属性」的最后一项挤在同一行，分节就白分了）。</p>
+     */
+    static List<Row> buildRows() {
+        List<Row> out = new ArrayList<>();
+        for (SelfStatsKind.Group group : SelfStatsKind.Group.values()) {
+            SelfStatsKind[] members = SelfStatsKind.section(group);
+            if (members.length == 0) continue;
+            out.add(new Row(group, null, null));
+            for (int i = 0; i < members.length; i += COLUMNS) {
+                SelfStatsKind left = members[i];
+                SelfStatsKind right = i + 1 < members.length ? members[i + 1] : null;
+                out.add(new Row(null, left, right));
+            }
+        }
+        return out;
     }
 
     @Override
@@ -59,17 +115,18 @@ public final class SelfStatsFilterScreen extends Screen {
 
         int width = columnWidth();
         int left = gridLeft();
-        int rows = visibleRows(listHeight());
-        SelfStatsKind[] kinds = SelfStatsKind.FILTERABLE;
-        for (int row = 0; row < rows; row++) {
-            for (int column = 0; column < COLUMNS; column++) {
-                int index = itemAt(this.scroll + row, column, COLUMNS, kinds.length);
-                if (index < 0) continue;
-                SelfStatsKind kind = kinds[index];
-                int x = left + column * (width + COLUMN_GAP);
-                int y = TOP + row * (ROW_HEIGHT + ROW_GAP);
-                addRenderableWidget(Button.builder(label(kind), b -> toggle(kind))
-                        .bounds(x, y, width, ROW_HEIGHT).build());
+        int visible = visibleRows();
+        for (int row = 0; row < visible; row++) {
+            int index = this.scroll + row;
+            if (index >= this.rows.size()) break;
+            Row line = this.rows.get(index);
+            if (line.isHeader()) continue;
+            int y = TOP + row * STEP;
+            if (line.left() != null) {
+                addRenderableWidget(button(line.left(), left, y, width));
+            }
+            if (line.right() != null) {
+                addRenderableWidget(button(line.right(), left + width + COLUMN_GAP, y, width));
             }
         }
 
@@ -82,6 +139,10 @@ public final class SelfStatsFilterScreen extends Screen {
         }).bounds(this.width / 2 - buttonWidth - 4, buttonY, buttonWidth, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("ctt_enemy_hud.config.back"), b -> back())
                 .bounds(this.width / 2 + 4, buttonY, buttonWidth, 20).build());
+    }
+
+    private Button button(SelfStatsKind kind, int x, int y, int width) {
+        return Button.builder(label(kind), b -> toggle(kind)).bounds(x, y, width, ROW_HEIGHT).build();
     }
 
     private void toggle(SelfStatsKind kind) {
@@ -99,16 +160,10 @@ public final class SelfStatsFilterScreen extends Screen {
 
     // ── 布局（纯函数，selfCheck 直接打） ──
 
-    /** 需要几行（一行放 {@code columns} 个）。 */
-    static int rowCount(int items, int columns) {
-        if (items <= 0 || columns <= 0) return 0;
-        return (items + columns - 1) / columns;
-    }
-
     /** 列表高度能放几行（含行间距）。 */
     static int visibleRows(int listHeight) {
         if (listHeight <= 0) return 0;
-        return (listHeight + ROW_GAP) / (ROW_HEIGHT + ROW_GAP);
+        return (listHeight + ROW_GAP) / STEP;
     }
 
     /** 最大滚动量（单位：行）。 */
@@ -126,15 +181,6 @@ public final class SelfStatsFilterScreen extends Screen {
         int rows = (int) Math.round(-delta);
         if (rows == 0 && delta != 0.0) rows = delta > 0 ? -1 : 1;
         return clampScroll(scroll + rows, maxScroll);
-    }
-
-    /**
-     * 第 {@code row} 行第 {@code column} 列对应第几个属性；超出范围返回 -1。
-     */
-    static int itemAt(int row, int column, int columns, int items) {
-        if (row < 0 || column < 0 || column >= columns) return -1;
-        int index = row * columns + column;
-        return index < items ? index : -1;
     }
 
     private int listHeight() {
@@ -163,7 +209,7 @@ public final class SelfStatsFilterScreen extends Screen {
     }
 
     private int maxScroll() {
-        return maxScroll(rowCount(SelfStatsKind.FILTERABLE.length, COLUMNS), visibleRows());
+        return maxScroll(this.rows.size(), visibleRows());
     }
 
     // ── 绘制 ──
@@ -181,16 +227,26 @@ public final class SelfStatsFilterScreen extends Screen {
                 .append(Component.translatable("ctt_enemy_hud.config.selfStatsFilter.scrollHint"));
         graphics.centeredText(this.font, countLine, this.width / 2, 40, 0xFF9FE8FF);
 
-        // 右侧滚动条（贴着两列按钮的右边）
+        // 分组标题：只画可见的那几行（行结构不滚动，滚动只改起点）。
         int visible = visibleRows();
+        for (int row = 0; row < visible; row++) {
+            int index = this.scroll + row;
+            if (index >= this.rows.size()) break;
+            Row line = this.rows.get(index);
+            if (!line.isHeader()) continue;
+            graphics.centeredText(this.font, Component.translatable(line.header().headerKey),
+                    this.width / 2, TOP + row * STEP + HEADER_TEXT_DY, HEADER_COLOR);
+        }
+
+        // 右侧滚动条（贴着两列按钮的右边）
         int trackTop = TOP;
-        int trackHeight = visible * (ROW_HEIGHT + ROW_GAP) - ROW_GAP;
+        int trackHeight = visible * STEP - ROW_GAP;
         if (trackHeight > 0) {
             int x = gridLeft() + columnWidth() * COLUMNS + COLUMN_GAP + 4;
             graphics.fill(x, trackTop, x + SCROLLBAR_WIDTH, trackTop + trackHeight, 0x30000000);
-            int rows = rowCount(SelfStatsKind.FILTERABLE.length, COLUMNS);
-            if (rows > visible && visible > 0) {
-                int thumbHeight = Math.max(8, trackHeight * visible / rows);
+            int total = this.rows.size();
+            if (total > visible && visible > 0) {
+                int thumbHeight = Math.max(8, trackHeight * visible / total);
                 int span = trackHeight - thumbHeight;
                 int offset = maxScroll() == 0 ? 0 : span * this.scroll / maxScroll();
                 graphics.fill(x, trackTop + offset, x + SCROLLBAR_WIDTH,

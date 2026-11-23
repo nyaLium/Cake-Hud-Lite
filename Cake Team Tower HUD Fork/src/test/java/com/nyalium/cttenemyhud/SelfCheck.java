@@ -37,6 +37,7 @@ public final class SelfCheck {
         panelModes();
         scrollBand();
         chatAndDrag();
+        panelTimerAndGrass();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -1415,7 +1416,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(EnemyHudConfig.CURRENT_VERSION == 13, "配置版本应为 13");
+        check(EnemyHudConfig.CURRENT_VERSION == 14, "配置版本应为 14");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1424,7 +1425,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 13, "v3 → v13 应升版本号");
+        check(v3.configVersion == 14, "v3 → v14 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1448,7 +1449,7 @@ public final class SelfCheck {
         check(kindOfKey(25) == SelfStatsKind.FIRE_ARMOR_AMP, "键 25 应归为火焰护甲倍率");
         check(kindOfKey(33) == SelfStatsKind.SPEED_AMP, "键 33 应归为速度倍率");
         check(kindOfKey(40) == SelfStatsKind.MANA_AMP, "键 40 应归为法力倍率");
-        check(kindOfKey(56) == SelfStatsKind.STATUS, "键 56 应归为状态效果");
+        check(kindOfKey(56) == SelfStatsKind.STATUS_56, "键 56 应归为「胸骨断裂」那条状态效果");
         check(kindOfKey(78) == SelfStatsKind.TIMER, "键 78 应归为计时");
 
         // 只有图标的数值行：图标 + 颜色 → 具体属性
@@ -1502,49 +1503,82 @@ public final class SelfCheck {
         check(glyphKind("\uE026", SelfStats.LIGHT_PURPLE) == SelfStatsKind.HEART_PINK,
                 "私有区字形 + 亮紫应归为粉心");
 
-        // 过滤表：细类、粗类展开、非法值
-        check(SelfStatsKind.FILTERABLE.length >= 50, "可过滤项应有 50 项以上，实际 " + SelfStatsKind.FILTERABLE.length);
+        // 过滤表：细类、分节、粗类展开、非法值（1.20.31：属性 58 + 状态效果 28 + 其它 2）
+        check(SelfStatsKind.FILTERABLE.length == 88,
+                "可过滤项应为 88 项，实际 " + SelfStatsKind.FILTERABLE.length);
+        check(SelfStatsKind.section(SelfStatsKind.Group.ATTRIBUTE).length == 58, "「属性」一节应有 58 项");
+        check(SelfStatsKind.section(SelfStatsKind.Group.STATUS).length == 28, "「状态效果」一节应有 28 项");
+        check(SelfStatsKind.section(SelfStatsKind.Group.OTHER).length == 2, "「其它」一节应有 2 项");
+        check(SelfStatsKind.status(49) == SelfStatsKind.STATUS_49, "键 49 应映射到 status_49");
+        check(SelfStatsKind.status(76) == SelfStatsKind.STATUS_76, "键 76 应映射到 status_76");
+        check(SelfStatsKind.status(48) == null && SelfStatsKind.status(77) == null,
+                "49~76 之外不该有状态效果类");
+        check(SelfStatsKind.byId("misc").filterable, "未识别行仍要能单独关掉（兜底保留）");
         check(EnemyHudConfig.sanitizeKinds(java.util.List.of("heart_red")).size() == 1, "合法隐藏类应保留");
         check(EnemyHudConfig.sanitizeKinds(java.util.List.of("hint")).isEmpty(), "提示类不该能进过滤表");
         check(EnemyHudConfig.sanitizeKinds(java.util.List.of("nope")).isEmpty(), "未知类应被丢掉");
         check(EnemyHudConfig.sanitizeKinds(java.util.List.of("heart_red", "heart_red")).size() == 1,
                 "重复的隐藏类应去重");
         check(EnemyHudConfig.sanitizeKinds(null).isEmpty(), "null 隐藏表应变成空表");
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("health")).size() == 7,
+                "旧粗类 health 应展开成 7 个细类");
         java.util.List<String> expandedHealth = EnemyHudConfig.sanitizeKinds(java.util.List.of("health"));
-        check(expandedHealth.size() == 7, "旧粗类 health 应展开成 7 个细类，实际 " + expandedHealth.size());
         check(expandedHealth.contains("hp_neg") && expandedHealth.contains("heal_percent"),
                 "health 展开应包含负生命与治疗百分比");
-        java.util.List<String> expandedAttack = EnemyHudConfig.sanitizeKinds(java.util.List.of("attack"));
-        check(expandedAttack.size() == 9, "旧粗类 attack 应展开成 9 个细类，实际 " + expandedAttack.size());
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("attack")).size() == 9,
+                "旧粗类 attack 应展开成 9 个细类");
         check(EnemyHudConfig.sanitizeKinds(java.util.List.of("misc")).contains("skulls"),
                 "misc 展开应包含骷髅数");
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("misc")).contains("grass"),
+                "misc 展开应包含草方块");
+        check(EnemyHudConfig.sanitizeKinds(java.util.List.of("status")).size() == 28,
+                "旧粗类 status 应展开成 28 条状态效果，实际 "
+                        + EnemyHudConfig.sanitizeKinds(java.util.List.of("status")).size());
         java.util.Set<String> ids = new java.util.HashSet<>();
         for (SelfStatsKind kind : SelfStatsKind.FILTERABLE) {
             check(ids.add(kind.id), "过滤项 id 不能重复: " + kind.id);
             check(kind != SelfStatsKind.HINT, "HINT 不该出现在过滤列表");
         }
 
+        // 分节列表：每节一行标题 + 两个一项（不跨节合并）
+        java.util.List<SelfStatsFilterScreen.Row> rows = SelfStatsFilterScreen.buildRows();
+        check(rows.size() == 47, "三节共 47 行（1+29+1+14+1+1），实际 " + rows.size());
+        check(rows.get(0).isHeader() && rows.get(0).header() == SelfStatsKind.Group.ATTRIBUTE,
+                "第一行应是「属性」标题");
+        check(!rows.get(1).isHeader() && rows.get(1).left() == SelfStatsKind.TIMER,
+                "属性一节第一项应是游戏时间");
+        check(rows.get(30).isHeader() && rows.get(30).header() == SelfStatsKind.Group.STATUS,
+                "第 30 行应是「状态效果」标题");
+        check(!rows.get(31).isHeader() && rows.get(31).left() == SelfStatsKind.STATUS_49
+                        && rows.get(31).right() == SelfStatsKind.STATUS_50,
+                "状态效果一节应从 49/50 并排开始");
+        check(rows.get(45).isHeader() && rows.get(45).header() == SelfStatsKind.Group.OTHER,
+                "第 45 行应是「其它」标题");
+        check(rows.get(46).left() == SelfStatsKind.GRASS && rows.get(46).right() == SelfStatsKind.MISC,
+                "其它一节应是草方块 + 未识别行");
+        int headers = 0;
+        for (SelfStatsFilterScreen.Row row : rows) if (row.isHeader()) headers++;
+        check(headers == 3, "应有 3 个分组标题，实际 " + headers);
+
         // 双列按钮 + 滚动的纯函数
-        check(SelfStatsFilterScreen.rowCount(60, 2) == 30, "60 项两列 = 30 行，实际 " + SelfStatsFilterScreen.rowCount(60, 2));
-        check(SelfStatsFilterScreen.rowCount(61, 2) == 31, "61 项两列 = 31 行（最后一行只放一个）");
-        check(SelfStatsFilterScreen.rowCount(5, 0) == 0, "列数 0 应得 0 行");
-        check(SelfStatsFilterScreen.visibleRows(148) == 6, "148 px 列表应能放 6 行，实际 " + SelfStatsFilterScreen.visibleRows(148));
+        check(SelfStatsFilterScreen.visibleRows(148) == 6, "148 px 列表应能放 6 行，实际 "
+                + SelfStatsFilterScreen.visibleRows(148));
         check(SelfStatsFilterScreen.visibleRows(0) == 0, "列表高度 0 应放 0 行");
-        check(SelfStatsFilterScreen.maxScroll(30, 6) == 24, "30 行 / 6 行可见 → 最大滚动 24");
+        check(SelfStatsFilterScreen.maxScroll(47, 6) == 41, "47 行 / 6 行可见 → 最大滚动 41");
         check(SelfStatsFilterScreen.maxScroll(5, 10) == 0, "内容比列表短时不该能滚");
-        check(SelfStatsFilterScreen.clampScroll(-3, 24) == 0, "滚动量不该小于 0");
-        check(SelfStatsFilterScreen.clampScroll(999, 24) == 24, "滚动量不该超过上限");
+        check(SelfStatsFilterScreen.clampScroll(-3, 41) == 0, "滚动量不该小于 0");
+        check(SelfStatsFilterScreen.clampScroll(999, 41) == 41, "滚动量不该超过上限");
         check(SelfStatsFilterScreen.scrollByWheel(2, -1.0, 10) == 3, "向下滚一格 → +1 行");
         check(SelfStatsFilterScreen.scrollByWheel(0, 1.0, 10) == 0, "已在顶部再往上滚应保持 0");
         check(SelfStatsFilterScreen.scrollByWheel(9, 1.0, 10) == 8, "向上滚一格 → -1 行");
         check(SelfStatsFilterScreen.scrollByWheel(0, -0.5, 10) == 1, "半格滚动应至少动一行");
-        check(SelfStatsFilterScreen.itemAt(0, 0, 2, 60) == 0, "第 0 行第 0 列 = 第 0 项");
-        check(SelfStatsFilterScreen.itemAt(0, 1, 2, 60) == 1, "第 0 行第 1 列 = 第 1 项");
-        check(SelfStatsFilterScreen.itemAt(1, 0, 2, 60) == 2, "第 1 行第 0 列 = 第 2 项");
-        check(SelfStatsFilterScreen.itemAt(29, 1, 2, 60) == 59, "第 29 行第 1 列 = 最后一项");
-        check(SelfStatsFilterScreen.itemAt(29, 1, 2, 59) == -1, "最后一项之外应返回 -1");
-        check(SelfStatsFilterScreen.itemAt(0, 2, 2, 60) == -1, "列号越界应返回 -1");
-        check(SelfStatsFilterScreen.itemAt(-1, 0, 2, 60) == -1, "行号越界应返回 -1");
+        check(SelfStatsFilterScreen.columnWidth(426) == 196,
+                "426 px 屏（开发端 GUI 宽）单列按钮应为 196，实际 "
+                        + SelfStatsFilterScreen.columnWidth(426));
+        check(SelfStatsFilterScreen.columnWidth(1000) == 200, "宽屏单列按钮封顶 200");
+        check(SelfStatsFilterScreen.columnWidth(200) == 83,
+                "200 px 窄屏单列按钮应按可用宽度收缩，实际 "
+                        + SelfStatsFilterScreen.columnWidth(200));
 
         // 地图私有区字形（从 view_stats.mcfunction 里抽出来的真实码位）
         check(glyphKind("5\uE004", 0x55FF55) == SelfStatsKind.TOWERS_REGEN, "U+E004 应归为塔内回血");
@@ -1560,7 +1594,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
-        check(EnemyHudConfig.CURRENT_VERSION == 13, "配置版本应为 13");
+        check(EnemyHudConfig.CURRENT_VERSION == 14, "配置版本应为 14");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1583,7 +1617,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 13, "v4 → v13 应升版本号");
+        check(v4.configVersion == 14, "v4 → v14 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板
@@ -1694,6 +1728,61 @@ public final class SelfCheck {
         check(!SelfStatsPanel.dragExceeds(0, 0, 0), "阈值 0 会被兜底成 1，原地仍不算");
         check(SelfStatsPanel.dragExceeds(1, 0, 0), "阈值 0 兜底后 1 px 就算拖动");
 
+    }
+
+    /**
+     * 1.20.31：游戏时间真的上面板 + 草方块那条不再被丢掉。
+     *
+     * <p>以前计时行只当「这一趟到此结束」的信号，收完就扔，所以面板上永远看不到游戏时间；
+     * 草方块那条（一个绿色 {@code □}）既没有翻译键也没有数字，连「像不像属性行」都过不了，
+     * 被整行丢掉。这里锁住：两条都会进 PENDING → SHOWN，并且都能在过滤表里单独关掉。</p>
+     */
+    private static void panelTimerAndGrass() {
+        // 草方块：单行 □（地图 view_stats_83）
+        check(SelfStats.isGrassLine("\u25A1"), "单个 □ 应认成草方块那行");
+        check(SelfStats.isGrassLine(" \u25A1 "), "两侧空格不影响识别");
+        check(!SelfStats.isGrassLine("\u25A1\u25A1"), "两个 □ 不算草方块那行");
+        check(!SelfStats.isGrassLine("ok"), "聊天不该认成草方块");
+        check(!SelfStats.statGlyphLine("\u25A1"),
+                "□ 没有数字，不属于「数字 + 图形」行（靠专用判据认）");
+        check(glyphKind("\u25A1", 0x55FF55) == SelfStatsKind.GRASS, "绿色 □ 应归为草方块");
+
+        // 采集：草方块 + 属性 + 计时行都该进面板（计时行同时是这一趟的收尾信号）
+        EnemyHudConfig.reset();
+        EnemyHudConfig.get().selfStatsHidden = new java.util.ArrayList<>();
+        SelfStats.reset();
+        SelfStats.beginCapture(1_000L, true);
+        check(SelfStats.onGameMessage(Component.literal("\u25A1"), false, 1_100L),
+                "自动采集：草方块那行应被吞掉");
+        check(SelfStats.onGameMessage(Component.literal("10 \u2764%"), false, 1_200L),
+                "自动采集：属性行应被吞掉");
+        check(SelfStats.onGameMessage(Component.literal("游戏时间为 0:00:19"), false, 1_300L),
+                "自动采集：计时行应被吞掉（并收尾这一趟）");
+        check(SelfStats.storedLineCount() == 3,
+                "草方块 + 属性 + 计时都该上面板，实际 " + SelfStats.storedLineCount());
+        java.util.List<Component> lines = SelfStats.lines();
+        check(lines.size() == 3, "过滤后仍是 3 行，实际 " + lines.size());
+        check(lines.get(2).getString().contains("0:00:19"),
+                "最后一行应是游戏时间（地图最后才发它）");
+
+        // 没装地图资源包时计时行是未解析的翻译键：不上面板（否则会出现「Misc_View_Stats_7800:00:19」）
+        SelfStats.reset();
+        SelfStats.beginCapture(2_000L, true);
+        SelfStats.onGameMessage(Component.translatable("Misc_View_Stats_78"), false, 2_100L);
+        check(SelfStats.storedLineCount() == 0,
+                "翻译键没解析出来时计时行不该上面板，实际 " + SelfStats.storedLineCount());
+
+        // 过滤表：两条都能单独关
+        SelfStats.reset();
+        SelfStats.beginCapture(3_000L, true);
+        SelfStats.onGameMessage(Component.literal("\u25A1"), false, 3_100L);
+        SelfStats.onGameMessage(Component.literal("游戏时间为 0:00:20"), false, 3_200L);
+        check(SelfStats.lines().size() == 2, "关之前应有两行（草方块 + 计时）");
+        EnemyHudConfig.get().selfStatsHidden.add(SelfStatsKind.GRASS.id);
+        check(SelfStats.lines().size() == 1, "关掉草方块后只剩计时行");
+        EnemyHudConfig.get().selfStatsHidden.add(SelfStatsKind.TIMER.id);
+        check(SelfStats.lines().isEmpty(), "两个都关掉后面板为空");
+        EnemyHudConfig.reset();
     }
 
     /**

@@ -419,22 +419,30 @@ public final class SelfStats {
         // 提示行（Hover over / 停留…）：不开面板，但算这一趟的输出。
         if (isHintLine(flat)) return selfTriggered;
 
-        // 计时行 = 这一趟结束（上游同样用它当收尾信号），顺手记下来判「时间冻住」。
         Analyzed a = analyze(message);
+
+        // 计时行 = 这一趟结束（上游同样用它当收尾信号），顺手记下来判「时间冻住」。
+        // 1.20.31：这一行本身也上面板（以前只当收尾信号、白扔掉，所以面板上从来见不到游戏时间）。
         if (a.keys.contains(TIME_KEY) || isGameTimeLine(flat)) {
             boolean hide = selfTriggered;
             pendingTimeText = flat;
+            if (panelWorthy(a, SelfStatsKind.TIMER) && PENDING.size() < MAX_LINES
+                    && !containsSameText(PENDING, message)) {
+                PENDING.add(new Line(message, SelfStatsKind.TIMER));
+            }
             endCapture(nowMs);
             return hide;
         }
 
-        boolean ours = isViewStatsLine(flat) || a.hasKey() || a.unresolvedKey || statGlyphLine(flat);
+        SelfStatsKind kind = classify(a);
+        // 1.20.31：草方块那条（一行绿色 □，没有键也没有数字）也属于本模组的内容，
+        // 以前它连「像不像属性行」这一关都过不了，被整行丢掉。
+        boolean ours = isViewStatsLine(flat) || a.hasKey() || a.unresolvedKey
+                || statGlyphLine(flat) || kind == SelfStatsKind.GRASS;
         if (!ours) return false;
 
-        SelfStatsKind kind = classify(a);
         // 提示性文本（标题 / 悬停说明）不上面板；缺地图语言文件时整行原文也不上屏。
-        boolean panelWorthy = kind != SelfStatsKind.HINT && !a.unresolvedKey;
-        if (panelWorthy && PENDING.size() < MAX_LINES && !containsSameText(PENDING, message)) {
+        if (panelWorthy(a, kind) && PENDING.size() < MAX_LINES && !containsSameText(PENDING, message)) {
             PENDING.add(new Line(message, kind));
         }
         addHearts(a, PENDING_HEARTS);
@@ -442,6 +450,16 @@ public final class SelfStats {
     }
 
     // ── 读取（面板用） ──
+
+    /**
+     * 这一行该不该上屏。
+     *
+     * <p>提示性文本（{@link SelfStatsKind#HINT}）永远不画；客户端没装地图资源包时整行是未解析的
+     * 翻译键（例如 {@code Misc_View_Stats_7800:00:19}），也不画。</p>
+     */
+    static boolean panelWorthy(Analyzed a, SelfStatsKind kind) {
+        return kind != SelfStatsKind.HINT && !(a != null && a.unresolvedKey);
+    }
 
     /** 面板内容（已按配置过滤掉隐藏类；地图发来时就是带样式的 Component，直接渲染）。 */
     public static List<Component> lines() {
@@ -623,6 +641,15 @@ public final class SelfStats {
         return false;
     }
 
+    /**
+     * 「本轮还没碰过草方块」那条（地图 {@code view_stats_83}）：整行就是一个绿色的 {@code □}。
+     *
+     * <p>制表符以外的空白一律先去掉再比，避免地图哪天多一个空格就认不出来。</p>
+     */
+    static boolean isGrassLine(String flat) {
+        return flat != null && flat.strip().equals("\u25A1");
+    }
+
     /** 地图属性行里用到的图形码位（含私有区字形）。 */
     static boolean isStatGlyphCp(int cp) {
         if (cp == 0x2764) return true;                    // ❤
@@ -722,6 +749,9 @@ public final class SelfStats {
      */
     static SelfStatsKind glyphKind(String flat, List<Integer> colors) {
         if (flat == null || flat.isEmpty()) return SelfStatsKind.MISC;
+
+        // 草方块那条：地图就发一个绿色的 □（view_stats_83），没有数字也没有翻译键。
+        if (isGrassLine(flat)) return SelfStatsKind.GRASS;
 
         // 「数字❤%」：地图里只有治疗百分比用这个组合（红 = HealPercent，亮紫 = ExtraHealing）
         int percent = flat.indexOf("\u2764%");
@@ -861,9 +891,10 @@ public final class SelfStats {
 
     private static java.util.Map<String, SelfStatsKind> buildKeyKinds() {
         java.util.Map<String, SelfStatsKind> m = new java.util.HashMap<>();
-        // 状态效果：Misc_View_Stats_49 … 76（纯文本，一行一个）
+        // 状态效果：Misc_View_Stats_49 … 76（纯文本，一行一个；1.20.31 起一条一项）
         for (int i = 49; i <= 76; i++) {
-            m.put(KEY_PREFIX + i, SelfStatsKind.STATUS);
+            SelfStatsKind kind = SelfStatsKind.status(i);
+            if (kind != null) m.put(KEY_PREFIX + i, kind);
         }
         // 倍率 / 基础值那一行都带地图翻译键，键和属性一一对应
         m.put(KEY_PREFIX + "4", SelfStatsKind.HP_AMP);
