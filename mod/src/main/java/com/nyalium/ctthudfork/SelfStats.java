@@ -38,6 +38,16 @@ import java.util.Set;
  *       所以刷新时面板不会先清空再慢慢长出来（之前那一下「闪烁」就是这么来的）。</li>
  * </ul>
  *
+ * <h2>1.20.38：进存档那一刻的属性行不再漏到聊天栏</h2>
+ * <p>世界载入时服务端常常隔好几秒才回这一趟（玩家还在「加载地形」、区块还在生成），
+ * 而一趟采集 {@value #CAPTURE_TIMEOUT_MS} ms 就按 {@link #settleIfTimedOut} 超时收尾了。
+ * 迟到的输出落进「没在采集」的状态，于是被当成<b>玩家手动触发</b>（1.20.24 的行为：照常显示在聊天栏），
+ * 整批属性行就这么刷了出来。</p>
+ * <p>现在记住「我们刚问过、还没收到」（{@link #claimedAsOwn}）：窗口
+ * {@link #OWN_RESPONSE_WINDOW_MS} ms 内的 ViewStats 输出一律算我们那趟，迟到的标题行
+ * 按自动重开采集，连标题都丢了的情况也会被第一行属性行认领回来。玩家真正手动触发的
+ * 那一趟（窗口之外）照旧显示，1.20.24 的结论不变。</p>
+ *
  * <h2>为什么必须靠这个</h2>
  * <p>别人的心数、敌人绝对血量都不在客户端可见的同步范围里（{@code RedHearts} 这类 dummy
  * objective 不挂在显示槽上就根本不会下发）；而 {@code ViewStats} 是唯一一条
@@ -50,6 +60,13 @@ public final class SelfStats {
     static final long CAPTURE_TIMEOUT_MS = 3000L;
     /** 一次爆发最长持续多久（地图一趟 ViewStats 是分多个 tick 发的）。 */
     static final long CAPTURE_HARD_MS = 8000L;
+    /**
+     * 1.20.38：「这趟 ViewStats 是我们自己触发的」认领窗口。
+     *
+     * <p>进存档时世界还在载入，服务端可能隔好几秒才回，而一趟采集 {@value #CAPTURE_TIMEOUT_MS} ms
+     * 就超时收尾了；迟到的那批属性行仍然属于我们，要接着吞（不然整批照常刷在聊天栏）。</p>
+     */
+    static final long OWN_RESPONSE_WINDOW_MS = 20_000L;
     /** 一次最多攒多少行（地图一趟大约 20~40 行，留点余量）。 */
     private static final int MAX_LINES = 64;
 
@@ -90,6 +107,19 @@ public final class SelfStats {
      * 只有自己发的才把输出从聊天栏吞掉；玩家手动触发的照常显示（对齐上游 {@code hideCapture}）。
      */
     private static boolean selfTriggered;
+    /**
+     * 我们自己最近一次发 {@code /trigger ViewStats} 的时间（ms，0 = 还没发过）。
+     *
+     * <p>用来认领「迟到的输出」（见 {@link #OWN_RESPONSE_WINDOW_MS}）。</p>
+     */
+    private static long lastAutoTriggerMs;
+    /**
+     * true = 发过 trigger、但那一趟的输出还没收到。
+     *
+     * <p>超时收尾时<b>不清</b>：进存档那种「服务端隔几秒才回」的情况，靠它在迟到的那批行
+     * 到达时重新开一趟并按「自己的」吞掉。</p>
+     */
+    private static boolean awaitingOwnResponse;
     /** 这一趟开始的时间（毫秒），用于超时收尾。 */
     private static long captureStartMs;
 
@@ -163,12 +193,15 @@ public final class SelfStats {
                 capturing = false;
                 selfTriggered = false;
             }
+            awaitingOwnResponse = false;               // 没开局就不会有输出在路上了
             nextTriggerMs = now + GATE_RECHECK_MS;
             return;
         }
         nextTriggerMs = now + seconds * 1000L;
         // auto = true：这一趟的输出要从聊天栏里吞掉（上游 hideCapture 的同一套思路）。
         beginCapture(now, true);
+        // 1.20.38：记下「我们刚问过」，迟迟不回时这批输出仍然算我们的（见 claimedAsOwn）。
+        noteAutoTriggerSent(now);
         ChatTriggerFilter.noteTriggerSent(now);
         try {
             mc.getConnection().sendCommand("trigger ViewStats");
@@ -270,6 +303,38 @@ public final class SelfStats {
     }
 
     /**
+     * 记下「我们自己刚发过 {@code /trigger ViewStats}」（1.20.38）。
+     *
+     * <p>发命令那一刻调用；之后迟到的输出都靠 {@link #claimedAsOwn} 认领回来。
+     * 单列一个方法是为了自检能直接模拟「发了、但一直没回」的时序。</p>
+     */
+    static void noteAutoTriggerSent(long nowMs) {
+        lastAutoTriggerMs = nowMs;
+        awaitingOwnResponse = true;
+    }
+
+    /** 迟到的 ViewStats 输出能不能算「我们自己触发的那趟」—— 读当前状态。 */
+    private static boolean claimedAsOwn(long nowMs) {
+        return claimedAsOwn(awaitingOwnResponse, nowMs, lastAutoTriggerMs, OWN_RESPONSE_WINDOW_MS);
+    }
+
+    /**
+     * 纯函数版「认领」判定（selfCheck 直接打）。
+     *
+     * @param awaiting          发过 trigger 且还没收到输出
+     * @param nowMs             现在
+     * @param lastAutoTriggerMs 上次自己发 trigger 的时刻（0 = 从没发过）
+     * @param windowMs          认领窗口
+     * @return true = 这批输出属于我们自己，要接着吞
+     */
+    static boolean claimedAsOwn(boolean awaiting, long nowMs, long lastAutoTriggerMs, long windowMs) {
+        if (!awaiting || lastAutoTriggerMs <= 0L) return false;
+        long age = nowMs - lastAutoTriggerMs;
+        // 时钟回拨（age < 0）时认领不了，宁可不吞也别把玩家的输出吞错。
+        return age >= 0L && age <= Math.max(0L, windowMs);
+    }
+
+    /**
      * 收尾一趟：把 PENDING 整体换到 SHOWN，并复位「要不要吞」。
      *
      * <p>空结果默认不覆盖旧面板（偶发丢包时不闪）。连续 {@value #MAX_EMPTY_CAPTURES}
@@ -278,16 +343,20 @@ public final class SelfStats {
      */
     private static void endCapture(long now) {
         if (!capturing) return;
+        boolean own = selfTriggered;
         capturing = false;
         selfTriggered = false;
         if (PENDING.isEmpty()) {
             pendingTimeText = null;
+            // 自己的那趟还一行都没收到（进存档时服务端可能还没回）：保持 awaitingOwnResponse，
+            // 让迟到的那批仍被认作我们的输出（1.20.38）。
             if (++emptyCaptures >= MAX_EMPTY_CAPTURES) {
                 SHOWN.clear();
                 java.util.Arrays.fill(HEARTS, 0);
             }
             return;
         }
+        if (own) awaitingOwnResponse = false;
         emptyCaptures = 0;
         SHOWN.clear();
         // 去重：同一行文字只保留第一次出现，避免「多重显示」。
@@ -357,6 +426,8 @@ public final class SelfStats {
         hardEndMs = 0L;
         nextTriggerMs = 0L;
         notStarted = false;
+        lastAutoTriggerMs = 0L;
+        awaitingOwnResponse = false;
         lastTimeText = null;
         pendingTimeText = null;
         sameTimeRounds = 0;
@@ -383,10 +454,11 @@ public final class SelfStats {
 
         // 「没开局 / 触发项没 enable」这两种回执：清面板、停这一趟。
         if (isGameNotStarted(flat)) {
-            boolean hide = selfTriggered;
+            boolean hide = selfTriggered || claimedAsOwn(nowMs);
             notStarted = true;
             capturing = false;
             selfTriggered = false;
+            awaitingOwnResponse = false;   // 服务端已经答过了，迟到的那批不存在了
             SHOWN.clear();                 // 地图明确说「没开局」：清空，别留上一局的数字
             java.util.Arrays.fill(HEARTS, 0);
             return hide;
@@ -394,10 +466,11 @@ public final class SelfStats {
         if (isTriggerDenied(flat)) {
             // 触发项还没 enable（对局没开始 / 两局之间 / 这张图不给触发）：
             // 停掉这一趟、清空面板；自己是自动触发时顺手把这行提示吞掉。
-            boolean hide = selfTriggered;
+            boolean hide = selfTriggered || claimedAsOwn(nowMs);
             notStarted = true;
             capturing = false;
             selfTriggered = false;
+            awaitingOwnResponse = false;
             SHOWN.clear();
             PENDING.clear();
             java.util.Arrays.fill(HEARTS, 0);
@@ -405,21 +478,28 @@ public final class SelfStats {
             return hide;
         }
 
-        // 「已触发 ViewStats」的确认行：只有自动触发时吞。
-        if (isTriggerAck(flat)) return selfTriggered;
+        // 「已触发 ViewStats」的确认行：只有自动触发时吞（迟到的那趟也算自动，1.20.38）。
+        if (isTriggerAck(flat)) return selfTriggered || claimedAsOwn(nowMs);
 
         // 标题行（Your Stats / 统计信息 / Misc_View_Stats_1）：
         // 不在采集里就说明是**玩家手动**触发的 —— 开一趟，但这一趟不吞。
+        // 例外：我们自己那趟迟到了（进存档时世界还在载入，服务端隔好几秒才回）。
         if (isViewStatsTitle(message)) {
-            if (!capturing) beginCapture(nowMs, false);
+            if (!capturing) beginCapture(nowMs, claimedAsOwn(nowMs));
             return selfTriggered;
+        }
+
+        Analyzed a = analyze(message);
+
+        // 1.20.38：这一趟已经按 3 s 超时收尾，但输出是我们自己问来的（迟到了）。
+        // 重新开一趟并继续吞 —— 否则整批属性行会照常刷进聊天栏。
+        if (!capturing && claimedAsOwn(nowMs) && looksLikeViewStatsPayload(flat, a)) {
+            beginCapture(nowMs, true);
         }
         if (!capturing) return false;
 
         // 提示行（Hover over / 停留…）：不开面板，但算这一趟的输出。
         if (isHintLine(flat)) return selfTriggered;
-
-        Analyzed a = analyze(message);
 
         // 计时行 = 这一趟结束（上游同样用它当收尾信号），顺手记下来判「时间冻住」。
         // 1.20.31：这一行本身也上面板（以前只当收尾信号、白扔掉，所以面板上从来见不到游戏时间）。
@@ -712,6 +792,20 @@ public final class SelfStats {
     static boolean isViewStatsLine(String flat) {
         if (flat == null) return false;
         return flat.contains("Misc_View_Stats") || flat.contains("Misc_View_Stat");
+    }
+
+    /**
+     * 这一行像不像 ViewStats 的输出（1.20.38：认领迟到的那批用）。
+     *
+     * <p>比 {@link #isViewStatsLine(String)} 宽：装了资源包时翻译键已经变成中文/英文，
+     * 所以「提示行 / 计时行 / 未解析键 / 数字 + 图形 / 草方块」都算。</p>
+     */
+    static boolean looksLikeViewStatsPayload(String flat, Analyzed a) {
+        if (flat == null) return false;
+        if (isViewStatsLine(flat)) return true;
+        if (isHintLine(flat) || isGameTimeLine(flat)) return true;
+        if (a != null && (a.hasKey() || a.unresolvedKey)) return true;
+        return statGlyphLine(flat) || isGrassLine(flat);
     }
 
     /** 地图在「游戏没开始」时回的那句（中英都要认）。 */
