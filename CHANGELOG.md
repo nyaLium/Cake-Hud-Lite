@@ -1,9 +1,9 @@
 # CHANGELOG · CTT HUD - Fork
 
 > 这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud)（作者 TheHolyLord，MIT）的 Fork 版。
-> 版本保留规则见 [versions/VERSIONING.md](versions/VERSIONING.md)：**每个版本都必须留档，不覆盖、不删除。**
-> 全量归档清单（大小 / SHA-256 / 内嵌版本号 / git 标签）见 **[versions/ARCHIVE.md](versions/ARCHIVE.md)**，
-> 用 `python versions/tools/archive_audit.py` 可重新生成并校验。
+> 版本规则见 [`VERSIONING.md`](VERSIONING.md)：**每个版本都必须留档，不覆盖、不删除。**
+> 公开版本清单（版本 / 大小 / SHA-256 / Release 链接）见 **[`RELEASES.md`](RELEASES.md)**，
+> 由 `python tools/archive_audit.py` 生成并校验（它审计维护者本地的 `versions/`）。
 > **编号说明**：`v1.0.0` 是**正式版**，版本号从这里重新起算；`1.10.0 – 1.20.42` 是发布前的工作版本线，
 > 它们的归档**只在本地** `versions/pre-release/`，不随仓库上传（下表里标「本地（未上传）」）。
 
@@ -445,7 +445,7 @@ public static boolean visible() {
   `ctt_hud_fork.mixins.json`（本来就是新名）。
 - **刻意保留**：`LEGACY_FILE_NAME = "ctt-enemy-hud.json"` —— 那是玩家磁盘上可能还存在的旧配置文件名，
   改了就没法自动迁移。
-- 归档 `versions/` 与 `CODE-AUDIT-1.20.24.md` 是历史记录，**不改写**；`versions/tools/archive_audit.py`
+- 归档目录 `versions/`（维护者本地）与 `CODE-AUDIT-1.20.24.md` 是历史记录，**不改写**；`tools/archive_audit.py`
   已改成两种产物名都认（老版本 `cake_team_tower_hud_fork-*`、新版本 `ctt-hud-fork-*`）。
 - 副作用：`options.txt` 里旧的 `key_key.ctt_enemy_hud.open_config` 行会失效，键位名变了、默认仍是 `F8`；
   旧的 `ctt-hud-fork.json` 照常读取（配置字段没变），无需手工迁移。
