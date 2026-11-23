@@ -16,8 +16,9 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 
 /**
- * 「实体血条设置」（1.20.19 合并原通用/敌人/玩家�?.20.20 修正滚动并加滚动条）�? *
- * <p>单列 + 分组标题；内容超出可视区时滚轮滚动，右侧显示滚动条并夹住上下限�?/p>
+ * 「实体血条设置」（1.20.19 合并原通用/敌人/玩家；1.20.20 修正滚动并加滚动条）。
+ *
+ * <p>单列 + 分组标题；内容超出可视区时滚轮滚动，右侧显示滚动条并夹住上下限。</p>
  */
 public final class EntityHudSettingsScreen extends Screen {
 
@@ -31,7 +32,7 @@ public final class EntityHudSettingsScreen extends Screen {
     private final EnemyHudConfigScreen menu;
     private ScrollPane pane = new ScrollPane(TOP, 1000);
     private final List<Row> rows = new ArrayList<>();
-    /** 滚动区里的控件：只登记输入（{@code addWidget}），绘制�?{@link #paintContent} 裁剪�?*/
+    /** 滚动区里的控件：只登记输入（{@code addWidget}），绘制由 {@link #paintContent} 裁剪。 */
     private final List<AbstractWidget> contentRows = new ArrayList<>();
 
     public EntityHudSettingsScreen(EnemyHudConfigScreen menu) {
@@ -45,7 +46,7 @@ public final class EntityHudSettingsScreen extends Screen {
 
     private record ToggleSpec(BooleanSupplier get, Consumer<Boolean> set) {}
 
-    /** group�? = 通用�? = 敌人�? = 玩家（决定开关关闭时是否灰掉）�?*/
+    /** group：0 = 通用，1 = 敌人，2 = 玩家（决定开关关闭时是否灰掉）。 */
     private record SliderSpec(double min, double max, double step, double value,
                               DoubleFunction<Component> label, DoubleConsumer onChange,
                               int group) {}
@@ -134,7 +135,8 @@ public final class EntityHudSettingsScreen extends Screen {
         int x = this.width / 2 - width / 2;
         for (Row row : rows) {
             if (row.kind == Kind.HEADER) continue;
-            // 整行都在可视区外的行不建控件（省得屏幕外还能点到�?            if (!this.pane.intersects(row.y, row.height)) continue;
+            // 整行都在可视区外的行不建控件（省得屏幕外还能点到）
+            if (!this.pane.intersects(row.y, row.height)) continue;
             int y = this.pane.screenY(row.y);
             AbstractWidget widget = row.kind == Kind.TOGGLE ? createToggle(row, x, y, width)
                     : createSlider(row, x, y, width);
@@ -177,13 +179,15 @@ public final class EntityHudSettingsScreen extends Screen {
         }
     }
 
-    /** 滚动条右侧的锚点（和画滚动条用同一个值，命中判定才不会错位）�?*/
+    /** 滚动条右侧的锚点（和画滚动条用同一个值，命中判定才不会错位）。 */
     private int scrollbarRight() {
         return this.width / 2 + Math.min(WIDTH_MAX, this.width - 60) / 2 + 10;
     }
 
     /**
-     * 画滚动区内容：在 {@code [top, bottom)} 里做真裁剪，滚到边界时最后一行被切掉�?     * 不会盖到下面的提示文�?/ 「返回」按钮，更不会画到屏幕外�?     */
+     * 画滚动区内容：在 {@code [top, bottom)} 里做真裁剪，滚到边界时最后一行被切掉，
+     * 不会盖到下面的提示文本 / 「返回」按钮，更不会画到屏幕外。
+     */
     private void paintContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         this.pane.beginClip(graphics, this.width);
         for (Row row : rows) {
@@ -203,11 +207,11 @@ public final class EntityHudSettingsScreen extends Screen {
         return true;
     }
 
-    // ── 滚动条：可点可拖�?.20.32�?──
+    // ── 滚动条：可点可拖（1.20.32） ──
 
-    /** 是否正在拖滑块�?*/
+    /** 是否正在拖滑块。 */
     private boolean barDragging;
-    /** 按下瞬间「滑块顶端相对光标」的偏移（拖动时滑块不跳）�?*/
+    /** 按下瞬间「滑块顶端相对光标」的偏移（拖动时滑块不跳）。 */
     private int barGrab;
 
     @Override
@@ -216,7 +220,8 @@ public final class EntityHudSettingsScreen extends Screen {
         if (!Pointer.accept(event)) return false;
         double[] gui = Pointer.gui(this, event);
         if (!this.pane.hitsBar(gui[0], gui[1], scrollbarRight())) return false;
-        // 按在滑块上：保持抓取偏移；按在轨道空白处：把滑块中心跳过�?        this.barDragging = true;
+        // 按在滑块上：保持抓取偏移；按在轨道空白处：把滑块中心跳过来
+        this.barDragging = true;
         this.barGrab = this.pane.hitsThumb(gui[1]) ? this.pane.grabOffset(gui[1]) : this.pane.thumbHeight() / 2;
         dragBarTo(gui[1]);
         return true;
