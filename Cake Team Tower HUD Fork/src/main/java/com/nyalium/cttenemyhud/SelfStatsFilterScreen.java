@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 「内容过滤」界面（1.20.6 起双列按钮 + 滚动；<b>1.20.31 起分三节</b>）。
+ * 「内容过滤」界面（1.20.6 起双列按钮 + 滚动；<b>1.20.31 起分三节</b>；1.20.32 滚动条可点可拖）。
  *
  * <p>以前是「一大串属性 + 状态效果 + 其它」平铺：状态效果 28 条挤在一个按钮里、
  * 「其它」把草方块和认不出的行混在一起，太粗。现在按
@@ -20,21 +20,24 @@ import java.util.List;
  *
  * <pre>
  *   ── 属性 ──
- *   [✔ 游戏时间]        [✔ 红心]
- *   [✔ 魂心]            [✔ 黑心]
+ *   [✔ 红心]            [✔ 魂心]
+ *   [✔ 黑心]            [✔ 蓝心]
  *   …
  *   ── 状态效果 ──
  *   [✔ 斗志昂扬]        [✔ 食物专家]
  *   …（28 条，一条一项）
  *   ── 其它 ──
+ *   [✔ 游戏时间]        [✔ 难度骷髅]
  *   [✔ 草方块]          [✔ 未识别行]
  * </pre>
  *
  * <p>列表项仍是真正的 {@link Button}（原版按钮纹理 = 有边框、有悬停高亮、可聚焦）：
- * 一屏放不下就滚轮翻行，右侧有滚动条。标题行不占按钮位、不可点。</p>
+ * 一屏放不下就滚轮翻行，右侧滚动条可用鼠标点/拖（1.20.32）。标题行不占按钮位、不可点。</p>
  *
  * <p>布局与滚动的数学都是纯函数（{@link #buildRows} / {@link #visibleRows} /
- * {@link #maxScroll} / {@link #clampScroll} / {@link #scrollByWheel}），selfCheck 直接打。</p>
+ * {@link #maxScroll} / {@link #clampScroll} / {@link #scrollByWheel}），滚动条几何在
+ * {@link ScrollPane}（{@code thumbHeight} / {@code thumbOffset} / {@code scrollForThumbTop}），
+ * selfCheck 直接打。</p>
  */
 public final class SelfStatsFilterScreen extends Screen {
 
@@ -57,6 +60,8 @@ public final class SelfStatsFilterScreen extends Screen {
     /** 左右边距 + 滚动条宽度。 */
     static final int SIDE = 10;
     static final int SCROLLBAR_WIDTH = 3;
+    /** 滚动条命中容差：3 px 的条太细，左右各放宽这么多像素才抓得住。 */
+    static final int SCROLLBAR_HIT_PAD = 3;
     /** 分组标题文字相对行顶的下移量（行高 20、字高 8 → 居中）。 */
     static final int HEADER_TEXT_DY = 6;
     /** 分组标题颜色（和设置界面里的分节标题一致）。 */
@@ -239,20 +244,65 @@ public final class SelfStatsFilterScreen extends Screen {
         }
 
         // 右侧滚动条（贴着两列按钮的右边）
-        int trackTop = TOP;
-        int trackHeight = visible * STEP - ROW_GAP;
-        if (trackHeight > 0) {
-            int x = gridLeft() + columnWidth() * COLUMNS + COLUMN_GAP + 4;
-            graphics.fill(x, trackTop, x + SCROLLBAR_WIDTH, trackTop + trackHeight, 0x30000000);
-            int total = this.rows.size();
-            if (total > visible && visible > 0) {
-                int thumbHeight = Math.max(8, trackHeight * visible / total);
-                int span = trackHeight - thumbHeight;
-                int offset = maxScroll() == 0 ? 0 : span * this.scroll / maxScroll();
-                graphics.fill(x, trackTop + offset, x + SCROLLBAR_WIDTH,
-                        trackTop + offset + thumbHeight, 0xC0FFFFFF);
-            }
-        }
+        drawScrollbar(graphics);
+    }
+
+    // ── 滚动条（1.20.32：可点可拖，绘制与命中判定共用一套几何） ──
+
+    /** 滚动条那一列的 x。 */
+    private int trackLeft() {
+        return gridLeft() + columnWidth() * COLUMNS + COLUMN_GAP + 4;
+    }
+
+    /** 轨道高度：可见行占的高度（去掉最后一行的间距）。 */
+    private int trackHeight() {
+        return Math.max(0, visibleRows() * STEP - ROW_GAP);
+    }
+
+    /** 滑块高度：可视行数占全部行数的比例，至少 8 px。 */
+    private int thumbHeight() {
+        return thumbHeight(trackHeight(), this.rows.size(), visibleRows());
+    }
+
+    /** 纯函数版（selfCheck 直接打）。 */
+    static int thumbHeight(int trackHeight, int rows, int visible) {
+        if (trackHeight <= 0 || rows <= 0 || visible <= 0) return 0;
+        return Math.max(8, trackHeight * visible / rows);
+    }
+
+    /** 滑块顶端相对列表顶的偏移（行刻度）。 */
+    private int thumbOffset() {
+        return ScrollPane.thumbOffset(trackHeight(), thumbHeight(), this.scroll, maxScroll());
+    }
+
+    private void drawScrollbar(GuiGraphicsExtractor graphics) {
+        int track = trackHeight();
+        if (track <= 0 || maxScroll() <= 0) return;
+        int x = trackLeft();
+        graphics.fill(x, TOP, x + SCROLLBAR_WIDTH, TOP + track, 0x30000000);
+        int thumb = thumbHeight();
+        int offset = thumbOffset();
+        graphics.fill(x, TOP + offset, x + SCROLLBAR_WIDTH, TOP + offset + thumb, 0xC0FFFFFF);
+    }
+
+    /** 光标是否落在滚动条那一列（含左右各 {@link #SCROLLBAR_HIT_PAD} 的容差；纵向限在轨道上）。 */
+    private boolean hitsBar(double mouseX, double mouseY) {
+        return maxScroll() > 0
+                && mouseX >= trackLeft() - SCROLLBAR_HIT_PAD
+                && mouseX <= trackLeft() + SCROLLBAR_WIDTH + SCROLLBAR_HIT_PAD
+                && mouseY >= TOP && mouseY <= TOP + trackHeight();
+    }
+
+    private boolean hitsThumb(double mouseY) {
+        int y = TOP + thumbOffset();
+        return maxScroll() > 0
+                && mouseY >= y - SCROLLBAR_HIT_PAD
+                && mouseY <= y + thumbHeight() + SCROLLBAR_HIT_PAD;
+    }
+
+    private int grabOffset(double mouseY) {
+        int offset = (int) Math.round(mouseY) - (TOP + thumbOffset());
+        return Math.max(0, Math.min(Math.max(0, thumbHeight() - 1), offset));
     }
 
     // ── 输入 ──
@@ -266,6 +316,51 @@ public final class SelfStatsFilterScreen extends Screen {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    // ── 滚动条：可点可拖（1.20.32） ──
+
+    /** 是否正在拖滑块。 */
+    private boolean barDragging;
+    /** 按下瞬间「滑块顶端相对光标」的偏移（拖动时滑块不跳）。 */
+    private int barGrab;
+
+    @Override
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubled) {
+        if (super.mouseClicked(event, doubled)) return true;
+        if (!Pointer.accept(event)) return false;
+        double[] gui = Pointer.gui(this, event);
+        if (!hitsBar(gui[0], gui[1])) return false;
+        // 按在滑块上：保持抓取偏移；按在轨道空白处：把滑块中心跳过来
+        this.barDragging = true;
+        this.barGrab = hitsThumb(gui[1]) ? grabOffset(gui[1]) : thumbHeight() / 2;
+        dragBarTo(gui[1]);
+        return true;
+    }
+
+    @Override
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dragX, double dragY) {
+        if (this.barDragging) {
+            dragBarTo(Pointer.gui(this, event)[1]);
+            return true;
+        }
+        return super.mouseDragged(event, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+        if (this.barDragging && Pointer.accept(event)) {
+            this.barDragging = false;
+            return true;
+        }
+        return super.mouseReleased(event);
+    }
+
+    private void dragBarTo(double mouseY) {
+        int thumbTop = (int) Math.round(mouseY) - this.barGrab - TOP;
+        this.scroll = clampScroll(ScrollPane.scrollForThumbTop(thumbTop, trackHeight(),
+                thumbHeight(), maxScroll()), maxScroll());
+        this.rebuildWidgets();
     }
 
     @Override

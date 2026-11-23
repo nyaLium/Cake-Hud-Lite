@@ -29,7 +29,8 @@ import net.minecraft.world.item.component.CustomData;
  * <p>1.20.22：缩放改成 {@code 0.5~1.5} 小数倍，并且是<b>真正的缩放</b> ——
  * 源区固定为整张纹理，目标框 {@code TEX_W*k × TEX_H*k}。</p>
  *
- * <p>1.20.26：纹理换成 34×86 的新四张（meter_0..3），默认缩放 0.7、默认不透明度 75%。</p>
+ * <p>1.20.26：纹理换成 34×86 的新四张（meter_0..3），默认缩放 0.7、默认不透明度 75%；
+ * 1.20.32 起默认不透明度改为 65%。</p>
  */
 final class ShieldIndicatorHud implements HudElement {
 

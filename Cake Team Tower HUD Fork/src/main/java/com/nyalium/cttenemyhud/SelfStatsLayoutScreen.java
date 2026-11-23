@@ -125,7 +125,7 @@ public final class SelfStatsLayoutScreen extends Screen {
         boolean demo = lines.isEmpty();
         if (demo) lines = SelfStatsPanel.demoLines();
         EnemyHudConfig.Panel panel = currentPanel();
-        SelfStatsPanel.draw(graphics, this.font, lines, panel, true);
+        SelfStatsPanel.draw(graphics, this.font, lines, panel, EnemyHudConfig.get().selfStatsTextShadow);
         int[] bounds = SelfStatsPanel.bounds(this.font, lines, panel);
         outline(graphics, bounds, dragging ? 0xC0FFD060 : 0x80FFFFFF);
         String info = "x=" + panel.x + "  y=" + panel.y + "  " + bounds[2] + "x" + bounds[3]

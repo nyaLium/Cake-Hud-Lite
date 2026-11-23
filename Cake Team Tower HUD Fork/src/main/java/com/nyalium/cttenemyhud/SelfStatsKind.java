@@ -21,13 +21,14 @@ package com.nyalium.cttenemyhud;
  * 力量 / 攻速），这类只能落到组内默认项；私有区字形的几条（钓鱼 / 因果…）也有颜色撞车的，
  * 归到 {@link #MISC}。</p>
  *
- * <h2>1.20.31：分组</h2>
+ * <h2>1.20.31 / 1.20.32：分组</h2>
  * <p>过滤界面不再是「一大串属性 + 状态效果 + 其它」三段粗桶，而是按 {@link Group} 分成三节，
  * 节与节之间画一条标题（和实体血条设置里的「── 通用 ── / ── 敌人设置 ──」是同一套观感）：</p>
  * <ul>
  *   <li>{@link Group#ATTRIBUTE}「属性」—— 心、生命、攻击、防御、护甲、速度、法力、杂项数值；</li>
  *   <li>{@link Group#STATUS}「状态效果」—— 地图的 28 条增益/诅咒，<b>一条一项</b>（{@link #STATUS_49} … {@link #STATUS_76}）；</li>
- *   <li>{@link Group#OTHER}「其它」—— 草方块那条（{@link #GRASS}）与未识别兜底（{@link #MISC}）。</li>
+ *   <li>{@link Group#OTHER}「其它」—— 游戏时间 {@link #TIMER}、难度骷髅 {@link #SKULLS}（1.20.32 从「属性」挪过来）、
+ *       草方块 {@link #GRASS} 与未识别兜底 {@link #MISC}。</li>
  * </ul>
  *
  * <h2>HINT</h2>
@@ -38,8 +39,6 @@ public enum SelfStatsKind {
 
     /** 标题 / 悬停提示：提示性文本，永远不显示，也不可过滤。 */
     HINT("hint", false, Group.ATTRIBUTE),
-    /** 游戏计时（{@code Misc_View_Stats_78}）。1.20.31 起这一行也会上面板（原来只当收尾信号）。 */
-    TIMER("timer", true, Group.ATTRIBUTE),
 
     // ── 心 ──
     HEART_RED("heart_red", true, Group.ATTRIBUTE),
@@ -104,7 +103,6 @@ public enum SelfStatsKind {
     SIZE("size", true, Group.ATTRIBUTE),
     GRAVITY("gravity", true, Group.ATTRIBUTE),
     TOWERS_REGEN("towers_regen", true, Group.ATTRIBUTE),
-    SKULLS("skulls", true, Group.ATTRIBUTE),
     BITCHES("bitches", true, Group.ATTRIBUTE),
     FISHING("fishing", true, Group.ATTRIBUTE),
     BEE("bee", true, Group.ATTRIBUTE),
@@ -115,6 +113,17 @@ public enum SelfStatsKind {
     KARMA_CELESTIAL("karma_celestial", true, Group.ATTRIBUTE),
 
     // ── 其它 ──
+
+    /**
+     * 游戏计时（{@code Misc_View_Stats_78}）。
+     *
+     * <p>1.20.31 起这一行会上面板（原来只当收尾信号）；1.20.32 起按你的要求归到「其它」一节，
+     * 不再混在属性里。</p>
+     */
+    TIMER("timer", true, Group.OTHER),
+
+    /** 难度骷髅（地图 {red ☠ = 正数 / 灰 ☠ = 负数}，键号 {@code view_stats_84}）。1.20.32 起归到「其它」。 */
+    SKULLS("skulls", true, Group.OTHER),
 
     /**
      * 「本轮还没碰过草方块」那条（地图 {@code view_stats_83}，一行绿色的 {@code □}）。
@@ -197,7 +206,7 @@ public enum SelfStatsKind {
         ATTRIBUTE("ctt_enemy_hud.config.header.attributes"),
         /** 地图那 28 条状态效果。 */
         STATUS("ctt_enemy_hud.config.header.status"),
-        /** 其它：草方块 + 未识别兜底。 */
+        /** 其它：游戏时间、难度骷髅、草方块、未识别兜底。 */
         OTHER("ctt_enemy_hud.config.header.other");
 
         /** 分节标题的翻译键（画在两组之间，和实体血条设置的标题同一套观感）。 */

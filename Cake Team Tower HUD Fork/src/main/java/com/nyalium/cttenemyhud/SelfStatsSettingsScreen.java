@@ -14,8 +14,7 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 
 /**
- * 「属性面板设置」（1.20.20 从子页面独立成可滚动界面，带右侧滚动条）。
- */
+ * 「属性面板设置」（1.20.20 从子页面独立成可滚动界面，带右侧滚动条）�? */
 public final class SelfStatsSettingsScreen extends Screen {
 
     private static final int ROW_HEIGHT = 20;
@@ -27,7 +26,7 @@ public final class SelfStatsSettingsScreen extends Screen {
     private final EnemyHudConfigScreen menu;
     private ScrollPane pane = new ScrollPane(TOP, 1000);
     private final List<Row> rows = new ArrayList<>();
-    /** 滚动区里的控件：只登记输入（{@code addWidget}），绘制由 {@link #paintContent} 裁剪。 */
+    /** 滚动区里的控件：只登记输入（{@code addWidget}），绘制�?{@link #paintContent} 裁剪�?*/
     private final List<AbstractWidget> contentRows = new ArrayList<>();
     private int contentHeight;
     private boolean editContainer;
@@ -61,6 +60,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         y = slider("selfStatsColumns", y, 1, 3, 1, panel.columns, mode);
         y = slider("selfStatsScale", y, 1.0, 2.0, 0.05, panel.scale, mode);
         y = slider("selfStatsOpacity", y, 0.2, 1.0, 0.05, panel.opacity, mode);
+        y = toggle("selfStatsTextShadow", y);
         y = button("selfStatsMode", y, "mode");
         if (mode == 2) y = button("selfStatsTarget", y, "target");
         y = button("selfStatsMove", y, "move");
@@ -84,7 +84,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         return y + ROW_STEP;
     }
 
-    /** 显示方式循环顺序：HUD + 容器界面(2) → HUD 显示(0) → 容器界面显示(1) → 回到 2。 */
+    /** 显示方式循环顺序：HUD + 容器界面(2) �?HUD 显示(0) �?容器界面显示(1) �?回到 2�?*/
     static int nextMode(int mode) {
         return switch (mode) {
             case 2 -> 0;
@@ -93,7 +93,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         };
     }
 
-    /** 显示方式按钮的翻译键（0/1/2）。 */
+    /** 显示方式按钮的翻译键�?/1/2）�?*/
     static String modeLabelKey(int mode) {
         return switch (mode) {
             case 1 -> "ctt_enemy_hud.config.selfStatsMode.container";
@@ -104,6 +104,23 @@ public final class SelfStatsSettingsScreen extends Screen {
 
     private static Component k(String id) {
         return Component.translatable("ctt_enemy_hud.config." + id);
+    }
+
+    /** 开关行的当前值（1.20.32：面板文字阴影独立，不再只有一个开关）�?*/
+    private static boolean toggleValue(String id) {
+        EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
+        return switch (id) {
+            case "selfStatsTextShadow" -> cfg.selfStatsTextShadow;
+            default -> cfg.showSelfStats;
+        };
+    }
+
+    private static void setToggle(String id, boolean value) {
+        EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
+        switch (id) {
+            case "selfStatsTextShadow" -> cfg.selfStatsTextShadow = value;
+            default -> cfg.showSelfStats = value;
+        }
     }
 
     @Override
@@ -131,9 +148,9 @@ public final class SelfStatsSettingsScreen extends Screen {
             int y = this.pane.screenY(row.y);
             AbstractWidget widget = null;
             switch (row.kind) {
-                case TOGGLE -> widget = CycleButton.onOffBuilder(cfg.showSelfStats)
+                case TOGGLE -> widget = CycleButton.onOffBuilder(toggleValue(row.id()))
                         .create(x, y, width, ROW_HEIGHT, row.label, (b, v) -> {
-                            EnemyHudConfig.get().showSelfStats = v;
+                            setToggle(row.id(), v);
                             this.rebuildWidgets();
                         });
                 case SLIDER -> {
@@ -187,8 +204,7 @@ public final class SelfStatsSettingsScreen extends Screen {
                                 EnemyHudConfig.Cfg c = EnemyHudConfig.get();
                                 c.selfStatsMode = nextMode(c.selfStatsMode);
                                 this.editContainer = false;
-                                rows.clear();      // 模式 2 多一行「编辑对象」，行表要重建
-                                buildRows();
+                                rows.clear();      // 模式 2 多一行「编辑对象」，行表要重�?                                buildRows();
                                 this.rebuildWidgets();
                             }
                             case "target" -> {
@@ -225,11 +241,16 @@ public final class SelfStatsSettingsScreen extends Screen {
         }
         this.pane.endClip(graphics);
         graphics.centeredText(this.font, this.title, this.width / 2, 22, 0xFFFFFFFF);
-        this.pane.drawScrollbar(graphics, this.width / 2 + Math.min(WIDTH_MAX, this.width - 60) / 2 + 10);
+        this.pane.drawScrollbar(graphics, scrollbarRight());
         if (this.pane.maxScroll() > 0) {
             graphics.centeredText(this.font, Component.translatable("ctt_enemy_hud.config.scrollHint"),
                     this.width / 2, this.height - ROW_HEIGHT - 26, 0xFFA0A0A0);
         }
+    }
+
+    /** 滚动条右侧的锚点（和画滚动条用同一个值，命中判定才不会错位）�?*/
+    private int scrollbarRight() {
+        return this.width / 2 + Math.min(WIDTH_MAX, this.width - 60) / 2 + 10;
     }
 
     @Override
@@ -239,11 +260,53 @@ public final class SelfStatsSettingsScreen extends Screen {
         return true;
     }
 
+    // ── 滚动条：可点可拖�?.20.32�?──
+
+    /** 是否正在拖滑块�?*/
+    private boolean barDragging;
+    /** 按下瞬间「滑块顶端相对光标」的偏移（拖动时滑块不跳）�?*/
+    private int barGrab;
+
+    @Override
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubled) {
+        if (super.mouseClicked(event, doubled)) return true;
+        if (!Pointer.accept(event)) return false;
+        double[] gui = Pointer.gui(this, event);
+        if (!this.pane.hitsBar(gui[0], gui[1], scrollbarRight())) return false;
+        this.barDragging = true;
+        this.barGrab = this.pane.hitsThumb(gui[1]) ? this.pane.grabOffset(gui[1]) : this.pane.thumbHeight() / 2;
+        dragBarTo(gui[1]);
+        return true;
+    }
+
+    @Override
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dragX, double dragY) {
+        if (this.barDragging) {
+            dragBarTo(Pointer.gui(this, event)[1]);
+            return true;
+        }
+        return super.mouseDragged(event, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+        if (this.barDragging && Pointer.accept(event)) {
+            this.barDragging = false;
+            return true;
+        }
+        return super.mouseReleased(event);
+    }
+
+    private void dragBarTo(double mouseY) {
+        this.pane.dragThumbTo((int) Math.round(mouseY) - this.barGrab);
+        this.rebuildWidgets();
+    }
+
     private void back() {
         this.minecraft.gui.setScreen(this.menu);
     }
 
-    /** 「移动面板」里就地切换了 HUD / 容器界面后，回到本页要跟着变。 */
+    /** 「移动面板」里就地切换�?HUD / 容器界面后，回到本页要跟着变�?*/
     void setEditContainer(boolean editContainer) {
         this.editContainer = editContainer;
     }

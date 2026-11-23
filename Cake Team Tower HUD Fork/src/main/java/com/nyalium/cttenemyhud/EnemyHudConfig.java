@@ -37,8 +37,13 @@ public final class EnemyHudConfig {
         public boolean enabled = true;
         /** 整体不透明度，0.50 ~ 1.00（低于 0.50 会被夹到 0.50）。 */
         public double opacity = 0.75;
-        /** 文字是否带阴影。 */
-        public boolean textShadow = true;
+        /**
+         * 实体血条（名字 / 心数 / 护甲）是否带文字阴影。
+         *
+         * <p>1.20.32 起默认<b>关闭</b>，并且只作用于头顶血条 —— 属性面板另有
+         * {@link #selfStatsTextShadow}（以前两者共用这一个字段，改实体血条会连带改面板）。</p>
+         */
+        public boolean textShadow = false;
         /** 是否画血条（原版 bossbar 纹理）。心数 / 护甲永远显示，不再提供开关。 */
         public boolean showBar = true;
         /**
@@ -116,6 +121,13 @@ public final class EnemyHudConfig {
         /** 属性面板文字不透明度，0.20 ~ 1.00（1.20.4）。 */
         public double selfStatsOpacity = 1.0;
         /**
+         * 属性面板文字阴影（1.20.32 起独立）。
+         *
+         * <p>以前面板跟着 {@link #textShadow}（实体血条那个）走，改一边会连带改另一边；现在分开，
+         * 默认<b>开启</b> —— 和升级前的观感一致（那时候 {@code textShadow} 默认 true）。</p>
+         */
+        public boolean selfStatsTextShadow = true;
+        /**
          * 默认（全部职业共用）时要隐藏的内容类，取值见 {@link SelfStatsKind#id}。
          *
          * <p>例如 {@code ["heart_red", "hp_neg"]} = 红心与负生命那几行不上面板。
@@ -134,8 +146,8 @@ public final class EnemyHudConfig {
         public int shieldY = -1;
         /** 缩放倍率（1.0 = 纹理原尺寸 34×86；1.20.22 起允许 0.5~1.5 的小数倍；1.20.26 起默认 0.7）。 */
         public double shieldScale = 0.7;
-        /** 不透明度 0.1~1.0（1.20.26 起默认 0.75）。 */
-        public double shieldOpacity = 0.75;
+        /** 不透明度 0.1~1.0（1.20.26 起默认 0.75；1.20.32 起默认 0.65）。 */
+        public double shieldOpacity = 0.65;
     }
 
     /**
@@ -169,7 +181,7 @@ public final class EnemyHudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 14;
+    public static final int CURRENT_VERSION = 15;
 
     /** 盾牌指示器的缩放范围（倍）。1.20.22 起是小数倍，纹理整张等比缩放。 */
     public static final double SHIELD_SCALE_MIN = 0.5;
@@ -467,6 +479,14 @@ public final class EnemyHudConfig {
             // 沿用本文件的惯例：**只有仍停在旧默认值 1.0 时才跟着改**，自己调过的不覆盖。
             if (cfg.shieldScale == 1.0) cfg.shieldScale = 0.7;
             if (cfg.shieldOpacity == 1.0) cfg.shieldOpacity = 0.75;
+        }
+        if (version < 15) {
+            // 1.20.32：① 属性面板文字阴影独立出来 —— 面板保持升级前的观感（= 旧 textShadow），
+            // 实体血条那个「文字阴影」跟到新默认值「关」；
+            // ② 盾牌默认不透明度 75% → 65%（放在 <13 之后：v12 的旧默认 1.0 先落到 0.75，再落到 0.65）。
+            cfg.selfStatsTextShadow = cfg.textShadow;
+            if (cfg.textShadow) cfg.textShadow = false;
+            if (cfg.shieldOpacity == 0.75) cfg.shieldOpacity = 0.65;
         }
         if (version < 9) {
             // 模式 2 的容器那套从「模式 2 的 HUD 那套」复制。

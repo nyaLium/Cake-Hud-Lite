@@ -38,6 +38,7 @@ public final class SelfCheck {
         scrollBand();
         chatAndDrag();
         panelTimerAndGrass();
+        scrollbarDrag();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -379,10 +380,10 @@ public final class SelfCheck {
         check(ShieldIndicatorHud.clampScale(Double.NaN) == 1.0, "NaN 倍率应回落 1.0");
         check(ShieldIndicatorHud.clampScale(9.0) == 1.5, "9 倍应夹到 1.5");
         check(ShieldIndicatorHud.clampScale(0.1) == 0.5, "0.1 倍应夹到 0.5");
-        // 1.20.26：盾牌默认值（0.7 倍 / 75%）+ 默认位置公式 + 纹理尺寸
+        // 1.20.26：盾牌默认值（0.7 倍 / 75%）；1.20.32 起不透明度默认 65% + 默认位置公式 + 纹理尺寸
         EnemyHudConfig.Cfg shieldDefaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(Math.abs(shieldDefaults.shieldScale - 0.7) < 1e-9, "盾牌默认缩放应为 0.7 倍");
-        check(Math.abs(shieldDefaults.shieldOpacity - 0.75) < 1e-9, "盾牌默认不透明度应为 75%");
+        check(Math.abs(shieldDefaults.shieldOpacity - 0.65) < 1e-9, "盾牌默认不透明度应为 65%");
         check(ShieldIndicatorHud.TEX_W == 34 && ShieldIndicatorHud.TEX_H == 86,
                 "盾牌纹理应为 34×86（1.20.26 换图）");
         // 默认位置：右手玩家在快捷栏左侧副手槽（guiW/2 - 109），底边距屏幕底 76 px
@@ -395,15 +396,15 @@ public final class SelfCheck {
         check(ShieldIndicatorHud.clampInto(-5, 24, 853) == 0, "越界应夹到 0");
         check(ShieldIndicatorHud.clampInto(900, 24, 853) == 829, "右边越界应夹到 屏幕-宽");
 
-        // 迁移：停在旧默认 1.0 / 1.0 的配置跟到 0.7 / 75%；自己调过的不动
+        // 迁移：停在旧默认 1.0 / 1.0 的配置跟到 0.7 / 65%（v13 先落 75%，v15 再落 65%）；自己调过的不动
         EnemyHudConfig.Cfg oldShield = new EnemyHudConfig.Cfg();
         oldShield.configVersion = 12;
         oldShield.shieldScale = 1.0;
         oldShield.shieldOpacity = 1.0;
         EnemyHudConfig.migrate("{\"configVersion\":12}", oldShield);
         check(Math.abs(oldShield.shieldScale - 0.7) < 1e-9
-                && Math.abs(oldShield.shieldOpacity - 0.75) < 1e-9,
-                "v12 旧默认值应迁移成 0.7 / 75%");
+                && Math.abs(oldShield.shieldOpacity - 0.65) < 1e-9,
+                "v12 旧默认值应迁移成 0.7 / 65%");
         EnemyHudConfig.Cfg customShield = new EnemyHudConfig.Cfg();
         customShield.configVersion = 12;
         customShield.shieldScale = 1.2;
@@ -412,6 +413,31 @@ public final class SelfCheck {
         check(Math.abs(customShield.shieldScale - 1.2) < 1e-9
                 && Math.abs(customShield.shieldOpacity - 0.4) < 1e-9,
                 "迁移不该覆盖自己调过的盾牌参数");
+
+        // 1.20.32：属性面板文字阴影独立 + 实体血条文字阴影默认关
+        EnemyHudConfig.Cfg shadowDefaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
+        check(!shadowDefaults.textShadow, "实体血条「文字阴影」默认应为关闭");
+        check(shadowDefaults.selfStatsTextShadow, "属性面板文字阴影默认应为开启（与升级前观感一致）");
+        EnemyHudConfig.Cfg v14Shadow = new EnemyHudConfig.Cfg();
+        v14Shadow.configVersion = 14;
+        v14Shadow.textShadow = true;      // 旧默认值
+        v14Shadow.shieldOpacity = 0.75;   // 旧默认值
+        EnemyHudConfig.migrate("{\"configVersion\":14}", v14Shadow);
+        check(!v14Shadow.textShadow, "v14 的实体血条文字阴影（旧默认 true）应跟到关闭");
+        check(v14Shadow.selfStatsTextShadow, "v14 升级后属性面板文字阴影应接住旧的 textShadow");
+        check(Math.abs(v14Shadow.shieldOpacity - 0.65) < 1e-9, "v14 的 75% 应跟到 65%");
+        EnemyHudConfig.Cfg v14NoShadow = new EnemyHudConfig.Cfg();
+        v14NoShadow.configVersion = 14;
+        v14NoShadow.textShadow = false;
+        EnemyHudConfig.migrate("{\"configVersion\":14}", v14NoShadow);
+        check(!v14NoShadow.selfStatsTextShadow,
+                "v14 里已关掉文字阴影的，面板也应保持关闭（别突然长阴影）");
+        EnemyHudConfig.Cfg v14CustomOpacity = new EnemyHudConfig.Cfg();
+        v14CustomOpacity.configVersion = 14;
+        v14CustomOpacity.shieldOpacity = 0.4;
+        EnemyHudConfig.migrate("{\"configVersion\":14}", v14CustomOpacity);
+        check(Math.abs(v14CustomOpacity.shieldOpacity - 0.4) < 1e-9,
+                "迁移不该覆盖自己调过的盾牌不透明度");
 
         check(ShieldIndicatorHud.scaledWidth(1.0) == ShieldIndicatorHud.TEX_W, "1.0 倍宽 = 原纹理宽");
         check(ShieldIndicatorHud.scaledHeight(1.0) == ShieldIndicatorHud.TEX_H, "1.0 倍高 = 原纹理高");
@@ -1416,7 +1442,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(EnemyHudConfig.CURRENT_VERSION == 14, "配置版本应为 14");
+        check(EnemyHudConfig.CURRENT_VERSION == 15, "配置版本应为 15");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1425,7 +1451,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 14, "v3 → v14 应升版本号");
+        check(v3.configVersion == 15, "v3 → v15 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1503,12 +1529,16 @@ public final class SelfCheck {
         check(glyphKind("\uE026", SelfStats.LIGHT_PURPLE) == SelfStatsKind.HEART_PINK,
                 "私有区字形 + 亮紫应归为粉心");
 
-        // 过滤表：细类、分节、粗类展开、非法值（1.20.31：属性 58 + 状态效果 28 + 其它 2）
+        // 过滤表：细类、分节、粗类展开、非法值（1.20.31：属性 / 状态效果 / 其它；1.20.32 游戏时间与难度骷髅移到「其它」）
         check(SelfStatsKind.FILTERABLE.length == 88,
                 "可过滤项应为 88 项，实际 " + SelfStatsKind.FILTERABLE.length);
-        check(SelfStatsKind.section(SelfStatsKind.Group.ATTRIBUTE).length == 58, "「属性」一节应有 58 项");
+        check(SelfStatsKind.section(SelfStatsKind.Group.ATTRIBUTE).length == 56, "「属性」一节应有 56 项");
         check(SelfStatsKind.section(SelfStatsKind.Group.STATUS).length == 28, "「状态效果」一节应有 28 项");
-        check(SelfStatsKind.section(SelfStatsKind.Group.OTHER).length == 2, "「其它」一节应有 2 项");
+        check(SelfStatsKind.section(SelfStatsKind.Group.OTHER).length == 4,
+                "「其它」一节应为 游戏时间 / 难度骷髅 / 草方块 / 未识别行 4 项");
+        check(SelfStatsKind.TIMER.group == SelfStatsKind.Group.OTHER
+                && SelfStatsKind.SKULLS.group == SelfStatsKind.Group.OTHER,
+                "游戏时间与难度骷髅应归到「其它」");
         check(SelfStatsKind.status(49) == SelfStatsKind.STATUS_49, "键 49 应映射到 status_49");
         check(SelfStatsKind.status(76) == SelfStatsKind.STATUS_76, "键 76 应映射到 status_76");
         check(SelfStatsKind.status(48) == null && SelfStatsKind.status(77) == null,
@@ -1542,20 +1572,22 @@ public final class SelfCheck {
 
         // 分节列表：每节一行标题 + 两个一项（不跨节合并）
         java.util.List<SelfStatsFilterScreen.Row> rows = SelfStatsFilterScreen.buildRows();
-        check(rows.size() == 47, "三节共 47 行（1+29+1+14+1+1），实际 " + rows.size());
+        check(rows.size() == 47, "三节共 47 行（1+28+1+14+1+2），实际 " + rows.size());
         check(rows.get(0).isHeader() && rows.get(0).header() == SelfStatsKind.Group.ATTRIBUTE,
                 "第一行应是「属性」标题");
-        check(!rows.get(1).isHeader() && rows.get(1).left() == SelfStatsKind.TIMER,
-                "属性一节第一项应是游戏时间");
-        check(rows.get(30).isHeader() && rows.get(30).header() == SelfStatsKind.Group.STATUS,
-                "第 30 行应是「状态效果」标题");
-        check(!rows.get(31).isHeader() && rows.get(31).left() == SelfStatsKind.STATUS_49
-                        && rows.get(31).right() == SelfStatsKind.STATUS_50,
+        check(!rows.get(1).isHeader() && rows.get(1).left() == SelfStatsKind.HEART_RED,
+                "属性一节第一项应是红心（游戏时间已挪到「其它」）");
+        check(rows.get(29).isHeader() && rows.get(29).header() == SelfStatsKind.Group.STATUS,
+                "第 29 行应是「状态效果」标题");
+        check(!rows.get(30).isHeader() && rows.get(30).left() == SelfStatsKind.STATUS_49
+                        && rows.get(30).right() == SelfStatsKind.STATUS_50,
                 "状态效果一节应从 49/50 并排开始");
-        check(rows.get(45).isHeader() && rows.get(45).header() == SelfStatsKind.Group.OTHER,
-                "第 45 行应是「其它」标题");
+        check(rows.get(44).isHeader() && rows.get(44).header() == SelfStatsKind.Group.OTHER,
+                "第 44 行应是「其它」标题");
+        check(rows.get(45).left() == SelfStatsKind.TIMER && rows.get(45).right() == SelfStatsKind.SKULLS,
+                "其它一节第一行应是 游戏时间 + 难度骷髅");
         check(rows.get(46).left() == SelfStatsKind.GRASS && rows.get(46).right() == SelfStatsKind.MISC,
-                "其它一节应是草方块 + 未识别行");
+                "其它一节第二行应是 草方块 + 未识别行");
         int headers = 0;
         for (SelfStatsFilterScreen.Row row : rows) if (row.isHeader()) headers++;
         check(headers == 3, "应有 3 个分组标题，实际 " + headers);
@@ -1594,7 +1626,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         EnemyHudConfig.Cfg cfg = new EnemyHudConfig.Cfg();
-        check(EnemyHudConfig.CURRENT_VERSION == 14, "配置版本应为 14");
+        check(EnemyHudConfig.CURRENT_VERSION == 15, "配置版本应为 15");
         EnemyHudConfig.Cfg defaults = EnemyHudConfig.normalize(new EnemyHudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1617,7 +1649,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         EnemyHudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 14, "v4 → v14 应升版本号");
+        check(v4.configVersion == 15, "v4 → v15 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板
@@ -1783,6 +1815,66 @@ public final class SelfCheck {
         EnemyHudConfig.get().selfStatsHidden.add(SelfStatsKind.TIMER.id);
         check(SelfStats.lines().isEmpty(), "两个都关掉后面板为空");
         EnemyHudConfig.reset();
+    }
+
+    /**
+     * 1.20.32：滚动条可以点/拖。
+     *
+     * <p>以前滚动条只是画出来，点它没反应。这里锁住几何：滑块高度按「视口 ÷ 内容」、
+     * 偏移按 {@code scroll / maxScroll} 映射、反解是它的逆运算；命中判定带 ±3 px 容差
+     * （4 px 的条太细，鼠标不好抓）。</p>
+     */
+    private static void scrollbarDrag() {
+        // 纯函数：滑块高度 / 偏移 / 反解
+        check(ScrollPane.thumbHeight(148, 500) == 148 * 148 / 500,
+                "滑块高度 = 视口² ÷ 内容，实际 " + ScrollPane.thumbHeight(148, 500));
+        check(ScrollPane.thumbHeight(148, 148) == 148, "内容刚好等于视口时滑块吃满");
+        check(ScrollPane.thumbHeight(0, 100) == 0, "轨道高 0 → 没有滑块");
+        check(ScrollPane.thumbOffset(148, 40, 0, 300) == 0, "在顶部时偏移 0");
+        check(ScrollPane.thumbOffset(148, 40, 300, 300) == 148 - 40, "到底时滑块贴底");
+        check(ScrollPane.thumbOffset(148, 40, 150, 300) == (148 - 40) / 2, "滚到一半时滑块也在中间");
+        check(ScrollPane.thumbOffset(148, 40, 9999, 300) == 148 - 40, "越界滚动量按最底算");
+        check(ScrollPane.scrollForThumbTop(0, 148, 40, 300) == 0, "滑块在顶 → 滚动 0");
+        check(ScrollPane.scrollForThumbTop(148 - 40, 148, 40, 300) == 300, "滑块在底 → 滚到底");
+        check(ScrollPane.scrollForThumbTop(-20, 148, 40, 300) == 0, "滑块越上界应夹到 0");
+        check(ScrollPane.scrollForThumbTop(9999, 148, 40, 300) == 300, "滑块越下界应夹到底");
+        check(ScrollPane.scrollForThumbTop(50, 148, 40, 0) == 0, "没有可滚动内容时反解为 0");
+        int offset = ScrollPane.thumbOffset(148, 40, 123, 300);
+        check(Math.abs(ScrollPane.scrollForThumbTop(offset, 148, 40, 300) - 123) <= 1,
+                "偏移 → 反解应回到原滚动量（整数截断允许 1 行误差），偏移 " + offset);
+
+        // 实例：命中判定（含容差）
+        ScrollPane pane = new ScrollPane(52, 200);
+        pane.contentHeight(500);            // 视口 148，最大滚动 352
+        check(pane.scrollbarVisible(), "内容比视口高时应有滚动条");
+        check(pane.barX(400) == 396, "滚动条 x = 锚点 - 宽（4）");
+        check(pane.hitsBar(396, 100, 400) && pane.hitsBar(393, 100, 400) && pane.hitsBar(402, 100, 400),
+                "滚动条 ±3 px 容差内都应命中");
+        check(!pane.hitsBar(392, 100, 400) && !pane.hitsBar(404, 100, 400), "容差外不该命中");
+        check(!pane.hitsBar(396, 20, 400) && !pane.hitsBar(396, 220, 400),
+                "可视区上下之外的同列位置不该响应（否则会点到下面的按钮/Tab 键）");
+        check(pane.hitsThumb(52 + 5), "滑块在顶部时应命中上沿");
+        check(!pane.hitsThumb(195), "滑块在顶部时底部不该命中");
+        check(pane.grabOffset(52 + 10) == 10, "抓取偏移 = 光标 - 滑块顶");
+        pane.dragThumbTo(52 + 100);
+        check(pane.scroll() > 0 && pane.scroll() < pane.maxScroll(), "拖到中间应落在中间");
+        pane.dragThumbTo(52 + 9999);
+        check(pane.scroll() == pane.maxScroll(), "拖到底应到最大滚动");
+        pane.dragThumbTo(0);
+        check(pane.scroll() == 0, "拖到顶应回到 0");
+
+        // 没有可滚动内容时不该响应
+        ScrollPane shortPane = new ScrollPane(52, 200);
+        shortPane.contentHeight(100);
+        check(!shortPane.scrollbarVisible(), "内容不足时不该有滚动条");
+        check(!shortPane.hitsBar(396, 100, 400) && !shortPane.hitsThumb(60),
+                "内容不足时点滚动条区域不该有反应");
+
+        // 过滤列表的滑块（8 px 下限，按行数占比）
+        check(SelfStatsFilterScreen.thumbHeight(145, 47, 6) == Math.max(8, 145 * 6 / 47),
+                "过滤列表滑块高度按可见行占比，实际 " + SelfStatsFilterScreen.thumbHeight(145, 47, 6));
+        check(SelfStatsFilterScreen.thumbHeight(0, 47, 6) == 0, "轨道高 0 → 过滤列表没有滑块");
+        check(SelfStatsFilterScreen.thumbHeight(145, 0, 6) == 0, "没有行 → 没有滑块");
     }
 
     /**

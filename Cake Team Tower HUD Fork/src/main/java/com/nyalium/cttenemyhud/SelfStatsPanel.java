@@ -44,7 +44,8 @@ final class SelfStatsPanel implements HudElement {
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
         EnemyHudConfig.Panel panel = EnemyHudConfig.panel(EnemyHudConfig.get().selfStatsMode, false);
-        draw(g, mc.font, lines, panel, cfg.textShadow);
+        // 1.20.32：面板文字阴影有自己的开关，不再跟着实体血条的 textShadow。
+        draw(g, mc.font, lines, panel, cfg.selfStatsTextShadow);
         if (cfg.debug) {
             // 排查用：屏幕/面板尺寸、过滤前后的行数（debug=true 时左下角一行，避开地图顶部的字）。
             int guiW = mc.getWindow().getGuiScaledWidth();
@@ -69,7 +70,7 @@ final class SelfStatsPanel implements HudElement {
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
         EnemyHudConfig.Panel panel = EnemyHudConfig.panel(EnemyHudConfig.get().selfStatsMode, true);
-        draw(g, mc.font, lines, panel, cfg.textShadow);
+        draw(g, mc.font, lines, panel, cfg.selfStatsTextShadow);
         // 1.20.15：光标停在某一行上时，显示这一行的官方 hover（和原版 ViewStats 聊天里一样）。
         int index = lineAt(mc.font, lines, panel, mouseX, mouseY);
         if (index >= 0) {
