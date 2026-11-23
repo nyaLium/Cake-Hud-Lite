@@ -245,6 +245,21 @@ public final class EnemyData {
         return info == null ? -1 : info.value();
     }
 
+    /**
+     * 读某位玩家的 {@code ClassPassive}（选了职业后为 1..26）；客户端看不到这个 objective 时返回 -1。
+     *
+     * <p><b>注意</b>：地图从不把 {@code ClassPassive} 挂到任何显示槽，所以在原版地图上客户端
+     * 拿到的永远是 -1（服务端只对「被追踪（挂过显示槽）」的 objective 同步分数，见类注释）。
+     * 1.20.36 的属性面板「选过职业」判定因此还有别的回退信号，见 {@link SelfStats#classChosen}。</p>
+     */
+    public static int classPassiveOf(Scoreboard sb, Entity entity) {
+        if (sb == null || entity == null) return -1;
+        Objective obj = sb.getObjective("ClassPassive");
+        if (obj == null) return -1;
+        ReadOnlyScoreInfo info = sb.getPlayerScoreInfo(entity, obj);
+        return info == null ? 0 : info.value();
+    }
+
     private static int pct(int hp, int maxHp) {
         if (maxHp <= 0) return 100;
         return Math.max(0, Math.min(100, Math.round(hp * 100.0f / maxHp)));

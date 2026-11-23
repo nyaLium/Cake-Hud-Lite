@@ -40,7 +40,7 @@ final class SelfStatsPanel implements HudElement {
         if (!cfg.enabled || !cfg.showSelfStats) return;
         // 1.20.14：「在容器界面显示」模式下 HUD 上不画，改由 ContainerPanelMixin 画在容器界面上。
         if (!EnemyHudConfig.hudMode()) return;
-        if (!SelfStats.visible()) return;
+        if (!SelfStats.visible(mc)) return;
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
         EnemyHudConfig.Panel panel = EnemyHudConfig.panel(EnemyHudConfig.get().selfStatsMode, false);
@@ -51,9 +51,10 @@ final class SelfStatsPanel implements HudElement {
             int guiW = mc.getWindow().getGuiScaledWidth();
             int guiH = mc.getWindow().getGuiScaledHeight();
             String info = String.format(java.util.Locale.ROOT,
-                    "panel %d,%d cols=%d scale=%.2f op=%.2f | lines %d/%d | gui %dx%d fb %dx%d",
+                    "panel %d,%d cols=%d scale=%.2f op=%.2f | lines %d/%d | class %s | gui %dx%d fb %dx%d",
                     panel.x, panel.y, panel.columns, panel.scale, panel.opacity,
                     lines.size(), SelfStats.storedLineCount(),
+                    SelfStats.cachedClassChosen() ? "yes" : "no",
                     guiW, guiH, mc.getWindow().getWidth(), mc.getWindow().getHeight());
             g.text(mc.font, info, 4, Math.max(4, guiH - 12), 0xFFFFFFFF, true);
         }
@@ -66,7 +67,7 @@ final class SelfStatsPanel implements HudElement {
         EnemyHudConfig.Cfg cfg = EnemyHudConfig.get();
         if (!cfg.enabled || !cfg.showSelfStats) return;
         if (!EnemyHudConfig.containerMode()) return;
-        if (!SelfStats.visible()) return;
+        if (!SelfStats.visible(mc)) return;
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
         EnemyHudConfig.Panel panel = EnemyHudConfig.panel(EnemyHudConfig.get().selfStatsMode, true);

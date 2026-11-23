@@ -40,6 +40,7 @@ public final class SelfCheck {
         panelTimerAndGrass();
         scrollbarDrag();
         scopedSettings();
+        classGate();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -1876,6 +1877,47 @@ public final class SelfCheck {
                 "过滤列表滑块高度按可见行占比，实际 " + SelfStatsFilterScreen.thumbHeight(145, 47, 6));
         check(SelfStatsFilterScreen.thumbHeight(0, 47, 6) == 0, "轨道高 0 → 过滤列表没有滑块");
         check(SelfStatsFilterScreen.thumbHeight(145, 0, 6) == 0, "没有行 → 没有滑块");
+    }
+
+    /**
+     * 1.20.36：准备大厅里先不画属性面板（「选过职业」门控）。
+     *
+     * <p>地图判断依据是 {@code ClassPassive > 0}，但客户端读不到那个计分项（地图从不挂显示槽）。
+     * 这里锁住客户端的等价信号与可见性真值表。</p>
+     */
+    private static void classGate() {
+        // 可见性真值表
+        check(SelfStats.visibleState(true, false, 3, true), "有数据 + 时间在走 + 选过职业 → 显示");
+        check(!SelfStats.visibleState(true, false, 3, false), "没选职业 → 不显示（准备大厅）");
+        check(!SelfStats.visibleState(true, true, 3, true), "时间冻住 → 不显示");
+        check(!SelfStats.visibleState(false, false, 3, true), "地图说没开局 → 不显示");
+        check(!SelfStats.visibleState(true, false, 0, true), "没内容 → 不显示");
+
+        // 「职业点」行 = 客户端能看到的「选过职业」等价信号
+        EnemyHudConfig.reset();
+        SelfStats.reset();
+        check(!SelfStats.lastCaptureHadClassStat(), "reset 后不该认为选过职业");
+        SelfStats.beginCapture(1_000L, true);
+        check(SelfStats.onGameMessage(Component.literal("120\u2764"), false, 1_100L), "属性行应被吞");
+        SelfStats.onGameMessage(Component.literal("游戏时间为 0:00:19"), false, 1_200L);
+        check(!SelfStats.lastCaptureHadClassStat(), "没有职业点行的采集不该认为选过职业");
+
+        SelfStats.reset();
+        SelfStats.beginCapture(2_000L, true);
+        SelfStats.onGameMessage(Component.literal("15\uD83D\uDDE1"), false, 2_100L);   // 金 🗡 = 职业点
+        SelfStats.onGameMessage(Component.literal("游戏时间为 0:00:20"), false, 2_200L);
+        check(SelfStats.lastCaptureHadClassStat(), "出现职业点行后应认为选过职业");
+
+        // 地图明确说「没开局 / 触发被拒」时信号要清掉，别把上一局的判定带进大厅
+        SelfStats.onGameMessage(Component.literal("无法触发该计分项"), false, 2_300L);
+        check(!SelfStats.lastCaptureHadClassStat(), "被拒绝（没开局）后应清掉职业信号");
+
+        // 职业被动道具判定（空 / null 不算）
+        check(!SelfStats.isClassPassiveItem(null), "null 物品不是职业被动");
+        check(!SelfStats.isClassPassiveItem(net.minecraft.world.item.ItemStack.EMPTY),
+                "空物品不是职业被动");
+        SelfStats.reset();
+        EnemyHudConfig.reset();
     }
 
     /**

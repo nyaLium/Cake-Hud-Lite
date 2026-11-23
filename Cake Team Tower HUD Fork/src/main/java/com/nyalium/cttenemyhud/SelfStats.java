@@ -109,6 +109,25 @@ public final class SelfStats {
     /** true = 时间冻住，面板先不画。 */
     private static boolean timeFrozen;
 
+    // ── 1.20.36：「选过职业」门控（准备大厅里先不画面板） ──
+
+    /**
+     * 「选过职业」重新判定的间隔（ms）。
+     *
+     * <p>判定要扫一遍背包（找地图发的职业被动道具）+ 读一次计分项，每帧都做太浪费，
+     * 250 ms 足够——准备大厅的选择窗口是秒级的。</p>
+     */
+    static final long CLASS_RECHECK_MS = 250L;
+
+    /** 这一趟 ViewStats 里出现过「职业点」相关的行（选了职业才会有）。 */
+    private static boolean pendingHadClassStat;
+    /** 上一趟完整采集里出现过职业点行。 */
+    private static boolean lastCaptureHadClassStat;
+    /** 「选过职业」的缓存值 + 上次计算时间。 */
+    private static boolean classChosenCache;
+    private static long classCheckedMs;
+    private static boolean classCheckedOnce;
+
     private SelfStats() {}
 
     /** 面板上的一行：渲染用的原始 Component + 分类。 */
@@ -159,6 +178,7 @@ public final class SelfStats {
             if (!SHOWN.isEmpty() || capturing) {
                 SHOWN.clear();
                 PENDING.clear();
+                lastCaptureHadClassStat = false;
                 java.util.Arrays.fill(HEARTS, 0);
                 capturing = false;
                 selfTriggered = false;
@@ -259,6 +279,7 @@ public final class SelfStats {
         captureStartMs = now;
         notStarted = false;
         pendingTimeText = null;
+        pendingHadClassStat = false;
         hardEndMs = now + CAPTURE_HARD_MS;
     }
 
@@ -284,6 +305,7 @@ public final class SelfStats {
             pendingTimeText = null;
             if (++emptyCaptures >= MAX_EMPTY_CAPTURES) {
                 SHOWN.clear();
+                lastCaptureHadClassStat = false;
                 java.util.Arrays.fill(HEARTS, 0);
             }
             return;
@@ -295,6 +317,7 @@ public final class SelfStats {
         for (Line line : PENDING) {
             if (seen.add(line.text.getString())) SHOWN.add(line);
         }
+        lastCaptureHadClassStat = pendingHadClassStat;
         System.arraycopy(PENDING_HEARTS, 0, HEARTS, 0, HEARTS.length);
         updateTimeFrozen(now);
     }
@@ -362,6 +385,11 @@ public final class SelfStats {
         sameTimeRounds = 0;
         lastTimeSampleMs = 0L;
         timeFrozen = false;
+        pendingHadClassStat = false;
+        lastCaptureHadClassStat = false;
+        classChosenCache = false;
+        classCheckedOnce = false;
+        classCheckedMs = 0L;
     }
 
     // ── 采集 ──
@@ -388,6 +416,7 @@ public final class SelfStats {
             capturing = false;
             selfTriggered = false;
             SHOWN.clear();                 // 地图明确说「没开局」：清空，别留上一局的数字
+            lastCaptureHadClassStat = false;
             java.util.Arrays.fill(HEARTS, 0);
             return hide;
         }
@@ -400,6 +429,7 @@ public final class SelfStats {
             selfTriggered = false;
             SHOWN.clear();
             PENDING.clear();
+            lastCaptureHadClassStat = false;
             java.util.Arrays.fill(HEARTS, 0);
             nextTriggerMs = nowMs + DENIED_BACKOFF_MS;
             return hide;
@@ -444,6 +474,11 @@ public final class SelfStats {
         // 提示性文本（标题 / 悬停说明）不上面板；缺地图语言文件时整行原文也不上屏。
         if (panelWorthy(a, kind) && PENDING.size() < MAX_LINES && !containsSameText(PENDING, message)) {
             PENDING.add(new Line(message, kind));
+        }
+        // 1.20.36：「职业点」那一行 = 选了职业才会出现（地图 ClassStat 初始为 0，为 0 时不发这行），
+        // 把它当成客户端能看见的「ClassPassive > 0」等价信号之一。
+        if (kind == SelfStatsKind.CLASS_STAT || kind == SelfStatsKind.CLASS_STAT_AMP) {
+            pendingHadClassStat = true;
         }
         addHearts(a, PENDING_HEARTS);
         return selfTriggered;
@@ -494,9 +529,94 @@ public final class SelfStats {
         return HEARTS.clone();
     }
 
-    /** 面板是否该画：有内容、地图没说「游戏没开始」、且游戏时间还在走。 */
-    public static boolean visible() {
-        return !notStarted && !timeFrozen && !SHOWN.isEmpty();
+    /**
+     * 面板是否该画：有内容、地图没说「游戏没开始」、游戏时间还在走、<b>并且已经选了职业</b>。
+     *
+     * <p>1.20.36：最后一条是为了压掉「准备大厅里先闪一下面板」——地图在 {@code gamestart} 就
+     * 启用了 ViewStats，但职业要几秒后才选；这段窗口里的数据没有意义。</p>
+     */
+    public static boolean visible(net.minecraft.client.Minecraft mc) {
+        return visibleState(!notStarted, timeFrozen, SHOWN.size(), classChosen(mc));
+    }
+
+    /** {@link #visible} 的纯函数版（selfCheck 直接打）。 */
+    static boolean visibleState(boolean started, boolean frozen, int lines, boolean classChosen) {
+        return started && !frozen && lines > 0 && classChosen;
+    }
+
+    /**
+     * 玩家是否已经「选了职业」——准备大厅里为 false，用来先不画面板。
+     *
+     * <p>地图那边判断依据是 {@code ClassPassive > 0}，但<b>客户端读不到这个计分项</b>：
+     * 地图从不把它挂到任何显示槽，而 26.3 的服务端只给「被追踪（挂过显示槽）」的 objective
+     * 同步分数（见 {@link EnemyData} 的类注释）。所以这里按可信度依次回退：</p>
+     * <ol>
+     *   <li>真能看到 {@code ClassPassive}（整合包/未来地图把它挂进显示槽，或服务端组件自己推）→ 直接用它；</li>
+     *   <li>背包里有地图发的<b>职业被动道具</b>（{@code custom_data.classPassive} 的染料）——
+     *       地图在 {@code gamestart} 会 {@code clear} 全背包、选完职业才重新发，正是「选过职业」的直接证据；</li>
+     *   <li>最近一趟 ViewStats 里出现过「职业点」那一行（{@code ClassStat != 0} 才会发）——
+     *       给「把道具存进箱子」的人留的兜底。</li>
+     * </ol>
+     */
+    static boolean classChosen(net.minecraft.client.Minecraft mc) {
+        long now = System.currentTimeMillis();
+        if (classCheckedOnce && now - classCheckedMs < CLASS_RECHECK_MS) return classChosenCache;
+        boolean chosen = computeClassChosen(mc);
+        classChosenCache = chosen;
+        classCheckedMs = now;
+        classCheckedOnce = true;
+        return chosen;
+    }
+
+    private static boolean computeClassChosen(net.minecraft.client.Minecraft mc) {
+        if (mc == null || mc.player == null || mc.level == null) return false;
+        // ① 万一客户端真能看到 ClassPassive
+        int passive = EnemyData.classPassiveOf(mc.level.getScoreboard(), mc.player);
+        if (passive >= 0) return passive > 0;
+        // ② 职业被动道具（地图 gamestart 会清空背包，选完职业才发）
+        if (hasClassPassiveItem(mc)) return true;
+        // ③ 最近一趟 ViewStats 里有「职业点」行
+        return lastCaptureHadClassStat;
+    }
+
+    /**
+     * 背包里有没有地图的职业被动道具（{@code lime_dye[custom_data={classPassive:1b}]}）。
+     *
+     * <p>按 {@code getContainerSize()/getItem(i)} 全量扫（快捷栏 + 主背包 + 装备栏 + 副手）：
+     * 地图先把它放进 {@code container.9}，之后玩家可能拖到别处，所以不能只看某一个槽。</p>
+     */
+    static boolean hasClassPassiveItem(net.minecraft.client.Minecraft mc) {
+        if (mc == null || mc.player == null) return false;
+        var inv = mc.player.getInventory();
+        int size = inv.getContainerSize();
+        for (int i = 0; i < size; i++) {
+            if (isClassPassiveItem(inv.getItem(i))) return true;
+        }
+        return false;
+    }
+
+    /** 单件物品判定（拆出来给自检用：纯查组件，不依赖背包）。 */
+    static boolean isClassPassiveItem(net.minecraft.world.item.ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+        var data = stack.getOrDefault(
+                net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.EMPTY);
+        if (data == null || data.isEmpty()) return false;
+        try {
+            return data.copyTag().getBooleanOr("classPassive", false);
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /** 最近一趟采集里是否出现过职业点行（自检用）。 */
+    static boolean lastCaptureHadClassStat() {
+        return lastCaptureHadClassStat;
+    }
+
+    /** 最近一次判定出的「选过职业」（调试用）。 */
+    static boolean cachedClassChosen() {
+        return classChosenCache;
     }
 
     /** 游戏时间是否被判定为「冻住」（自检 / 调试用）。 */

@@ -9,7 +9,8 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
-| **1.20.35** | 「优先使用服务端数据」默认保持开启且不再可改：界面去掉开关、`useServerData` 字段删除（配置 v18），代码写死优先使用服务端组件数据 | `versions/v1.20.35/` |
+| **1.20.36** | 准备大厅（还没选职业）不再先闪面板：`visible()` 加「选过职业」门控 —— `ClassPassive`（客户端读得到时）→ 职业被动道具 → ViewStats「职业点」行依次回退 | `versions/v1.20.36/` |
+| 1.20.35 | 「优先使用服务端数据」默认保持开启且不再可改：界面去掉开关、`useServerData` 字段删除（配置 v18），代码写死优先使用服务端组件数据 | `versions/v1.20.35/` |
 | 1.20.34 | 敌人 / 玩家各一个「显示血条」整块开关（关掉后血条 + 上方文字都消失，只剩原版名字）；删掉 `teamShowBar`（配置 v17）；滚动提示不再写「滚动条可点可拖」 | `versions/v1.20.34/` |
 | 1.20.33 | 所有滚动页的滚动条都能点/拖（命中 ±5 px、悬停提亮）；队友血条独立成 `teamShowBar`；实体设置页滑块重建不回弹；「回到初始位置」按对象取默认 y；配置 v16 | `versions/v1.20.33/` |
 | 1.20.32 | 游戏时间 / 难度骷髅移入「其它」；滚动条可点可拖（三个滚动页）；盾牌不透明度默认 65%；属性面板文字阴影独立、实体血条「文字阴影」默认关；配置 v15 | `versions/v1.20.32/` |
@@ -79,7 +80,45 @@
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
 
-## 1.20.35（当前）
+## 1.20.36（当前）
+
+### ① 问题
+
+地图在 `gamestart` 就 `enable ViewStats` 了，但职业要等选择窗口结束（`ClassPassive` 由 0 变成 1..26）才定。
+这段几秒的窗口里，本模组已经在正常采集、正常上屏 —— 所以「准备大厅 » 选择职业」之间面板会先闪一下。
+
+### ② 关键发现：客户端读不到 `ClassPassive`
+
+按你说的用 `ClassPassive > 0` 做判据是最准的，但**它在原版地图上客户端拿不到**：
+
+- 地图 `scoreboards_part_2.mcfunction` 只是 `scoreboard objectives add ClassPassive dummy`，
+  **从未把 `ClassPassive` 放进任何显示槽**（全部 `setdisplay` 语句里没有它）；
+- 26.3 的服务端只对「被追踪（`ServerScoreboard.trackedObjectives`，由 `setDisplayObjective` 触发）」的
+  objective 同步分数 —— 反编译 `ServerScoreboard.onScoreChanged/onObjectiveAdded` 确认：加分只在
+  `trackedObjectives.contains(obj)` 时才发 `ClientboundSetScorePacket`，而 `onObjectiveAdded` 只置脏、不广播。
+
+所以 1.20.36 仍然把 `ClassPassive` 排在第一位（哪天地图把它挂进显示槽、或整合包自己推，就直接生效），
+但实际生效的是下面两条**客户端看得见**的等价信号：
+
+### ③ 门控怎么判（按可信度回退）
+
+`SelfStats.classChosen()`，每 250 ms 重算一次（`CLASS_RECHECK_MS`）：
+
+| 顺序 | 信号 | 为什么可信 |
+| --- | --- | --- |
+| 1 | `ClassPassive > 0`（客户端真能看到时） | 地图自己的判据 |
+| 2 | 背包里有职业被动道具 `lime_dye[custom_data={classPassive:1b}]` | `gamestart` 会 `clear @a[tag=!OP]` 清空背包，选完职业才由 `class_passive_main` 重新发这件道具 —— 正好是「已选职业」的直接证据 |
+| 3 | 最近一趟 ViewStats 里出现过「职业点」那行（`ClassStat != 0` 才发） | 给「把道具存进箱子」的人兜底 |
+
+三条都没有 → `visible()` 返回 false：面板不画（数据照常采集，`debug=true` 的调试行会多出 `class yes/no`）。
+地图回「没开局 / 无法触发」、断线重连、回到大厅时，这三条信号一起清掉，避免把上一局的判定带进下一个准备大厅。
+
+### ④ 配置 / 自检
+
+- 配置版本**不变（v18）**：这次没有任何字段变化，只是行为门控。
+- `checks=5349 failures=0`（+12：可见性真值表、「职业点」行置位/清位、没开局回执清信号、道具判定）。
+
+## 1.20.35
 
 ### ① 「优先使用服务端数据」写死开启
 
