@@ -91,6 +91,18 @@ public final class SelfStatsLayoutScreen extends Screen {
         this.minecraft.gui.setScreen(this.parent);
     }
 
+    /**
+     * 对齐时不要模糊背景（1.20.27）。
+     *
+     * <p>原版 {@code Screen.extractBackground} 会调 {@code blurBeforeThisStratum()} 把世界糊掉；
+     * 拖动/对齐面板时玩家恰恰要靠真实画面判断位置，所以这里直接不画模糊层。
+     * 那层很淡的压暗（{@code INWORLD_MENU_BACKGROUND}）保留，文字仍然清楚。</p>
+     */
+    @Override
+    protected void extractBlurredBackground(GuiGraphicsExtractor graphics) {
+        // 故意留空
+    }
+
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);

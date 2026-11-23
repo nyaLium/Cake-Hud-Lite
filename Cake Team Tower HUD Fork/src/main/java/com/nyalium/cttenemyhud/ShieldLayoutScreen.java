@@ -53,6 +53,12 @@ public final class ShieldLayoutScreen extends Screen {
         this.minecraft.gui.setScreen(this.parent);
     }
 
+    /** 对齐时不要模糊背景（1.20.27，见 {@code SelfStatsLayoutScreen} 的同一段说明）。 */
+    @Override
+    protected void extractBlurredBackground(GuiGraphicsExtractor graphics) {
+        // 故意留空
+    }
+
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
