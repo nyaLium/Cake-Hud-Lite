@@ -14,7 +14,8 @@
 | 路径 | 内容 |
 | --- | --- |
 | `mod/` | 源码工程（Gradle + Loom，Minecraft 26.3 / Fabric） |
-| `versions/vX.Y.Z/` | **每个版本的归档**：jar、sources、README、RELEASE、实机证据图 |
+| `versions/vX.Y.Z/` | **正式版的归档**（当前只有 v1.0.0 / v1.0.1）：jar、sources、README、RELEASE |
+| `versions/pre-release/` | **发布前测试版的归档**（1.10.0 – 1.20.42，共 67 个）：同一套内容；清单见 `versions/pre-release/INDEX.md` |
 | `versions/ARCHIVE.md` | 全部版本的清单（大小 / SHA-256 / 内嵌版本号 / git 标签） |
 | `versions/VERSIONING.md` | 版本保留规则（每版必留档，不覆盖、不删除） |
 | `versions/tools/archive_audit.py` | 归档审计：重新生成 `ARCHIVE.md` 并校验 |
@@ -29,7 +30,7 @@
 
 ## 归档规则
 
-- 每个版本都必须有 `versions/vX.Y.Z/`，**不覆盖、不删除**；
+- 每个版本都必须有归档目录，**不覆盖、不删除**：正式版在 `versions/v1.0.x/`，测试版在 `versions/pre-release/vX.Y.Z/`（清单 `versions/pre-release/INDEX.md`）；
 - 归档内容：jar + sources + README + RELEASE（+ 实机截图）；
 - 每次发版后运行 `python versions/tools/archive_audit.py`，刷新 `versions/ARCHIVE.md`；
 - 根目录只保留**最新一版**的 jar，历史 jar 全部在 `versions/` 里。
