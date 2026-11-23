@@ -18,7 +18,7 @@
 | `versions/ARCHIVE.md` | 全部版本的清单（大小 / SHA-256 / 内嵌版本号 / git 标签） |
 | `versions/VERSIONING.md` | 版本保留规则（每版必留档，不覆盖、不删除） |
 | `versions/tools/archive_audit.py` | 归档审计：重新生成 `ARCHIVE.md` 并校验 |
-| `ctt-hud-fork-1.20.37.jar` | 最新版 jar（与 `versions/v1.20.37/` 中的字节一致） |
+| `ctt-hud-fork-1.20.38.jar` | 最新版 jar（与 `versions/v1.20.38/` 中的字节一致） |
 
 ## 安装
 
@@ -38,4 +38,4 @@
 
 - 功能与配置：`mod/README.md`
 - 版本沿革：`CHANGELOG.md`
-- 最新版说明：`versions/v1.20.37/RELEASE.md`
+- 最新版说明：`versions/v1.20.38/RELEASE.md`

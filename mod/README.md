@@ -2,9 +2,10 @@
 
 > **这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版**（原作者 TheHolyLord，MIT 许可）。
 >
-> 当前版本 **1.20.37**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.20.38**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/字号/透明度，
 > 88 个属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
+> 1.20.38 修掉「进存档那一刻属性行刷进聊天栏」：采集超时收尾后，自己 trigger 的迟到输出仍按我们的吞掉。
 >
 > **1.20.37 起彻底改名**：仓库 `CTT HUD - Fork`、Gradle 工程 `mod/`、包名 `com.nyalium.ctthudfork`、
 > 入口类 `CttHudForkClient` / `CttHudForkServer`、配置类 `HudConfig`、布局类 `HudLayout`、
@@ -14,11 +15,11 @@
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.20.37` |
+| 版本 | `1.20.38` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/ctt-hud-fork-1.20.30.jar` |
+| 产物 | `build/libs/ctt-hud-fork-1.20.38.jar` |
 
 ## 绘制方式（1.15.0 起）
 
