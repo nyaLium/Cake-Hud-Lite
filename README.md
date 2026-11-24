@@ -14,7 +14,7 @@
 > 纯客户端（Fork 自 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud)，MIT）；**客户端必装、服务端选装**，
 > 服务端只装 Fabric API 也能用完整功能。
 >
-> 当前正式版 **1.2.8**。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
+> 当前正式版 **1.2.9**。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
 
 ## 功能
 
@@ -34,7 +34,8 @@ jar 在 **GitHub Releases** 里：<https://github.com/nyaLium/CTT-HUD-Mod-Fork-V
 
 | 版本 | 附件 | 说明 |
 | --- | --- | --- |
-| **1.2.8**（最新） | `ctt-hud-fork-1.2.8.jar` + `-sources.jar` | 百分比文本前加红心：`❤ 73%`（癫狂 / 百分比回退都生效） |
+| **1.2.9**（最新） | `ctt-hud-fork-1.2.9.jar` + `-sources.jar` | 癫狂期间也摘掉原版 `below_name` 分数（不再与本 Mod 的 `❤ 73%` 重复、名字也落回原位） |
+| 1.2.8 | `ctt-hud-fork-1.2.8.jar` + `-sources.jar` | 百分比文本前加红心：`❤ 73%` |
 | 1.2.7 | `ctt-hud-fork-1.2.7.jar` + `-sources.jar` | 癫狂下显示「百分比文本 + 百分比条」 |
 | 1.2.6 | `ctt-hud-fork-1.2.6.jar` + `-sources.jar` | 癫狂下改画百分比血条 |
 | 1.2.5 | `ctt-hud-fork-1.2.5.jar` + `-sources.jar` | 癫狂改用专属 Boss 栏识别；未知诅咒也隐藏属性面板 |
@@ -75,7 +76,7 @@ jar 在 **GitHub Releases** 里：<https://github.com/nyaLium/CTT-HUD-Mod-Fork-V
 ```bash
 cd mod
 ./gradlew build        # 需要 JDK 25；会自动跑 selfCheck（4786 条断言）
-# 产物：mod/build/libs/ctt-hud-fork-1.2.8.jar（本地构建用；正式包见 Releases）
+# 产物：mod/build/libs/ctt-hud-fork-1.2.9.jar（本地构建用；正式包见 Releases）
 ```
 
 ## 目录结构
@@ -98,7 +99,7 @@ cd mod
 
 - 功能与配置详解：[`mod/README.md`](mod/README.md)（代码导览、配置字段表、界面文案 ↔ 字段对照）
 - 版本沿革：[`CHANGELOG.md`](CHANGELOG.md)
-- 最新版说明：[`RELEASES.md`](RELEASES.md) 或 [Release v1.2.8](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.8)
+- 最新版说明：[`RELEASES.md`](RELEASES.md) 或 [Release v1.2.9](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.9)
 - 发布清单：[`RELEASES.md`](RELEASES.md)
 - 版本规则：[`VERSIONING.md`](VERSIONING.md)
 

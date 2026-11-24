@@ -21,8 +21,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * 自动落回 {@code y ∈ [0, 9]}（即「分数原本占的那一行」）—— 这正是需要的位置，
  * 本 Mod 无需自己画名字。</p>
  *
- * <p>判定用 {@link HudTarget#managed}：只有数据包真正管控的实体（敌人 / 队友）才摘，
- * 其它实体（掉落物、船、画、Boss 条无关实体）一律不动。</p>
+ * <p>判定用 {@link HudTarget#hidesBelowNameScore}（1.2.9）：数据包真正管控的实体（敌人 / 队友）才摘，
+ * 其它实体（掉落物、船、画、Boss 条无关实体）一律不动；**癫狂期间也摘**，因为此时百分比
+ * 文本由本 Mod 绘制，原版数字会重复。</p>
  */
 @Mixin(EntityRenderer.class)
 public abstract class NameTagScoreMixin {
@@ -35,7 +36,8 @@ public abstract class NameTagScoreMixin {
         // 而头顶血条要按实体 UUID 取数据（见 HudRenderBridge）。
         HudRenderBridge.attach(state, entity);
         if (!HudConfig.get().hideBelowNameScore) return;
-        if (HudTarget.managed(Minecraft.getInstance(), entity)) {
+        // 1.2.9：癫狂时也摘 —— 那时百分比文本是本 Mod 画的，原版数字会重复。
+        if (HudTarget.hidesBelowNameScore(Minecraft.getInstance(), entity)) {
             state.scoreText = null;
         }
     }

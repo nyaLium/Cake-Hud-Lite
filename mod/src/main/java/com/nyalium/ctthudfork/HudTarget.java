@@ -59,6 +59,21 @@ public final class HudTarget {
         return true;
     }
 
+    /**
+     * 是否要把原版 {@code below_name} 分数摘掉（1.2.9）。
+     *
+     * <p>平时与 {@link #managed} 一致；<b>癫狂</b>时也要摘 —— 因为此时是<b>本 Mod</b>
+     * 在画「`❤ 百分比` + 百分比条」，原版那条 {@code HealthPercent} 数字会重复
+     * （截图里就是名字下方多出的 `76`）。未知诅咒仍交给 {@link #managed} 的 false（整块 UI 隐藏）。</p>
+     */
+    public static boolean hidesBelowNameScore(Minecraft mc, Entity entity) {
+        if (mc == null || entity == null) return false;
+        if (!HudConfig.get().hideBelowNameScore) return false;
+        if (CurseDetector.isActive(mc)) return false;
+        if (BerserkDetector.isActive(mc)) return managedCore(mc, entity);
+        return managed(mc, entity);
+    }
+
     /** 不看诅咒 / 癫狂、只看「这只实体归不归本 Mod 管」。 */
     static boolean managedCore(Minecraft mc, Entity entity) {
         if (mc == null || entity == null) return false;
