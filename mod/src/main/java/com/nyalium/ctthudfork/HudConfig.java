@@ -35,8 +35,12 @@ public final class HudConfig {
         public int configVersion = CURRENT_VERSION;
         /** 总开关：false 时完全不绘制。 */
         public boolean enabled = true;
-        /** 血条 + 文字的透明度，0.50 ~ 1.00（低于 0.50 会被夹到 0.50）。界面上叫「透明度」（1.0.0 起统一）。 */
-        public double opacity = 0.75;
+        /**
+         * 血条 + 文字的透明度，0.10 ~ 1.00（低于 0.10 会被夹到 0.10）。界面上叫「透明度」（1.0.0 起统一）。
+         *
+         * <p>1.2.2：默认从 0.75 改成 <b>0.50</b>，下限从 0.50 放宽到 0.10；旧配置里仍停在 0.75 的会在迁移时改成 0.50。</p>
+         */
+        public double opacity = 0.50;
         /**
          * 实体血条（名字 / 心数 / 护甲）是否带文字阴影。
          *
@@ -224,7 +228,7 @@ public final class HudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 22;
+    public static final int CURRENT_VERSION = 23;
 
     /** 1.20.41：面板「默认位置」的哨兵值（{@code -1} = 用动态默认，见 {@link #defaultPanelY}）。 */
     public static final int DEFAULT_Y_SENTINEL = -1;
@@ -676,6 +680,11 @@ public final class HudConfig {
             //           只动仍停在旧默认 0 的，自己选过 1 的不动。
             if (cfg.selfStatsMode == 0) cfg.selfStatsMode = 2;
         }
+        if (version < 23) {
+            // 1.2.2：血条通用透明度默认值 0.75 → 0.50（下限同时放宽到 0.10）。
+            // 沿用本文件惯例：只动仍停在旧默认 0.75 的，自己调过的不覆盖。
+            if (cfg.opacity == 0.75) cfg.opacity = 0.50;
+        }
         cfg.configVersion = CURRENT_VERSION;
     }
 
@@ -686,7 +695,7 @@ public final class HudConfig {
      */
     static Cfg normalize(Cfg read) {
         if (read == null) read = new Cfg();
-        read.opacity = clamp(read.opacity, 0.5, 1.0);
+        read.opacity = clamp(read.opacity, 0.1, 1.0);
         read.scale = clamp(read.scale, 0.75, 1.5);
         read.maxDistance = clamp(read.maxDistance, 4.0, 256.0);
         // 血条长度：非法值回落默认 75，其余夹在 50~150。

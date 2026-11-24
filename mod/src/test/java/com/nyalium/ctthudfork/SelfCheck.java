@@ -389,7 +389,7 @@ public final class SelfCheck {
         c.maxDistance = 0;
         c.barWidth = -100;
         HudConfig.normalize(c);
-        check(c.opacity == 0.5, "opacity 0.1 应夹到 0.5");
+        check(c.opacity == 0.1, "opacity 0.1 应保持 0.1（下限 0.10）");
         check(c.scale == 0.75, "scale 0.01 应夹到 0.75");
         check(c.maxDistance == 4.0, "maxDistance 0 应夹到 4");
         check(c.barWidth == HudLayout.BAR_WIDTH_MIN, "barWidth -100 应夹到 50");
@@ -415,7 +415,7 @@ public final class SelfCheck {
         check(defaults.teamBarWidth == 75.0, "队友血条默认长度也应为 75");
         check(defaults.scale == 0.9, "默认缩放应为 0.9: " + defaults.scale);
         check(defaults.teamScale == 0.9, "队友默认缩放也应为 0.9: " + defaults.teamScale);
-        check(defaults.opacity == 0.75, "默认透明度应为 0.75");
+        check(defaults.opacity == 0.5, "默认透明度应为 0.50");
         check(defaults.showBar, "默认应画血条");
         check(defaults.hideBelowNameScore, "默认应隐藏 below_name 分数");
         check(defaults.hideEnemyBossBar, "默认应隐藏上方 Boss 栏里的最近敌人信息");
@@ -424,7 +424,7 @@ public final class SelfCheck {
 
         check(HudConfig.normalize(null) != null, "normalize(null) 不能返回 null");
 
-        // v22：显示方式默认值改成「HUD + 容器界面」，只动仍停在旧默认 0 的
+        // v23：通用透明度默认 0.75 → 0.50（下限 0.10）；v22：显示方式默认值改成「HUD + 容器界面」
         HudConfig.Cfg modeOld = new HudConfig.Cfg();
         modeOld.configVersion = 21;
         modeOld.selfStatsMode = 0;
@@ -481,12 +481,13 @@ public final class SelfCheck {
         HudConfig.migrate("{\"configVersion\":3,\"scale\":1.0}", v3);
         check(v3.scale == 1.0, "已经是 v3 的配置不该再迁移: " + v3.scale);
 
-        for (double op = 0.4; op <= 1.2; op += 0.05) {
+        // 1.2.2：下限放宽到 0.10（原来 0.50），alpha 的合法区间随之变成 26~255。
+        for (double op = 0.05; op <= 1.2; op += 0.05) {
             HudConfig.Cfg t = new HudConfig.Cfg();
             t.opacity = op;
             HudConfig.normalize(t);
             int alpha = (int) Math.round(255.0 * t.opacity);
-            check(alpha >= 128 && alpha <= 255, "opacity=" + op + " 映射出 alpha=" + alpha);
+            check(alpha >= 26 && alpha <= 255, "opacity=" + op + " 映射出 alpha=" + alpha);
         }
     }
 
@@ -543,7 +544,7 @@ public final class SelfCheck {
         HudLayout.Result r = run("心数行", new Data("两色", 160, 100, false, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
         String joined = join(r);
-        check(joined.equals("❤100/100 💛60"), "心数行内容=" + joined);
+        check(joined.equals("❤100/100 ❤60"), "心数行内容=" + joined);
         check(!joined.contains("|"), "同一条心数行不该有分隔符=" + joined);
         check(r.rowCount() == 1, "没有护甲时只有一行心数: " + r.rowCount());
 
@@ -561,12 +562,12 @@ public final class SelfCheck {
         HudLayout.Result crackedLine = HudLayout.compute(50, 50, false, 0,
                 new int[7], HeartCounts.of(50, 0, 0, 0, 5), o, SelfCheck::width);
         check(crackedLine.rowCount() == 1, "敌人心数固定一行: " + crackedLine.rowCount());
-        check(rowText(crackedLine, 0).equals("❤50/50 💔5"),
+        check(rowText(crackedLine, 0).equals("❤50/50 ❤5"),
                 "轮换到碎心时应显示: " + rowText(crackedLine, 0));
         o.cycleKind = HeartCounts.PINK;
         HudLayout.Result pinkLine = HudLayout.compute(50, 50, false, 0,
                 new int[7], HeartCounts.of(50, 0, 0, 0, -5), o, SelfCheck::width);
-        check(rowText(pinkLine, 0).equals("❤50/50 💗5"),
+        check(rowText(pinkLine, 0).equals("❤50/50 ❤5"),
                 "轮换到粉心时应显示: " + rowText(pinkLine, 0));
         check(HeartCounts.COLORS[HeartCounts.CRACKED] == 0xAA0000, "碎心配色应为 dark_red");
         check(HeartCounts.COLORS[HeartCounts.PINK] == 0xFF55FF, "粉心配色应为 light_purple");
@@ -574,7 +575,7 @@ public final class SelfCheck {
         o.cycleKind = HeartCounts.BLUE;
         HudLayout.Result blueLine = HudLayout.compute(50, 50, false, 0,
                 new int[7], HeartCounts.of(30, 0, 0, 20, 0), o, SelfCheck::width);
-        check(rowText(blueLine, 0).equals("❤30/50 💙20"),
+        check(rowText(blueLine, 0).equals("❤30/50 ❤20"),
                 "轮换到蓝心时应显示: " + rowText(blueLine, 0));
 
         // 轮换到该类心不存在时，只显示红心。
@@ -612,7 +613,7 @@ public final class SelfCheck {
         check(armored.rowCount() == 2, "有护甲时固定两行: " + armored.rowCount());
         check(rowText(armored, 0).equals("\uD83D\uDEE13  " + EnemyData.ARMOR_ICONS[1] + "5"),
                 "护甲与元素护甲之间应有两个空格: " + rowText(armored, 0));
-        check(rowText(armored, 1).equals("❤100/100 💛60"),
+        check(rowText(armored, 1).equals("❤100/100 ❤60"),
                 "第二行应是红心 + 一种轮换心: " + rowText(armored, 1));
         check(armored.rows.get(0).top == HudLayout.TEXT_TOP - HudLayout.ROW_STEP,
                 "护甲行要再抬 " + HudLayout.ROW_STEP + " 像素");
@@ -632,7 +633,7 @@ public final class SelfCheck {
         HudLayout.Result one = HudLayout.compute(150, 150, false, 0, new int[7],
                 HeartCounts.of(60, 40, 30, 20, 2), oneKind, SelfCheck::width);
         check(one.rowCount() == 1, "敌人心数固定一行: " + one.rowCount());
-        check(rowText(one, 0).equals("❤60/150 🖤30"),
+        check(rowText(one, 0).equals("❤60/150 ❤30"),
                 "敌人只显示一种轮换心: " + rowText(one, 0));
 
         // 玩家排版（playerStyle）：碎心/粉心 + 蓝心固定在最上面一行，心数行只轮换魂/黑。
@@ -651,22 +652,22 @@ public final class SelfCheck {
         HudLayout.Result teamHearts = HudLayout.compute(150, 150, false, 0, new int[7],
                 HeartCounts.of(60, 40, 30, 20, 2), teamLike, SelfCheck::width);
         check(teamHearts.rowCount() == 2, "玩家：特殊心 + 心数，共两行: " + teamHearts.rowCount());
-        check(rowText(teamHearts, 0).equals("💔2 💙20"),
+        check(rowText(teamHearts, 0).equals("❤2 ❤20"),
                 "玩家最上面一行 = 碎心 + 蓝心: " + rowText(teamHearts, 0));
-        check(rowText(teamHearts, 1).equals("❤60/150 💛40"),
+        check(rowText(teamHearts, 1).equals("❤60/150 ❤40"),
                 "玩家心数行只轮换魂/黑: " + rowText(teamHearts, 1));
 
         teamLike.cycleKind = HeartCounts.BLACK;
         HudLayout.Result teamBlack = HudLayout.compute(150, 150, false, 0, new int[7],
                 HeartCounts.of(60, 40, 30, 20, 2), teamLike, SelfCheck::width);
-        check(rowText(teamBlack, 1).equals("❤60/150 🖤30"),
+        check(rowText(teamBlack, 1).equals("❤60/150 ❤30"),
                 "轮换到黑心时: " + rowText(teamBlack, 1));
 
         teamLike.cycleKind = HeartCounts.SOUL;
         HudLayout.Result teamPlain = HudLayout.compute(150, 150, false, 0, new int[7],
                 HeartCounts.of(60, 40, 0, 0, 0), teamLike, SelfCheck::width);
         check(teamPlain.rowCount() == 1, "玩家没有碎心/蓝心时只有一行: " + teamPlain.rowCount());
-        check(rowText(teamPlain, 0).equals("❤60/150 💛40"),
+        check(rowText(teamPlain, 0).equals("❤60/150 ❤40"),
                 "玩家心数行=" + rowText(teamPlain, 0));
 
         // 玩家排版下，红心与轮换心的顺序固定：红心在前。
@@ -689,7 +690,7 @@ public final class SelfCheck {
         check(!teamFlat.contains(EnemyData.ARMOR_ICONS[1]), "队友不该出现 🔥 元素护甲段: " + teamFlat);
         check(!teamFlat.contains("|"), "队友不该出现护甲分隔符: " + teamFlat);
         // join() 把几行首尾相接，去掉空格再比（玩家：特殊心行 + 红心/轮换心行）。
-        check(teamFlat.replace(" ", "").equals("💔2💙20❤60/150💛40"),
+        check(teamFlat.replace(" ", "").equals("❤2❤20❤60/150❤40"),
                 "队友这几行只应有心: " + teamFlat);
         check(teamArmored.barWidth == 100, "队友的血条仍要画: " + teamArmored.barWidth);
 
@@ -705,7 +706,7 @@ public final class SelfCheck {
                 enemyArmor, SelfCheck::width);
         check(rowText(mobArmored, 0).equals("\uD83D\uDEE15  \uD83D\uDD253 \u26031"),
                 "敌人护甲行（两个空格 + 元素护甲）: " + rowText(mobArmored, 0));
-        check(rowText(mobArmored, 1).equals("❤60/150 🖤30"),
+        check(rowText(mobArmored, 1).equals("❤60/150 ❤30"),
                 "敌人心数行只显示一种轮换心: " + rowText(mobArmored, 1));
         // 用转义写死期望值：🛡 在源码里常被写成「🛡+U+FE0F」，直接比字面量会踩变体选择符。
         check(join(armored).contains("\uD83D\uDEE13"), "防御段缺失: " + join(armored));
@@ -763,7 +764,7 @@ public final class SelfCheck {
             check(armour.contains("\uD83D\uDEE15"), "第 " + page + " 页应始终带 🛡5: " + armour);
             check(armour.contains(pageArmour[page]),
                     "第 " + page + " 页应显示 " + pageArmour[page] + ": " + armour);
-            check(rowText(r, 1).equals("❤60/150 💛40"), "第二行应是心数: " + rowText(r, 1));
+            check(rowText(r, 1).equals("❤60/150 ❤40"), "第二行应是心数: " + rowText(r, 1));
             check(text.contains("❤60/150"), "心数行始终在: " + text);
         }
 
@@ -828,11 +829,18 @@ public final class SelfCheck {
 
     private static void bigNumbers() {
         check(HudLayout.num(0).equals("0"), "num(0)");
-        check(HudLayout.num(99999).equals("99999"), "num(99999)=" + HudLayout.num(99999));
+        check(HudLayout.num(100).equals("100"), "num(100)=" + HudLayout.num(100));
+        check(HudLayout.num(900).equals("900"), "num(900) 不该缩写成 0.9K: " + HudLayout.num(900));
+        check(HudLayout.num(999).equals("999"), "num(999)=" + HudLayout.num(999));
+        check(HudLayout.num(1000).equals("1K"), "num(1000)=" + HudLayout.num(1000));
+        check(HudLayout.num(1100).equals("1.1K"), "num(1100)=" + HudLayout.num(1100));
+        check(HudLayout.num(24999).equals("24.9K"), "num(24999) 应截断成 24.9K: " + HudLayout.num(24999));
+        check(HudLayout.num(99_999).equals("99.9K"), "num(99999)=" + HudLayout.num(99_999));
         check(HudLayout.num(100_000).equals("100K"), "num(100000)=" + HudLayout.num(100_000));
         check(HudLayout.num(123_456).equals("123K"), "num(123456)=" + HudLayout.num(123_456));
         check(HudLayout.num(999_999).equals("999K"), "num(999999)=" + HudLayout.num(999_999));
-        check(HudLayout.num(1_234_567).equals("1.2M"), "num(1234567)=" + HudLayout.num(1_234_567));
+        check(HudLayout.num(1_100_000).equals("1.1M"), "num(1100000)=" + HudLayout.num(1_100_000));
+        check(HudLayout.num(2_100_000).equals("2.1M"), "num(2100000)=" + HudLayout.num(2_100_000));
         check(HudLayout.num(12_345_678).equals("12.3M"), "num(12345678)="
                 + HudLayout.num(12_345_678));
         check(HudLayout.num(999_999_999).equals("999M"), "num(999999999)="
@@ -855,6 +863,54 @@ public final class SelfCheck {
         check(!text.contains("999999"), "大数值应先缩写: " + text);
         check(text.contains("999K/999K"), "大数值缩写格式: " + text);
         check(text.length() < 60, "缩写后整行不该太长: " + text.length() + " -> " + text);
+
+        // 1.2.2：玩家头顶的心数**不缩写**（魂/黑/蓝/碎/粉都照原样写）
+        HudLayout.Options p2 = new HudLayout.Options();
+        p2.showArmor = false;
+        p2.showBar = false;
+        p2.playerStyle = true;
+        p2.cycleKind = HeartCounts.SOUL;
+        String pt = join(HudLayout.compute(12_345, 12_345, false, 0, new int[7],
+                HeartCounts.of(12_345, 10_000, 0, 0, 0), p2, SelfCheck::width));
+        check(pt.contains("12345") && pt.contains("10000"), "玩家心数不该缩写: " + pt);
+        check(!pt.contains("12.3K") && !pt.contains("10K"), "玩家心数不该出现缩写后缀: " + pt);
+
+        // 1.2.2：六类心用同一个 ❤ 字形，靠颜色区分
+        for (int i = 0; i < HeartCounts.COUNT; i++) {
+            check(HeartCounts.ICONS[i].equals("\u2764"), "第 " + i + " 类心应使用 ❤");
+        }
+
+        // 1.2.2：通用透明度 0.10 ~ 1.00，默认 0.50；旧配置的 0.75 迁移成 0.50
+        HudConfig.Cfg low = new HudConfig.Cfg();
+        low.opacity = 0.05;
+        HudConfig.normalize(low);
+        check(low.opacity == 0.1, "opacity 0.05 应夹到 0.10: " + low.opacity);
+        HudConfig.Cfg kept = new HudConfig.Cfg();
+        kept.opacity = 0.4;
+        HudConfig.normalize(kept);
+        check(kept.opacity == 0.4, "opacity 0.40 应原样保留: " + kept.opacity);
+        HudConfig.Cfg mig = new HudConfig.Cfg();
+        mig.configVersion = 22;
+        mig.opacity = 0.75;
+        HudConfig.migrate("{\"configVersion\":22,\"opacity\":0.75}", mig);
+        check(mig.opacity == 0.5, "v22 的 0.75 应迁移成 0.50: " + mig.opacity);
+
+        // 1.2.2：真盔甲不参与翻页，常驻在 🛡 防御后面
+        int[] onlyTrue = new int[EnemyData.ARMOR_OBJECTIVES.length];
+        onlyTrue[EnemyData.TRUE_ARMOR_INDEX] = 20;
+        check(HudLayout.armourPageCount(onlyTrue) == 0, "真盔甲不该占翻页名额");
+        HudLayout.Options p3 = new HudLayout.Options();
+        p3.showArmor = true;
+        p3.showBar = false;
+        p3.showHearts = false;
+        String trueTop = join(HudLayout.compute(100, 100, false, 0, onlyTrue,
+                HeartCounts.forMob(100, 100), p3, SelfCheck::width));
+        check(trueTop.contains("20"), "只有真盔甲时也应显示: " + trueTop);
+        int[] bothArmor = new int[EnemyData.ARMOR_OBJECTIVES.length];
+        bothArmor[0] = 10;                       // 火
+        bothArmor[EnemyData.TRUE_ARMOR_INDEX] = 20;
+        check(HudLayout.armourPageCount(bothArmor) == 1, "真盔甲不算页后只剩 1 页: "
+                + HudLayout.armourPageCount(bothArmor));
     }
 
     /** 第 index 行拼起来的文字（0 = 最上面那行）。 */
@@ -1327,7 +1383,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(HudConfig.CURRENT_VERSION == 22, "配置版本应为 22");
+        check(HudConfig.CURRENT_VERSION == 23, "配置版本应为 23");
         HudConfig.Cfg defaults = HudConfig.normalize(new HudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1336,7 +1392,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         HudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 22, "v3 → v22 应升版本号");
+        check(v3.configVersion == 23, "v3 → v23 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1511,7 +1567,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         HudConfig.Cfg cfg = new HudConfig.Cfg();
-        check(HudConfig.CURRENT_VERSION == 22, "配置版本应为 22");
+        check(HudConfig.CURRENT_VERSION == 23, "配置版本应为 23");
         HudConfig.Cfg defaults = HudConfig.normalize(new HudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1564,7 +1620,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         HudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 22, "v4 → v22 应升版本号");
+        check(v4.configVersion == 23, "v4 → v23 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板

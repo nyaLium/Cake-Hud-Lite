@@ -46,6 +46,8 @@ public final class EnemyData {
     };
     /** 蓝 🛡 Defence 的颜色。 */
     public static final int DEFENCE_COLOR = 0x5555FF;
+    /** 真盔甲在 {@link #ARMOR_OBJECTIVES} / {@link #ARMOR_ICONS} 里的下标（1.2.2：不参与翻页）。 */
+    public static final int TRUE_ARMOR_INDEX = 4;
 
     private EnemyData() {}
 

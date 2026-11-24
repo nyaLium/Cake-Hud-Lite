@@ -222,8 +222,15 @@ public final class HudWorldRenderer {
             refresh(mc);
             TeamBarTitle.Entry entry = teamEntries.get(id);
             if (entry != null) {
-                // 没有服务端组件时队伍条只给 AllHearts / MaxHP，拆不出红心 —— 只能按它填。
-                return EnemyData.exact(entry.hp, entry.maxHp, entry.ratio(), 0, NO_ARMOUR,
+                // 1.2.2：纯客户端时 below_name 的 HealthPercent 就是「红心 ÷ MaxHP」的百分比
+                // （数据包 health.mcfunction 对所有参战玩家都算），比队伍条的 AllHearts/MaxHP
+                // 更贴近血条本意（蓝心/魂心不该撑满绿条）。有百分比就用它填进度，
+                // 文字仍按队伍条的 当前/上限 显示。
+                int percent = EnemyData.healthPercentOf(mc.level.getScoreboard(), entity);
+                float ratio = percent >= 0
+                        ? Math.max(0.0f, Math.min(1.0f, percent / 100.0f))
+                        : entry.ratio();
+                return EnemyData.exact(entry.hp, entry.maxHp, ratio, 0, NO_ARMOUR,
                         HeartCounts.unknown());
             }
             // 队伍条里没这一条（没开队伍条 / 解析时没认到他）→ 退回队友自己的

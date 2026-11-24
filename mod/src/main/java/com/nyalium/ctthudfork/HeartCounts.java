@@ -50,15 +50,20 @@ public final class HeartCounts {
     public static final int UNKNOWN = Integer.MIN_VALUE;
 
     /**
-     * 图标。红/魂/黑/蓝/碎用 emoji；碎心画暗红、粉心画亮紫（与数据包 view_stats 同色）。
+     * 图标：**六类心统一用同一个 ❤**，靠 {@link #COLORS} 区分颜色。
+     *
+     * <p>1.2.2：以前魂/黑/蓝/碎/粉用的是 💛🖤💙💔💗 这些 emoji，而地图的
+     * {@code view_stats.mcfunction} 对每一类心都是 {@code {text:"❤", color:...}} ——
+     * 同一个字形换颜色。两种写法在字体里会落成不同的字形（emoji 彩色字 vs 地图字体），
+     * 所以魂心看起来和红心不一样。现在统一成 ❤，与地图 / 属性面板一致。</p>
      */
     public static final String[] ICONS = {
-            "\u2764",             // ❤
-            "\uD83D\uDC9B",       // 💛
-            "\uD83D\uDDA4",       // 🖤
-            "\uD83D\uDC99",       // 💙
-            "\uD83D\uDC94",       // 💔 碎心
-            "\uD83D\uDC97"        // 💗 粉心
+            "\u2764",             // ❤ 红
+            "\u2764",             // ❤ 魂（黄）
+            "\u2764",             // ❤ 黑（紫）
+            "\u2764",             // ❤ 蓝（蓝）
+            "\u2764",             // ❤ 碎（暗红）
+            "\u2764"              // ❤ 粉（亮紫）
     };
 
     /** 与血条配色一致：红=红、魂=黄、黑=紫、蓝=蓝、碎=暗红、粉=亮紫（同数据包 view_stats）。 */

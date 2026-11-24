@@ -227,6 +227,14 @@ public final class HudLayout {
             if (defence != 0) {
                 top.add(new Line("\uD83D\uDEE1" + num(defence), EnemyData.DEFENCE_COLOR));
             }
+            // 1.2.2：真盔甲（TrueArmor）不再参与翻页，和 🛡 防御一样常驻。
+            // 数据包里它是 ArmorDisplay 的一页（白 🛡），但它属于「护甲」类而不是元素抗性。
+            int trueArmor = trueArmorValue(armor);
+            if (trueArmor != 0) {
+                top.add(new Line(HEART_GAP, 0xFFFFFF));
+                top.add(new Line(EnemyData.ARMOR_ICONS[EnemyData.TRUE_ARMOR_INDEX]
+                        + num(trueArmor), EnemyData.ARMOR_COLORS[EnemyData.TRUE_ARMOR_INDEX]));
+            }
             List<Line> elements = armourPage(armor, opt.armourPage);
             if (!elements.isEmpty()) {
                 if (!top.isEmpty()) {
@@ -246,16 +254,16 @@ public final class HudLayout {
         if (opt.showNumbers) {
             if (opt.showHearts && hearts != null && hearts.any()) {
                 if (hearts.has(HeartCounts.RED)) {
-                    heartRow.add(redLine(hearts.get(HeartCounts.RED), maxHp));
+                    heartRow.add(redLine(hearts.get(HeartCounts.RED), maxHp, !opt.playerStyle));
                 }
                 if (opt.playerStyle) {
-                    addKinds(top, hearts, HeartCounts.CRACKED, HeartCounts.PINK, HeartCounts.BLUE);
+                    addKinds(top, hearts, false, HeartCounts.CRACKED, HeartCounts.PINK, HeartCounts.BLUE);
                 }
                 if (opt.cycleKind >= 0 && hearts.has(opt.cycleKind)) {
                     if (!heartRow.isEmpty()) {
                         heartRow.add(new Line(HEART_GAP, 0xFFFFFF));
                     }
-                    heartRow.add(kindLine(opt.cycleKind, hearts.get(opt.cycleKind)));
+                    heartRow.add(kindLine(opt.cycleKind, hearts.get(opt.cycleKind), !opt.playerStyle));
                 }
             } else if (percentOnly) {
                 // 纯客户端只有 below_name 的 HealthPercent：拆不出各类心，但**至少把百分比数字画出来**
@@ -301,6 +309,7 @@ public final class HudLayout {
         int seen = 0;
         int n = Math.min(armor.length, EnemyData.ARMOR_ICONS.length);
         for (int i = 0; i < n; i++) {
+            if (i == EnemyData.TRUE_ARMOR_INDEX) continue;   // 1.2.2：真盔甲常驻，不占页
             int v = armor[i];
             if (v == 0) continue;
             int itemPage = seen / ARMOUR_PAGE_SIZE;
@@ -317,15 +326,21 @@ public final class HudLayout {
      * <p>红心上限就是 {@code MaxHP}（数据包 {@code RedHearts = min(RedHearts, MaxHP)}）；
      * 上限未知（≤ 0）时只写当前值。</p>
      */
-    private static Line redLine(int red, int maxHp) {
+    private static Line redLine(int red, int maxHp, boolean abbreviate) {
         String icon = HeartCounts.ICONS[HeartCounts.RED];
-        String text = maxHp > 0 ? icon + num(Math.max(0, red)) + "/" + num(maxHp) : icon + num(Math.max(0, red));
+        String cur = number(Math.max(0, red), abbreviate);
+        String text = maxHp > 0 ? icon + cur + "/" + number(maxHp, abbreviate) : icon + cur;
         return new Line(text, HeartCounts.COLORS[HeartCounts.RED]);
     }
 
+    /** 数字文本：{@code abbreviate} = false 时原样输出（玩家头顶的心数不缩写）。 */
+    static String number(int value, boolean abbreviate) {
+        return abbreviate ? num(value) : Integer.toString(value);
+    }
+
     /** 某一类心的一段：图标 + 数量。 */
-    private static Line kindLine(int kind, int value) {
-        return new Line(HeartCounts.ICONS[kind] + num(value), HeartCounts.COLORS[kind]);
+    private static Line kindLine(int kind, int value, boolean abbreviate) {
+        return new Line(HeartCounts.ICONS[kind] + number(value, abbreviate), HeartCounts.COLORS[kind]);
     }
 
     /**
@@ -356,20 +371,23 @@ public final class HudLayout {
      * 把指定几类心各写成一段，追加到 {@code lines}，<b>只写存在的类型</b>。
      * 段之前补一个空格（{@code lines} 已有内容时）。碎心与粉心互斥。
      */
-    private static void addKinds(List<Line> lines, HeartCounts hearts, int... kinds) {
+    private static void addKinds(List<Line> lines, HeartCounts hearts, boolean abbreviate, int... kinds) {
         for (int kind : kinds) {
             if (!hearts.has(kind)) continue;
             if (!lines.isEmpty()) {
                 lines.add(new Line(HEART_GAP, 0xFFFFFF));
             }
-            lines.add(kindLine(kind, hearts.get(kind)));
+            lines.add(kindLine(kind, hearts.get(kind), abbreviate));
         }
     }
 
     // ── 大数值缩写 ──
 
-    /** 超过这个值开始用 K / M / B 缩写。 */
-    public static final int NUM_EXACT_LIMIT = 100_000;
+    /** 超过这个值开始用 K / M / B 缩写（1.2.2 起从 100000 降到 1000）。
+     *
+     * <p>按需求「整数位必须 ≥ 1」：900 仍写 {@code 900}，不会变成 {@code 0.9K}；
+     * 1000 才进 K。小数一位、**截断**（24999 → {@code 24.9K}）。</p> */
+    public static final int NUM_EXACT_LIMIT = 1_000;
 
     /**
      * 数字的显示文本：{@code < 100000} 原样，再大改写成 {@code 123.4K / 12.3M / 2.1B}。
@@ -403,9 +421,16 @@ public final class HudLayout {
         int items = 0;
         int n = Math.min(armor.length, EnemyData.ARMOR_ICONS.length);
         for (int i = 0; i < n; i++) {
+            if (i == EnemyData.TRUE_ARMOR_INDEX) continue;   // 真盔甲常驻，不算页
             if (armor[i] != 0) items++;
         }
         return (items + ARMOUR_PAGE_SIZE - 1) / ARMOUR_PAGE_SIZE;
+    }
+
+    /** 真盔甲的值（下标见 {@link EnemyData#TRUE_ARMOR_INDEX}）；数组不够长时 0。 */
+    static int trueArmorValue(int[] armor) {
+        if (armor == null || armor.length <= EnemyData.TRUE_ARMOR_INDEX) return 0;
+        return armor[EnemyData.TRUE_ARMOR_INDEX];
     }
 
     /** 页号夹到 {@code [0, pages)}；页数为 0 时返回 0。 */
