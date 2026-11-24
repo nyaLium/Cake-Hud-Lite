@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.2.10** | 癫狂改为**只隐藏自身属性面板**（数据包查证：癫狂不隐藏最近敌人条 / 队伍血量条 / below_name，实体血条与信息照常）；修「魂心溢出时血条瞬间变满」（队友百分比读不到时给 5 s 粘性缓存）；「当前/上限」前加 ❤ | [Release v1.2.10](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.10) |
 | **1.2.9** | 癫狂期间也摘原版 `below_name` 分数：1.2.6 起癫狂分支绕过 `managed()`，导致本 Mod 的 `❤ 百分比` 与原版数字重复、名字被抬高 9 px；新增 `HudTarget.hidesBelowNameScore` 统一判定 | [Release v1.2.9](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.9) |
 | **1.2.8** | 百分比文本前加红心：`❤ 73%`（`percentOnly` 分支统一处理，癫狂 / 队友回退 / 敌人回退都生效） | [Release v1.2.8](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.8) |
 | **1.2.7** | 癫狂下补上百分比**文本**：只关心数/护甲，`showNumbers` 保留 → `HudLayout` 走 percentOnly 分支写 `73%`，配上百分比条（1.2.6 只有条没有字） | [Release v1.2.7](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.7) |
@@ -106,6 +107,36 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.2.10
+
+### ① 癫狂口径（数据包查证）
+
+| 项 | 癫狂期间是否被地图隐藏 |
+| --- | --- |
+| 最近敌人 Boss 栏 `targetting` | 否 |
+| 队伍血量 Boss 栏 `spectator_bossbar` | 否（`misc.mcfunction` 每 tick 无条件重设） |
+| 玩家头顶 `below_name` 百分比 | 否（只有诅咒会 `setdisplay below_name`） |
+
+所以：**只隐藏自身属性面板**（HUD 与容器），队友/敌人的血条与信息照常显示。
+1.2.6–1.2.9 的癫狂专用绘制（百分比条/文本）与 `EnemyData.percent` 工厂已删除。
+
+### ② 魂心溢出「瞬间变满」
+
+队友进度优先 `HealthPercent`；读不到时原来退到 `entry.ratio()`（AllHearts/MaxHP，溢出时恒 1）。
+改为 **5 s 粘性缓存**（`PERCENT_STICKY_MS`），读不到时用最近一次已知百分比；进服/断线清空。
+
+### ③ `❤ 当前/上限`
+
+`HudLayout` 的「拆不出各类心」兜底分支加红心前缀，与百分比/心数行统一。
+
+### ④ 自检
+
+`checks=4883 failures=0`。
+
+### ⑤ 未验证
+
+没有实机复现闪满与癫狂新口径。
 
 ## 1.2.9
 

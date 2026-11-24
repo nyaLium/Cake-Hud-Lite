@@ -7,7 +7,7 @@
 >
 > 这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版（MIT 许可；其 LICENSE 的版权声明为 Copyright (c) 2026 Kirin0321（麒麟））。
 >
-> 当前版本 **1.2.8**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.2.10**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/透明度，
 > 88 个属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
 > 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」（进服后先静默 3 s 再问）；1.20.40 把面板/盾牌的位置改成**相对位置**，窗口大小或 GUI 缩放变化后不再错位；1.20.41 面板默认位置改到**左侧偏上（y = 屏幕高 ÷ 3）**；1.20.42 容器界面那两套的默认位置也一样。
@@ -21,11 +21,11 @@
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.2.8` |
+| 版本 | `1.2.10` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/ctt-hud-fork-1.2.8.jar` |
+| 产物 | `build/libs/ctt-hud-fork-1.2.10.jar` |
 | 仓库 | <https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version>（`fabric.mod.json` 的 `contact.homepage` / `sources` / `issues` 都指向这里，Mod Menu 会显示） |
 
 ## 代码导览（每个类做什么）
@@ -683,7 +683,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/ctt-hud-fork-1.2.8.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/ctt-hud-fork-1.2.10.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革
@@ -795,6 +795,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 同名怪排序 | 百分比精确 > ≤2 > ≤5 → 名字精确 → 离玩家更近 → 上一帧绑定 |
 | 队友条目 | 完整玩家名只精确匹配；宽松（包含）匹配必须**唯一候选**且不是任何玩家全名 |
 | 认不到时 | 敌人退回 `below_name` 百分比；队友退回百分比绿条 |
+| 队友百分比粘性 | `HealthPercent` 读不到时沿用最近一次已知值 **5 s**（`HudWorldRenderer.PERCENT_STICKY_MS`），避免魂心溢出时退到恒为 1 的 `AllHearts/MaxHP` 而闪满 |
 
 ### 布局 / 绘制
 
@@ -807,7 +808,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 显示距离 | 4~256 格，默认 **48** |
 | 血条通用透明度 | 0.10~1.00，默认 **0.50**（1.2.2） |
 | 文字阴影 | 默认**关**（只管头顶血条；面板独立一项） |
-| 隐藏 `below_name` 分数 | 默认**开**；1.2.9 起癫狂期间也摘（本 Mod 画百分比，原版数字会重复） |
+| 隐藏 `below_name` 分数 | 默认**开**（名称落回原位） |
 | 护甲配色 | 🛡 防御=蓝、真·防御=白、🔥金、☃ 白、☠ 紫、☀ 白、⚓ 水蓝、⚡ 黄 |
 | 盾牌默认位置 | 底边距底 **76 px**，水平对准副手格中心 `guiW/2 ∓ 109` |
 | 盾牌档位 | `damage/max`：<0.4 绿、<0.6 黄、<0.8 红、否则空 |
@@ -821,6 +822,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 缩写 | `< 1000` 原样；`≥ 1000` 用 K/M/B；**截断**一位小数；整数位 ≥ 1 |
 | 例 | `900`、`1000→1K`、`1100→1.1K`、`24999→24.9K`、`999999→999.9K`、`1100000→1.1M` |
 | 百分比 | `hp*100/maxHp` 四舍五入、夹 0~100；1.2.8 起前面带红心：`❤ 73%` |
+| 当前/上限 | 拆不出各类心时写 `❤ 当前/上限`（1.2.10 起带红心） |
 | 心形 | 六类统一 `❤`，靠颜色区分（与地图 `view_stats` 一致） |
 | 玩家心数排版（1.2.3） | 上排 `魂/黑/蓝`；下排 `红 当前/上限` + `碎/粉` |
 
@@ -830,7 +832,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 | --- | --- |
 | 自动开队伍条 | 检测到自己有个人 bossbar 才发 `/trigger TogglePartyBossbar` |
 | 诅咒 | 检测到诅咒 bossbar 时整个 UI（含名称接管）隐藏；1.2.4 起属性面板（HUD 与容器）也隐藏。地图在诅咒楼层开始时会 `scoreboard objectives setdisplay below_name`（清空展示槽），所以此时头顶百分比本来就没有 |
-| 癫狂（Berserk） | 靠**专属 Boss 栏**的翻译键 `Misc_Bossbars_P10_Bossbar_11` 识别（100 ms 探测、500 ms 释放）；期间只画**`❤ 百分比` 文本 + 百分比条**（`below_name` 的 `HealthPercent`，心数/护甲不画），名字与原版分数交还原版，**属性面板不受影响**（1.2.8） |
+| 癫狂（Berserk） | 靠**专属 Boss 栏**的翻译键 `Misc_Bossbars_P10_Bossbar_11` 识别（100 ms 探测、500 ms 释放）；**只隐藏自身属性面板**（HUD 与容器），队友/敌人的头顶血条与信息照常显示（1.2.10） |
 | 服务端组件 | 装了本 Mod 的服务端推 `mob_health`（uuid/hp/四色心/碎心/护甲），5 s 保鲜 |
 | 旁观/死亡 | 不画头顶 HUD，但原版 `below_name` 分数仍会被摘掉 |
 | 旧配置键 | `hideBehindEntities`、`useServerData`、`verticalOffset` 等读取时忽略 |
