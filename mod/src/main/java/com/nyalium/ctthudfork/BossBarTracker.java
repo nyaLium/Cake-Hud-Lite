@@ -500,7 +500,9 @@ public final class BossBarTracker {
 
         List<Player> candidates = new ArrayList<>();
         for (Entity entity : mc.level.entitiesForRendering()) {
-            if (entity instanceof Player player && player != mc.player && player.isAlive()) {
+            // 1.3.2：队伍条（spectator_bossbar）的名册是 @a[scores={BossbarID=1001..1010}]，
+            // **包含自己**；所以候选里也要有自己（调试模式画自己时就能直接查到条目）。
+            if (entity instanceof Player player && player.isAlive()) {
                 candidates.add(player);
             }
         }

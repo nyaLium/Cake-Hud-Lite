@@ -11,7 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
-| **1.3.1**（本地调整，未发布） | 过滤界面「属性」细分为 属性 / 属性 - 心型 / 属性 - 倍率 / 属性 - 护甲 / 属性 - 杂项；调试模式的「自己」改用个人状态条取数（与队友同一套逻辑） | 属性面板过滤按**新的数据包**重新对照：分类改为优先用图标上的 hover 键 `view_stats_N`；「乘算前」原始值单独成类（新增 8 项，可过滤项 88 → **96**）；修正 `Misc_View_Stats_101/104/107/115/122/124` 等倍率键；名称对齐数据包；设置页新增「调试模式」 | 癫狂改为**只隐藏自身属性面板**（数据包查证：癫狂不隐藏最近敌人条 / 队伍血量条 / below_name，实体血条与信息照常）；修「魂心溢出时血条瞬间变满」（队友百分比读不到时给 5 s 粘性缓存）；「当前/上限」前加 ❤ | [Release v1.2.10](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.10) |
+| **1.3.2**（本地调整，未发布） | 魂心归入「属性 - 心型」；队伍条名册本来就含自己 —— `resolveTeam` 不再排除自己，服务端 `collect` 也不再跳过自己，调试模式的「自己」与队友完全同一条取数路径 | 过滤界面「属性」细分为 属性 / 属性 - 心型 / 属性 - 倍率 / 属性 - 护甲 / 属性 - 杂项；调试模式的「自己」改用个人状态条取数（与队友同一套逻辑） | 属性面板过滤按**新的数据包**重新对照：分类改为优先用图标上的 hover 键 `view_stats_N`；「乘算前」原始值单独成类（新增 8 项，可过滤项 88 → **96**）；修正 `Misc_View_Stats_101/104/107/115/122/124` 等倍率键；名称对齐数据包；设置页新增「调试模式」 | 癫狂改为**只隐藏自身属性面板**（数据包查证：癫狂不隐藏最近敌人条 / 队伍血量条 / below_name，实体血条与信息照常）；修「魂心溢出时血条瞬间变满」（队友百分比读不到时给 5 s 粘性缓存）；「当前/上限」前加 ❤ | [Release v1.2.10](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.10) |
 | **1.2.9** | 癫狂期间也摘原版 `below_name` 分数：1.2.6 起癫狂分支绕过 `managed()`，导致本 Mod 的 `❤ 百分比` 与原版数字重复、名字被抬高 9 px；新增 `HudTarget.hidesBelowNameScore` 统一判定 | [Release v1.2.9](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.9) |
 | **1.2.8** | 百分比文本前加红心：`❤ 73%`（`percentOnly` 分支统一处理，癫狂 / 队友回退 / 敌人回退都生效） | [Release v1.2.8](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.8) |
 | **1.2.7** | 癫狂下补上百分比**文本**：只关心数/护甲，`showNumbers` 保留 → `HudLayout` 走 percentOnly 分支写 `73%`，配上百分比条（1.2.6 只有条没有字） | [Release v1.2.7](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.7) |

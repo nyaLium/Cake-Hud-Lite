@@ -87,19 +87,22 @@ public final class HudWorldRenderer {
         boolean teammate = entity instanceof Player;
         EnemyData.Snapshot data;
         if (selfDebug) {
-            // 1.3.1：自己不在「队伍血量」那条 bar 里（它只列队友），所以队友路径取不到条目；
-            // 这里改用**自己的个人状态条**（同样是 名字 (当前/上限)），逻辑与队友一致：
-            // 条按 below_name 的红心百分比填，文字写 当前/上限。
-            BossBarTracker.Bar self = BossBarTracker.selfBar(mc);
-            if (self != null) {
-                int percent = EnemyData.healthPercentOf(mc.level.getScoreboard(), entity);
-                float ratio = percent >= 0
-                        ? Math.max(0.0f, Math.min(1.0f, percent / 100.0f))
-                        : self.progress;
-                data = EnemyData.exact(self.hp, self.maxHp, ratio, 0, NO_ARMOUR,
-                        HeartCounts.unknown());
-            } else {
-                data = resolveData(mc, entity, teammate);
+            // 1.3.2：队伍条的名册包含自己（@a[scores={BossbarID=1001..1010}]），
+            // 所以「自己」直接走**队友同一条路径**：
+            //   ① 服务端 payload（选装服务端：四色心 / 碎心 / 护甲）；
+            //   ② 队伍条条目 名字 (当前/上限)；
+            //   ③ below_name 百分比（兜底）。
+            data = resolveData(mc, entity, true);
+            if (data == null) {
+                BossBarTracker.Bar self = BossBarTracker.selfBar(mc);
+                if (self != null) {
+                    int percent = EnemyData.healthPercentOf(mc.level.getScoreboard(), entity);
+                    float ratio = percent >= 0
+                            ? Math.max(0.0f, Math.min(1.0f, percent / 100.0f))
+                            : self.progress;
+                    data = EnemyData.exact(self.hp, self.maxHp, ratio, 0, NO_ARMOUR,
+                            HeartCounts.unknown());
+                }
             }
         } else {
             data = resolveData(mc, entity, teammate);

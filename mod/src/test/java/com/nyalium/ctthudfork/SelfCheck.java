@@ -1542,8 +1542,8 @@ public final class SelfCheck {
         check(rows.size() == 56, "三节 + 5 个属性细分共 56 行，实际 " + rows.size());
         check(rows.get(0).isHeader() && rows.get(0).subHeader() == SelfStatsKind.Sub.CORE,
                 "第一行应是「属性」细分标题");
-        check(!rows.get(1).isHeader() && rows.get(1).left() == SelfStatsKind.HEART_SOUL,
-                "魂心不在「心型」列表里，落在「属性」第一项");
+        check(!rows.get(1).isHeader() && rows.get(1).left() == SelfStatsKind.HP_RAW,
+                "属性一节第一项应是最大生命值（乘算前）；hp_amp 归「倍率」");
         check(rows.get(38).isHeader() && rows.get(38).header() == SelfStatsKind.Group.STATUS,
                 "第 38 行应是「状态效果」标题");
         check(!rows.get(39).isHeader() && rows.get(39).left() == SelfStatsKind.STATUS_49
@@ -1558,6 +1558,8 @@ public final class SelfCheck {
         // 1.3.1：属性细分（心型 / 倍率 / 护甲 / 杂项）
         check(SelfStatsKind.HEART_RED.sub() == SelfStatsKind.Sub.HEART, "红心应归心型");
         check(SelfStatsKind.HP_NEG.sub() == SelfStatsKind.Sub.HEART, "负心应归心型");
+        check(SelfStatsKind.HEART_SOUL.sub() == SelfStatsKind.Sub.HEART, "魂心应归心型");
+        check(SelfStatsKind.HEART_SOUL.sub() == SelfStatsKind.Sub.HEART, "魂心应归心型");
         check(SelfStatsKind.DEFENCE_AMP.sub() == SelfStatsKind.Sub.MULT, "防御倍率应归倍率");
         check(SelfStatsKind.SIZE.sub() == SelfStatsKind.Sub.MISC, "体型应归杂项");
         check(SelfStatsKind.KARMA_DARK.sub() == SelfStatsKind.Sub.MISC, "业力应归杂项");

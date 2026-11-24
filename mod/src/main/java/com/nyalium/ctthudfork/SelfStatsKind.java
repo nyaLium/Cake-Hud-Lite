@@ -258,9 +258,10 @@ public enum SelfStatsKind {
         }
     }
 
-    /** 心型（按需求：红、黑、粉、碎、蓝、负;魂心不在这一组）。 */
+    /** 心型：红、魂、黑、粉、碎、蓝、负。 */
     private static final java.util.Set<String> HEART_IDS = java.util.Set.of(
-            "heart_red", "heart_black", "heart_pink", "heart_cracked", "heart_blue", "hp_neg");
+            "heart_red", "heart_soul", "heart_black", "heart_pink", "heart_cracked",
+            "heart_blue", "hp_neg");
 
     /** 护甲组：防御 / 真•防御 / 元素护甲（含它们的「乘算前」）。 */
     private static final java.util.Set<String> ARMOR_IDS = java.util.Set.of(
