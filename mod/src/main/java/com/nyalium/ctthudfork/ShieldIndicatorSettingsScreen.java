@@ -4,6 +4,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -20,6 +21,7 @@ import java.util.function.DoubleFunction;
  *   <tr><td>显示盾牌指示器</td><td>{@code shieldEnabled}</td><td>默认开；关掉后下面几项灰掉</td></tr>
  *   <tr><td>缩放比例</td><td>{@code shieldScale}</td><td>0.50~1.50，步进 0.05，默认 0.70（不写「倍」）</td></tr>
  *   <tr><td>透明度</td><td>{@code shieldOpacity}</td><td>0.10~1.00，默认 0.65</td></tr>
+ *   <tr><td>根据主手位置自动调整</td><td>{@code shieldAutoMirror}</td><td>默认开；关掉后默认位置固定按右手习惯（副手在左），切换主手不镜像</td></tr>
  *   <tr><td>调整位置…</td><td>{@code shieldX/Y} + {@code layoutGuiW/H}</td><td>拖动；{@code -1} = 跟随副手槽</td></tr>
  * </table>
  */
@@ -73,6 +75,18 @@ public final class ShieldIndicatorSettingsScreen extends Screen {
                 v -> HudConfig.get().shieldOpacity = v);
         opacity.active = on;
         addRenderableWidget(opacity);
+        y += ROW_GAP;
+
+        // 根据主手位置自动调整：shieldAutoMirror（默认开）
+        // 只影响「默认位置」（shieldX/Y = -1）；拖动过的自定义位置不受影响。
+        CycleButton<Boolean> mirror = CycleButton.onOffBuilder(cfg.shieldAutoMirror)
+                .create(x, y, width, ROW_HEIGHT,
+                        Component.translatable("ctt_hud_fork.config.shieldAutoMirror"),
+                        (b, v) -> HudConfig.get().shieldAutoMirror = v);
+        mirror.setTooltip(Tooltip.create(
+                Component.translatable("ctt_hud_fork.config.shieldAutoMirror.tooltip")));
+        mirror.active = on;
+        addRenderableWidget(mirror);
         y += ROW_GAP;
 
         // 调整位置…：进 ShieldLayoutScreen（拖动 / 方向键；写 shieldX/Y + layoutGuiW/H）

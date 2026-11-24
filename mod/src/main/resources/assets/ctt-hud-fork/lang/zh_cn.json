@@ -142,6 +142,8 @@
   "ctt_hud_fork.config.shieldEnabled": "显示盾牌指示器",
   "ctt_hud_fork.config.shieldScale": "缩放比例：%s",
   "ctt_hud_fork.config.shieldOpacity": "透明度：%s",
+  "ctt_hud_fork.config.shieldAutoMirror": "根据主手位置自动调整",
+  "ctt_hud_fork.config.shieldAutoMirror.tooltip": "开启后：初始位置按主手判断副手在快捷栏的哪一侧（主手右手→副手在左，主手左手→副手在右），切换主手时自动镜像。关闭后：固定按右手习惯（副手在左）摆放，切换主手也不动。只影响未拖动过的初始位置。",
   "ctt_hud_fork.config.shieldMove": "调整位置…",
   "ctt_hud_fork.config.selfStatsMove.dragHint": "按住拖动；也可用方向键微调（按住 Shift 每次 16 px）",
   "key.category.ctt-hud-fork.main": "CTT HUD - Fork"

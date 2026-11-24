@@ -24,7 +24,8 @@ import net.minecraft.world.item.component.CustomData;
  * {@link #defaultX}/{@link #defaultY} 的<b>默认位置</b>：</p>
  * <ul>
  *   <li>水平：对准副手**物品格**的中心 —— 右手玩家副手在快捷栏左侧，即 {@code guiW/2 - 109}；
- *       左手玩家（{@code main_hand=left}）自动镜像到 {@code guiW/2 + 109}；</li>
+ *       左手玩家（{@code main_hand=left}）镜像到 {@code guiW/2 + 109}；
+ *       是否镜像由 {@code shieldAutoMirror} 决定（1.2.0 起可在设置里关掉，关掉后固定按右手）；</li>
  *   <li>垂直：整条指示器的**底边**落在屏幕底部往上 76 px（{@code guiH - 76 - h}）。</li>
  * </ul>
  *
@@ -67,6 +68,19 @@ final class ShieldIndicatorHud implements HudElement {
     /** 缩放后的高（GUI 像素，至少 1）。 */
     static int scaledHeight(double scale) {
         return Math.max(1, (int) Math.round(TEX_H * clampScale(scale)));
+    }
+
+    /**
+     * 默认位置该用哪一侧（1.2.0 抽出，绘制与拖动预览共用，保证两边一致）。
+     *
+     * <p>{@code shieldAutoMirror} 开：副手侧跟着主手走（主手右手 → 副手在左；
+     * 主手左手 → 副手在右）；关：永远按右手习惯（副手在左），切换主手也不镜像。</p>
+     *
+     * @param mainArm 玩家主手；{@code null}（界面里还没拿到玩家）按右手处理
+     */
+    static boolean offhandOnLeft(HudConfig.Cfg cfg, HumanoidArm mainArm) {
+        if (!cfg.shieldAutoMirror) return true;
+        return mainArm != HumanoidArm.LEFT;
     }
 
     /**
@@ -132,7 +146,7 @@ final class ShieldIndicatorHud implements HudElement {
         int x = pos[0];
         int y = pos[1];
         if (x < 0 || y < 0) {
-            boolean offhandOnLeft = mc.player.getMainArm().getOpposite() == HumanoidArm.LEFT;
+            boolean offhandOnLeft = offhandOnLeft(cfg, mc.player.getMainArm());
             x = defaultX(offhandOnLeft, guiW, w);
             y = defaultY(guiH, h);
         }

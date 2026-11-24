@@ -1520,6 +1520,22 @@ public final class SelfCheck {
         check(defaults.selfStatsMode == 2, "默认显示方式应为 HUD + 容器界面（v1.0.0 起）");
         check(defaults.selfStatsHidden.isEmpty(), "默认不隐藏任何属性");
 
+        // 1.2.0：盾牌默认位置是否跟随主手（shieldAutoMirror）
+        check(defaults.shieldAutoMirror, "盾牌默认位置默认跟随主手镜像");
+        HudConfig.Cfg mirrorOn = new HudConfig.Cfg();
+        check(ShieldIndicatorHud.offhandOnLeft(mirrorOn, net.minecraft.world.entity.HumanoidArm.RIGHT),
+                "右手玩家：副手应在快捷栏左侧");
+        check(!ShieldIndicatorHud.offhandOnLeft(mirrorOn, net.minecraft.world.entity.HumanoidArm.LEFT),
+                "左手玩家：开启镜像时副手应在右侧");
+        HudConfig.Cfg mirrorOff = new HudConfig.Cfg();
+        mirrorOff.shieldAutoMirror = false;
+        check(ShieldIndicatorHud.offhandOnLeft(mirrorOff, net.minecraft.world.entity.HumanoidArm.LEFT),
+                "关闭镜像后左手玩家也按右手习惯（副手在左）");
+        check(ShieldIndicatorHud.defaultX(true, 400, 24) == 400 / 2 - 109 - 12,
+                "副手在左时 x 应对准快捷栏左侧物品格");
+        check(ShieldIndicatorHud.defaultX(false, 400, 24) == 400 / 2 + 109 - 12,
+                "副手在右时 x 应镜像到另一侧");
+
         HudConfig.Cfg wild = new HudConfig.Cfg();
         wild.selfStatsOpacity = -3.0;
         wild.selfStatsHidden = new java.util.ArrayList<>(java.util.List.of("heart_red", "hint", "heart_red", "health"));

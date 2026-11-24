@@ -104,8 +104,8 @@ public final class ShieldLayoutScreen extends Screen {
         int x = stored[0];
         int y = stored[1];
         if (x < 0 || y < 0) {
-            boolean offhandOnLeft = this.minecraft.player == null
-                    || this.minecraft.player.getMainArm().getOpposite() == net.minecraft.world.entity.HumanoidArm.LEFT;
+            boolean offhandOnLeft = ShieldIndicatorHud.offhandOnLeft(cfg,
+                    this.minecraft.player == null ? null : this.minecraft.player.getMainArm());
             x = ShieldIndicatorHud.defaultX(offhandOnLeft, this.width, w);
             y = ShieldIndicatorHud.defaultY(this.height, h);
         }

@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.2.0** | 盾牌指示器设置新增「根据主手位置自动调整」（`shieldAutoMirror`，默认开，悬停有说明）：关掉后默认位置固定按右手（副手在左），切换主手不再镜像；配置 schema 不变（新字段默认值 = 旧行为） | [Release v1.2.0](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.0) |
 | **1.1.0** | 盾牌指示器纹理换成新的 34×86 四档（`meter_0..3`）；Mod 简介改为「为地图“蛋糕塔”（Cake Team Towers）制作」的三条卖点；版本号 1.1.0（语义化：新内容，非修 bug） | [Release v1.1.0](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.1.0) |
 | **1.0.3** | `fabric.mod.json` 增加 `contact`（homepage / sources / issues 指向 [nyaLium/CTT-HUD-Mod-Fork-Version](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version)），Mod Menu 的模组页会显示这三个链接；无代码改动 | [Release v1.0.3](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.0.3) |
 | **1.0.2** | 修正 LICENSE 里的上游版权署名：上游 Cake-Hud 的 LICENSE 写的是 `Copyright (c) 2026 Kirin0321 (麒麟)`（不是仓库账号名），根 `LICENSE` / `NOTICE.md` / `mod/LICENSE`（内嵌进 jar）与 `fabric.mod.json` 的 authors 一并更正；无代码改动 | 本地归档（未单独发布） |
@@ -96,6 +97,43 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.2.0
+
+### ① 新选项：根据主手位置自动调整
+
+| 项 | 值 |
+| --- | --- |
+| 字段 | `HudConfig.Cfg.shieldAutoMirror`（默认 `true`） |
+| 位置 | 「盾牌指示器设置…」→ 透明度 与 调整位置 之间 |
+| 悬停提示 | 「开启后：初始位置按主手判断副手在快捷栏的哪一侧（主手右手→副手在左，主手左手→副手在右），切换主手时自动镜像。关闭后：固定按右手习惯（副手在左）摆放，切换主手也不动。只影响未拖动过的初始位置。」 |
+
+### ② 默认位置的判定（检查结果）
+
+盾牌指示器的默认位置（`shieldX/Y = -1` 时）由两段组成：
+
+1. **水平**：对准**副手物品格中心**。原版快捷栏 182 px 宽，左侧物品格中心在 `guiW/2 − 109`，
+   右侧在 `guiW/2 + 109`；主手决定副手在哪一侧 ——
+   `offhandOnLeft = (mainArm == RIGHT)`（即右手玩家副手在左，左手玩家在右）。
+2. **垂直**：整条指示器的底边距屏幕底部 76 px（`guiH − 76 − h`）。
+
+所以切换主手（`Options → Skin Customization` 旁的「主手」）时，副手物品格换到另一侧，
+默认位置就跟着镜像 —— 这就是你看到的现象。
+
+### ③ 实现
+
+- `ShieldIndicatorHud.offhandOnLeft(cfg, mainArm)` 统一判定：`!cfg.shieldAutoMirror` 时恒为
+  「副手在左」，否则按主手；
+- HUD 绘制（`ShieldIndicatorHud`）与「调整位置」预览（`ShieldLayoutScreen`）共用它，预览与实际一致；
+- 配置新字段默认 `true`，旧配置文件缺这个键时读出来就是旧行为，**不需要迁移**，schema 仍是 22。
+
+### ④ 自检
+
+`checks=4792 failures=0`（新增 6 条：默认值、右手/左手镜像、关闭后固定右手、左右两个默认 x 公式）。
+
+### ⑤ 未验证
+
+没有实机进游戏点这个开关；界面位置/悬停提示是照现有设置页的写法加的（`CycleButton` + `Tooltip.create`）。
 
 ## 1.1.0
 

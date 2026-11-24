@@ -142,6 +142,8 @@
   "ctt_hud_fork.config.shieldEnabled": "Show shield indicator",
   "ctt_hud_fork.config.shieldScale": "Scale: %s",
   "ctt_hud_fork.config.shieldOpacity": "Opacity: %s",
+  "ctt_hud_fork.config.shieldAutoMirror": "Mirror with main hand",
+  "ctt_hud_fork.config.shieldAutoMirror.tooltip": "On: the default position follows the main hand (right hand -> offhand on the left, left hand -> offhand on the right) and mirrors when you switch hands. Off: always the right-handed layout (offhand on the left). Affects only the default position, not a dragged one.",
   "ctt_hud_fork.config.shieldMove": "Adjust position...",
   "ctt_hud_fork.config.selfStatsMove.dragHint": "Drag to move; arrow keys nudge (Shift = 16 px per press)",
   "key.category.ctt-hud-fork.main": "CTT HUD - Fork"
