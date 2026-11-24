@@ -1900,17 +1900,17 @@ public final class SelfCheck {
         // ① 「显示血条」= 整块：关掉敌人后布局为空，队友不受它影响
         HudConfig.Cfg cfg = new HudConfig.Cfg();
         cfg.showBar = false;
-        HudLayout.Options off = HudWorldRenderer.options(cfg);
+        HudLayout.Options off = HudWorldRenderer.options(cfg, false);
         check(!off.showBar && !off.showNumbers && !off.showHearts && !off.showArmor,
                 "关掉「显示血条」后敌人四个开关都应关（血条 + 文字）");
         HudLayout.Result empty = HudLayout.compute(100, 100, false, 5,
                 new int[]{0, 0, 0, 0, 0, 0, 0}, HeartCounts.forMob(100, 100), off, String::length);
         check(empty.isEmpty(), "关掉「显示血条」后敌人整块布局应为空（只剩原版名字）");
-        check(HudWorldRenderer.teamOptions(cfg).showBar, "关掉敌人「显示血条」不该连带队友");
+        check(HudWorldRenderer.options(cfg, true).showBar, "关掉敌人「显示血条」不该连带队友");
         cfg.showBar = true;
-        check(HudWorldRenderer.options(cfg).showBar, "打开后敌人血条应回来");
+        check(HudWorldRenderer.options(cfg, false).showBar, "打开后敌人血条应回来");
         HudLayout.Result on = HudLayout.compute(100, 100, false, 5,
-                new int[]{0, 0, 0, 0, 0, 0, 0}, HeartCounts.forMob(100, 100), HudWorldRenderer.options(cfg),
+                new int[]{0, 0, 0, 0, 0, 0, 0}, HeartCounts.forMob(100, 100), HudWorldRenderer.options(cfg, false),
                 String::length);
         check(!on.isEmpty(), "打开后敌人布局应有内容");
 
