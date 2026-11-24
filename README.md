@@ -103,6 +103,7 @@ cd mod
 - 最新版说明：[`RELEASES.md`](RELEASES.md) 或 [Release v1.2.10](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.10)
 - 发布清单：[`RELEASES.md`](RELEASES.md)
 - 版本规则：[`VERSIONING.md`](VERSIONING.md)
+- 测试清单：[docs/TEST-PLAN.md](docs/TEST-PLAN.md)（环境矩阵 + 分项勾选表）
 
 ## 许可
 
