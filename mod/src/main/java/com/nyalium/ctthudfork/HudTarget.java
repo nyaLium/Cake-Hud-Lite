@@ -114,11 +114,6 @@ public final class HudTarget {
         return computeVisibleCore(mc, entity);
     }
 
-    /** 不看诅咒 / 癫狂的可见性判定（癫狂时画百分比条要用）。 */
-    static boolean visibleCore(Minecraft mc, Entity entity) {
-        return computeVisibleCore(mc, entity);
-    }
-
     private static boolean computeVisibleCore(Minecraft mc, Entity entity) {
         HudConfig.Cfg cfg = HudConfig.get();
         if (!managedCore(mc, entity)) return false;
