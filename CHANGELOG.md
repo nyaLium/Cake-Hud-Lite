@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.2.9** | 癫狂期间也摘原版 `below_name` 分数：1.2.6 起癫狂分支绕过 `managed()`，导致本 Mod 的 `❤ 百分比` 与原版数字重复、名字被抬高 9 px；新增 `HudTarget.hidesBelowNameScore` 统一判定 | [Release v1.2.9](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.9) |
 | **1.2.8** | 百分比文本前加红心：`❤ 73%`（`percentOnly` 分支统一处理，癫狂 / 队友回退 / 敌人回退都生效） | [Release v1.2.8](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.8) |
 | **1.2.7** | 癫狂下补上百分比**文本**：只关心数/护甲，`showNumbers` 保留 → `HudLayout` 走 percentOnly 分支写 `73%`，配上百分比条（1.2.6 只有条没有字） | [Release v1.2.7](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.7) |
 | **1.2.6** | 癫狂下改画**百分比血条**：地图不清 `below_name` 的 `HealthPercent`，所以只画条、不写数字/心数/护甲（`EnemyData.percent` 新工厂）；未知诅咒仍整块隐藏（地图 `setdisplay below_name` 清空，百分比本就不在） | [Release v1.2.6](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.6) |
@@ -105,6 +106,27 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.2.9
+
+### ① 原因
+
+1.2.6 起癫狂分支用 `managedCore` / `visibleCore` 绕过 `managed()`，`NameTagScoreMixin` 的
+「隐藏 below_name 分数」也随之失效 → 头顶同时有本 Mod 的 `❤ 76%` 和原版 `76`，
+名字还被原版上抬 9 px，挤在文字与血条之间。
+
+### ② 修法
+
+`HudTarget.hidesBelowNameScore(mc, entity)`：诅咒 false；癫狂 `managedCore`；平时 `managed`。
+`NameTagScoreMixin` 改用它。
+
+### ③ 自检
+
+`checks=4875 failures=0`。
+
+### ④ 未验证
+
+没有实机再进癫狂复核。
 
 ## 1.2.8
 

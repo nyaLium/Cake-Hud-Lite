@@ -98,7 +98,7 @@
 | 文件 | 作用 |
 | --- | --- |
 | `NameTagHudMixin` | 在 `EntityRenderer.submitNameDisplay` 末尾插入世界空间 HUD |
-| `NameTagScoreMixin` | 摘掉原版 `below_name` 计分板分数（信息已由血条表达） |
+| `NameTagScoreMixin` | 摘掉原版 `below_name` 计分板分数（信息已由血条表达；癫狂期间也摘） |
 | `BossBarHudRenderMixin` | 按配置隐藏原版 Boss 栏里的敌人 / 队伍条目 |
 | `BossHealthOverlayAccessor` | 拿到 `BossHealthOverlay` 的 bars 映射 |
 | `ContainerPanelMixin` | 在容器界面（箱子等）上画属性面板 |
@@ -807,7 +807,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 显示距离 | 4~256 格，默认 **48** |
 | 血条通用透明度 | 0.10~1.00，默认 **0.50**（1.2.2） |
 | 文字阴影 | 默认**关**（只管头顶血条；面板独立一项） |
-| 隐藏 `below_name` 分数 | 默认**开** |
+| 隐藏 `below_name` 分数 | 默认**开**；1.2.9 起癫狂期间也摘（本 Mod 画百分比，原版数字会重复） |
 | 护甲配色 | 🛡 防御=蓝、真·防御=白、🔥金、☃ 白、☠ 紫、☀ 白、⚓ 水蓝、⚡ 黄 |
 | 盾牌默认位置 | 底边距底 **76 px**，水平对准副手格中心 `guiW/2 ∓ 109` |
 | 盾牌档位 | `damage/max`：<0.4 绿、<0.6 黄、<0.8 红、否则空 |
