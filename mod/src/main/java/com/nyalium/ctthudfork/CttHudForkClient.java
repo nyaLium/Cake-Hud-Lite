@@ -82,6 +82,7 @@ public final class CttHudForkClient implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             BerserkDetector.reset();
             CurseDetector.reset();
+            HudWorldRenderer.resetPercentCache();
             SelfStats.onWorldJoined(System.currentTimeMillis());
         });
         // 断线 / 换服清缓存，避免看到上一局的残留数据。
@@ -89,6 +90,7 @@ public final class CttHudForkClient implements ClientModInitializer {
             ClientMobHealthCache.reset();
             BerserkDetector.reset();
             CurseDetector.reset();
+            HudWorldRenderer.resetPercentCache();
             SelfStats.reset();
         });
     }

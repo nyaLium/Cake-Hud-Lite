@@ -168,7 +168,7 @@ public final class SelfCheck {
 
         // 「拆不出心数但已知当前/上限」（队伍条那一份）仍然写 当前/最大
         var exact = HudLayout.compute(63, 120, false, 0, new int[7], unknown, team, SelfCheck::width);
-        check(exact != null && flatten(exact).equals("63/120"),
+        check(exact != null && flatten(exact).equals("❤ 63/120"),
                 "未知心数的绝对值应退回 63/120，实际 " + flatten(exact));
     }
 
@@ -609,7 +609,7 @@ public final class SelfCheck {
         noHearts.showBar = false;
         HudLayout.Result numbers = run("关掉心数", new Data("普通", 160, 100, false, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), noHearts);
-        check(join(numbers).equals("160/100"), "关掉心数应退回绝对血量: " + join(numbers));
+        check(join(numbers).equals("❤ 160/100"), "关掉心数应退回「❤ 当前/上限」: " + join(numbers));
 
         // 1.20.0：护甲在最上面一行，🛡 与元素护甲之间**两个空格**。
         HudLayout.Options withArmor = new HudLayout.Options();
@@ -660,7 +660,7 @@ public final class SelfCheck {
 
         HudLayout.Result teamNoHearts = HudLayout.compute(73, 120, false, 0, new int[7],
                 HeartCounts.unknown(), teamLike, SelfCheck::width);
-        check(join(teamNoHearts).equals("73/120"),
+        check(join(teamNoHearts).equals("❤ 73/120"),
                 "队友拿不到心数时应退回当前/最大: " + join(teamNoHearts));
 
         HudLayout.Result teamHearts = HudLayout.compute(150, 150, false, 0, new int[7],
@@ -890,27 +890,6 @@ public final class SelfCheck {
                 HeartCounts.of(12_345, 10_000, 0, 0, 0), p2, SelfCheck::width));
         check(pt.contains("12.3K") && pt.contains("10K"), "玩家心数也要缩写: " + pt);
         check(!pt.contains("12345") && !pt.contains("10000"), "玩家心数不该出现原样大数: " + pt);
-
-        // 1.2.6：癫狂时的「百分比条」读数
-        EnemyData.Snapshot pct73 = EnemyData.percent(73);
-        check(pct73.percentOnly, "percent() 应标记 percentOnly");
-        check(pct73.hp == 73 && pct73.maxHp == 100, "percent() 的当前/上限应为 73/100");
-        check(pct73.percent == 73, "percent 字段应为 73");
-        check(Math.abs(pct73.ratio - 0.73f) < 1e-6, "比例应为 0.73: " + pct73.ratio);
-        check(EnemyData.percent(120).percent == 100, "超过 100 应夹到 100");
-        check(EnemyData.percent(-5).percent == 0, "负数应夹到 0");
-
-        // 1.2.7：癫狂的排版 = 百分比文本 + 条（关掉心数/护甲，保留数字开关）
-        HudLayout.Options p4 = new HudLayout.Options();
-        p4.showArmor = false;
-        p4.showHearts = false;
-        p4.showBar = true;
-        p4.barWidth = 100;
-        HudLayout.Result berserkLayout = HudLayout.compute(73, 100, true, 0, new int[7],
-                HeartCounts.unknown(), p4, SelfCheck::width);
-        check(rowText(berserkLayout, 0).equals("❤ 73%"),
-                "癫狂排版应写「❤ 百分比文本」: " + rowText(berserkLayout, 0));
-        check(berserkLayout.barWidth == 100, "癫狂排版仍应有血条: " + berserkLayout.barWidth);
 
         // 1.2.2：六类心用同一个 ❤ 字形，靠颜色区分
         for (int i = 0; i < HeartCounts.COUNT; i++) {

@@ -42,7 +42,8 @@ final class SelfStatsPanel implements HudElement {
         HudConfig.Cfg cfg = HudConfig.get();
         if (!cfg.enabled || !cfg.showSelfStats) return;
         // 1.2.4：「未知诅咒」期间面板也隐藏（此前只挡了实体血条）。
-        if (CurseDetector.isActive(mc)) return;
+        // 1.2.10：「癫狂」期间同理 —— 地图说「无法查看你的 UI」，但实体血条/信息照常可见。
+        if (CurseDetector.isActive(mc) || BerserkDetector.isActive(mc)) return;
         // 1.20.14：「在容器界面显示」模式下 HUD 上不画，改由 ContainerPanelMixin 画在容器界面上。
         if (!HudConfig.hudMode()) return;
         if (!SelfStats.visible()) return;
@@ -72,8 +73,8 @@ final class SelfStatsPanel implements HudElement {
         if (mc == null || mc.player == null) return;
         HudConfig.Cfg cfg = HudConfig.get();
         if (!cfg.enabled || !cfg.showSelfStats) return;
-        // 1.2.4：诅咒期间容器里的面板同样隐藏。
-        if (CurseDetector.isActive(mc)) return;
+        // 1.2.4：诅咒期间容器里的面板同样隐藏；1.2.10 癫狂也一样。
+        if (CurseDetector.isActive(mc) || BerserkDetector.isActive(mc)) return;
         if (!HudConfig.containerMode()) return;
         if (!SelfStats.visible()) return;
         List<Component> lines = SelfStats.lines();

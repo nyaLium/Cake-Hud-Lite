@@ -71,40 +71,19 @@ public final class HudWorldRenderer {
         if (!cfg.enabled) return;
         // 诅咒：与地图设定一致，整个 UI 隐藏（不提供开关）。
         if (CurseDetector.isActive(mc)) return;
-        // 1.2.6：癫狂不再整块隐藏 —— 地图不会清掉 {@code below_name} 的百分比
-        // （只有未知诅咒会 {@code setdisplay below_name} 清一次），所以此时按百分比画一条条，
-        // 不写数字、不画心数/护甲，也不接管名字与原版分数。
-        boolean berserk = BerserkDetector.isActive(mc);
-        if (berserk) {
-            if (!HudTarget.managedCore(mc, entity)) return;
-            if (!HudTarget.visibleCore(mc, entity)) return;
-        } else {
-            // 只画本 Mod 接管的实体：数据包管控的敌人 / 队伍条里的队友。
-            if (!HudTarget.managed(mc, entity)) return;
-            // 距离 / 被墙挡住 / 被其它实体挡住 —— 保留为「少提交一点」的额外剔除，
-            // 真正的遮挡由深度测试负责。
-            if (!HudTarget.visible(mc, entity)) return;
-        }
+        // 1.2.10：癫狂**不再影响实体 HUD** —— 地图本身不会隐藏最近敌人条 / 队伍血量条 / below_name，
+        // 按本 Mod 的口径也只隐藏「自身属性面板」（见 SelfStatsPanel）。
+        // 只画本 Mod 接管的实体：数据包管控的敌人 / 队伍条里的队友。
+        if (!HudTarget.managed(mc, entity)) return;
+        // 距离 / 被墙挡住 / 被其它实体挡住 —— 保留为「少提交一点」的额外剔除，
+        // 真正的遮挡由深度测试负责。
+        if (!HudTarget.visible(mc, entity)) return;
 
         boolean teammate = entity instanceof Player;
-        EnemyData.Snapshot data;
-        if (berserk) {
-            int percent = EnemyData.healthPercentOf(mc.level.getScoreboard(), entity);
-            if (percent < 0) return;   // 连百分比都没有：不画
-            data = EnemyData.percent(percent);
-        } else {
-            data = resolveData(mc, entity, teammate);
-        }
+        EnemyData.Snapshot data = resolveData(mc, entity, teammate);
         if (data == null) return;
 
         HudLayout.Options options = teammate ? teamOptions(cfg) : options(cfg);
-        if (berserk) {
-            // 1.2.7：癫狂时只画「百分比文本 + 百分比条」。
-            // 关掉心数与护甲后，HudLayout 会走 percentOnly 分支，把 `73%` 写在血条上方；
-            // 数字开关（showNumbers）仍听配置，百分比文本本来就是这个模式唯一的文字。
-            options.showHearts = false;
-            options.showArmor = false;
-        }
         // 元素护甲每页 2 项，按时间循环（用实体 id 错开，避免同一帧全体翻页）。
         long now = System.currentTimeMillis();
         options.armourPage = ArmourCycle.page(data.armor, now, entity.getId());
@@ -250,6 +229,14 @@ public final class HudWorldRenderer {
                 // 更贴近血条本意（蓝心/魂心不该撑满绿条）。有百分比就用它填进度，
                 // 文字仍按队伍条的 当前/上限 显示。
                 int percent = EnemyData.healthPercentOf(mc.level.getScoreboard(), entity);
+                if (percent < 0) {
+                    // 1.2.10：百分比短暂读不到时用**最近的已知值**兜底，不要退到
+                    // entry.ratio() —— 魂心把 AllHearts 顶到 MaxHP 以上时它恒等于 1，
+                    // 血条会「瞬间变满再掉回来」。这里粘 5 s。
+                    percent = stickyPercent(id);
+                } else {
+                    rememberPercent(id, percent);
+                }
                 float ratio = percent >= 0
                         ? Math.max(0.0f, Math.min(1.0f, percent / 100.0f))
                         : entry.ratio();
@@ -278,6 +265,31 @@ public final class HudWorldRenderer {
             data.kind = bar.kind;
         }
         return data;
+    }
+
+    /** 队友红心百分比的粘性缓存：% 短暂读不到时沿用最近一次（见 resolveData 的注释）。 */
+    private static final java.util.Map<UUID, Integer> LAST_PERCENT = new java.util.HashMap<>();
+    private static final java.util.Map<UUID, Long> LAST_PERCENT_AT = new java.util.HashMap<>();
+    /** 粘性时长：5 s（比分同步的抖动窗口大得多，又不会把旧值留太久）。 */
+    private static final long PERCENT_STICKY_MS = 5_000L;
+
+    private static int stickyPercent(UUID id) {
+        Long at = LAST_PERCENT_AT.get(id);
+        if (at == null) return -1;
+        if (System.currentTimeMillis() - at > PERCENT_STICKY_MS) return -1;
+        Integer v = LAST_PERCENT.get(id);
+        return v != null ? v : -1;
+    }
+
+    private static void rememberPercent(UUID id, int percent) {
+        LAST_PERCENT.put(id, percent);
+        LAST_PERCENT_AT.put(id, System.currentTimeMillis());
+    }
+
+    /** 进世界 / 断线时清空（避免把上一局的百分比带过来）。 */
+    static void resetPercentCache() {
+        LAST_PERCENT.clear();
+        LAST_PERCENT_AT.clear();
     }
 
     /** 一帧解析一次 Boss 栏与队伍条；顺带跑队伍条自动开启。 */

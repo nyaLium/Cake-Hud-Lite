@@ -54,23 +54,16 @@ public final class HudTarget {
      */
     static boolean uiAllowed(Minecraft mc) {
         if (mc == null) return false;
-        if (CurseDetector.isActive(mc)) return false;
-        if (BerserkDetector.isActive(mc)) return false;
-        return true;
+        // 1.2.10：癫狂不再挡实体 HUD（只隐藏自身属性面板，见 SelfStatsPanel）。
+        return !CurseDetector.isActive(mc);
     }
 
     /**
      * 是否要把原版 {@code below_name} 分数摘掉（1.2.9）。
      *
-     * <p>平时与 {@link #managed} 一致；<b>癫狂</b>时也要摘 —— 因为此时是<b>本 Mod</b>
-     * 在画「`❤ 百分比` + 百分比条」，原版那条 {@code HealthPercent} 数字会重复
-     * （截图里就是名字下方多出的 `76`）。未知诅咒仍交给 {@link #managed} 的 false（整块 UI 隐藏）。</p>
+     * <p>1.2.10 起癫狂不再影响它（实体 HUD 恢复正常），与 {@link #managed} 完全一致。</p>
      */
     public static boolean hidesBelowNameScore(Minecraft mc, Entity entity) {
-        if (mc == null || entity == null) return false;
-        if (!HudConfig.get().hideBelowNameScore) return false;
-        if (CurseDetector.isActive(mc)) return false;
-        if (BerserkDetector.isActive(mc)) return managedCore(mc, entity);
         return managed(mc, entity);
     }
 

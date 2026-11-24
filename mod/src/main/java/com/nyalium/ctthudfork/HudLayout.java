@@ -282,7 +282,10 @@ public final class HudLayout {
                 heartRow.add(new Line(HEART_GAP, 0xFFFFFF));
                 heartRow.add(new Line(percentText(hp, maxHp), 0xFFFFFF));
             } else {
-                // 拆不出各类心（例如队友只有 AllHearts/MaxHP）：退回原来的「当前/最大」。
+                // 拆不出各类心（例如纯客户端队友只有 AllHearts/MaxHP）：退回「当前/最大」。
+                // 1.2.10：前面加红心（这是红心血量的口径），与 percentOnly / 心数行统一。
+                heartRow.add(new Line(HeartCounts.ICONS[HeartCounts.RED], HeartCounts.COLORS[HeartCounts.RED]));
+                heartRow.add(new Line(HEART_GAP, 0xFFFFFF));
                 heartRow.add(new Line(num(Math.max(0, hp)) + "/" + num(Math.max(0, maxHp)), 0xFFFFFF));
             }
         }
