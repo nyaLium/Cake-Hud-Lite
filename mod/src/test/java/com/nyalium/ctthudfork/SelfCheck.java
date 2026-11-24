@@ -891,6 +891,15 @@ public final class SelfCheck {
         check(pt.contains("12.3K") && pt.contains("10K"), "玩家心数也要缩写: " + pt);
         check(!pt.contains("12345") && !pt.contains("10000"), "玩家心数不该出现原样大数: " + pt);
 
+        // 1.2.6：癫狂时的「百分比条」读数
+        EnemyData.Snapshot pct73 = EnemyData.percent(73);
+        check(pct73.percentOnly, "percent() 应标记 percentOnly");
+        check(pct73.hp == 73 && pct73.maxHp == 100, "percent() 的当前/上限应为 73/100");
+        check(pct73.percent == 73, "percent 字段应为 73");
+        check(Math.abs(pct73.ratio - 0.73f) < 1e-6, "比例应为 0.73: " + pct73.ratio);
+        check(EnemyData.percent(120).percent == 100, "超过 100 应夹到 100");
+        check(EnemyData.percent(-5).percent == 0, "负数应夹到 0");
+
         // 1.2.2：六类心用同一个 ❤ 字形，靠颜色区分
         for (int i = 0; i < HeartCounts.COUNT; i++) {
             check(HeartCounts.ICONS[i].equals("\u2764"), "第 " + i + " 类心应使用 ❤");

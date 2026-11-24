@@ -42,14 +42,29 @@ public final class HudTarget {
 
     /** 本 Mod 接管的实体（有 CTT 数据 / 是队友），不考虑距离与渲染可见性。 */
     public static boolean managed(Minecraft mc, Entity entity) {
+        if (!uiAllowed(mc)) return false;
+        return managedCore(mc, entity);
+    }
+
+    /**
+     * 「UI 允许显示」的总闸：未知诅咒（整个 UI）与癫狂（实体血条）都关它。
+     *
+     * <p>1.2.6：癫狂不再是「完全不画」—— 见 {@link HudWorldRenderer}，此时改画百分比条，
+     * 但仍不接管名字 / 不摘原版 {@code below_name} 分数（百分比要留给玩家看）。</p>
+     */
+    static boolean uiAllowed(Minecraft mc) {
+        if (mc == null) return false;
+        if (CurseDetector.isActive(mc)) return false;
+        if (BerserkDetector.isActive(mc)) return false;
+        return true;
+    }
+
+    /** 不看诅咒 / 癫狂、只看「这只实体归不归本 Mod 管」。 */
+    static boolean managedCore(Minecraft mc, Entity entity) {
         if (mc == null || entity == null) return false;
         HudConfig.Cfg cfg = HudConfig.get();
         if (!cfg.enabled) return false;
         if (mc.level == null || mc.player == null) return false;
-        // 诅咒：与地图设定一致，整个 UI 隐藏（名称也不接管，否则名字会凭空消失）。
-        if (CurseDetector.isActive(mc)) return false;
-        // 1.2.4 癫狂：同样隐藏玩家 / 敌人的头顶血条与心数（属性面板不受影响）。
-        if (BerserkDetector.isActive(mc)) return false;
         if (entity == mc.player) return false;
         if (entity instanceof ArmorStand) return false;
         if (!entity.isAlive() || entity.isInvisible()) return false;
@@ -87,8 +102,18 @@ public final class HudTarget {
     }
 
     private static boolean computeVisible(Minecraft mc, Entity entity) {
+        if (!uiAllowed(mc)) return false;
+        return computeVisibleCore(mc, entity);
+    }
+
+    /** 不看诅咒 / 癫狂的可见性判定（癫狂时画百分比条要用）。 */
+    static boolean visibleCore(Minecraft mc, Entity entity) {
+        return computeVisibleCore(mc, entity);
+    }
+
+    private static boolean computeVisibleCore(Minecraft mc, Entity entity) {
         HudConfig.Cfg cfg = HudConfig.get();
-        if (!managed(mc, entity)) return false;
+        if (!managedCore(mc, entity)) return false;
 
         // 死亡 / 观战：CTT 里死掉的玩家就是**旁观模式**，所以一条规则同时管住两种状态。
         // 只挡「画」，不挡 managed —— managed 还负责摘掉原版 below_name 分数，

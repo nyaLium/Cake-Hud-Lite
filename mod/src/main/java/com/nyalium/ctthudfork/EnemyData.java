@@ -225,6 +225,20 @@ public final class EnemyData {
     }
 
     /**
+     * 只有 {@code below_name} 百分比时的读数（1.2.6，癫狂期间用）。
+     *
+     * <p>癫狂不会清掉 {@code below_name} 的 {@code HealthPercent}（地图只在未知诅咒里
+     * {@code setdisplay below_name} 清过一次），所以此时还能按百分比画一条条、不写数字。</p>
+     *
+     * @param percent 0~100；小于 0 由调用方过滤
+     */
+    public static Snapshot percent(int percent) {
+        int p = Math.max(0, Math.min(100, percent));
+        return new Snapshot(p, 100, true, p, 0, new int[ARMOR_OBJECTIVES.length],
+                HeartCounts.unknown(), p / 100.0f);
+    }
+
+    /**
      * 只判断「这只实体受数据包管控」，不构造读数 —— 供每帧每实体的判定用，零分配。
      *
      * <p>判据与 {@link #read} 完全一致：{@code AllHearts / RedHearts / MaxHP / HealthPercent}

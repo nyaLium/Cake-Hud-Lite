@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.2.6** | 癫狂下改画**百分比血条**：地图不清 `below_name` 的 `HealthPercent`，所以只画条、不写数字/心数/护甲（`EnemyData.percent` 新工厂）；未知诅咒仍整块隐藏（地图 `setdisplay below_name` 清空，百分比本就不在） | [Release v1.2.6](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.6) |
 | **1.2.5** | 癫狂（Berserk）改用**专属 Boss 栏**识别：数据包在玩家带 `Berserk` 标签时把个人状态条换成 `Misc_Bossbars_P10_Bossbar_11`（p1..p10 共用）；不再依赖聊天消息（带癫狂进服也能识别） | [Release v1.2.5](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.5) |
 | **1.2.4** | 「未知诅咒」现在也隐藏属性面板（HUD 与容器两处）；新增 `BerserkDetector`：癫狂期间隐藏玩家/敌人的头顶血条与心数（靠 `Items_status_effect21_berserk_1/_3` 聊天键识别，无开关），属性面板不受影响 | [Release v1.2.4](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.4) |
 | **1.2.3** | 属性名统一（盔甲 → 防御、真•盔甲 → 真·防御）；玩家心数改两行排版（上排 魂/黑/蓝，下排 红 当前/上限 + 碎/粉，不再轮换）；心数统一缩写（玩家也缩）；缩写去掉「整数位 ≥100 不带小数」，999999 → 999.9K；`mod/README.md` 新增「隐藏特征」一节 | [Release v1.2.3](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.3) |
@@ -102,6 +103,36 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.2.6
+
+### ① 查证
+
+| 状态 | 地图对 `below_name` 百分比的处理 | 结论 |
+| --- | --- | --- |
+| 癫狂（Berserk） | **不动**：`status_effect21_berserk` 只加分数/发消息，没有 `setdisplay` | 百分比仍可见 |
+| 未知诅咒 | `d_curse02_unknown.mcfunction` 第 9-11 行：`scoreboard objectives setdisplay below_name` / `list` / `sidebar`（不带 objective = 清空） | 百分比消失 |
+
+### ② 癫狂改为画百分比条
+
+`HudWorldRenderer.submit` 里癫狂分支：
+
+- 用 `managedCore` / `visibleCore` 判定实体（绕过癫狂闸门）；
+- `EnemyData.healthPercentOf` 取百分比 → `EnemyData.percent(p)`；
+- `showNumbers/showHearts/showArmor = false` → 只画条；
+- 不接管名字、不摘原版分数；取不到百分比（< 0）不画。
+
+### ③ `EnemyData.percent(int)`
+
+`percent(73)` → `Snapshot(hp=73, maxHp=100, percentOnly=true, percent=73, ratio=0.73)`；>100 夹 100，<0 夹 0。
+
+### ④ 自检
+
+`checks=4857 failures=0`。
+
+### ⑤ 未验证
+
+没有实机进癫狂看百分比条。
 
 ## 1.2.5
 

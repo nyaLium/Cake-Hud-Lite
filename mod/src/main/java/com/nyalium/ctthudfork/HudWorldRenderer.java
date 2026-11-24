@@ -71,19 +71,39 @@ public final class HudWorldRenderer {
         if (!cfg.enabled) return;
         // 诅咒：与地图设定一致，整个 UI 隐藏（不提供开关）。
         if (CurseDetector.isActive(mc)) return;
-        // 1.2.4 癫狂：隐藏实体血条（面板另走 HudElement，不受影响）。
-        if (BerserkDetector.isActive(mc)) return;
-        // 只画本 Mod 接管的实体：数据包管控的敌人 / 队伍条里的队友。
-        if (!HudTarget.managed(mc, entity)) return;
-        // 距离 / 被墙挡住 / 被其它实体挡住 —— 保留为「少提交一点」的额外剔除，
-        // 真正的遮挡由深度测试负责。
-        if (!HudTarget.visible(mc, entity)) return;
+        // 1.2.6：癫狂不再整块隐藏 —— 地图不会清掉 {@code below_name} 的百分比
+        // （只有未知诅咒会 {@code setdisplay below_name} 清一次），所以此时按百分比画一条条，
+        // 不写数字、不画心数/护甲，也不接管名字与原版分数。
+        boolean berserk = BerserkDetector.isActive(mc);
+        if (berserk) {
+            if (!HudTarget.managedCore(mc, entity)) return;
+            if (!HudTarget.visibleCore(mc, entity)) return;
+        } else {
+            // 只画本 Mod 接管的实体：数据包管控的敌人 / 队伍条里的队友。
+            if (!HudTarget.managed(mc, entity)) return;
+            // 距离 / 被墙挡住 / 被其它实体挡住 —— 保留为「少提交一点」的额外剔除，
+            // 真正的遮挡由深度测试负责。
+            if (!HudTarget.visible(mc, entity)) return;
+        }
 
         boolean teammate = entity instanceof Player;
-        EnemyData.Snapshot data = resolveData(mc, entity, teammate);
+        EnemyData.Snapshot data;
+        if (berserk) {
+            int percent = EnemyData.healthPercentOf(mc.level.getScoreboard(), entity);
+            if (percent < 0) return;   // 连百分比都没有：不画
+            data = EnemyData.percent(percent);
+        } else {
+            data = resolveData(mc, entity, teammate);
+        }
         if (data == null) return;
 
         HudLayout.Options options = teammate ? teamOptions(cfg) : options(cfg);
+        if (berserk) {
+            // 只留血条：百分比条（绿条 / 红条按队友与敌人区分）。
+            options.showNumbers = false;
+            options.showHearts = false;
+            options.showArmor = false;
+        }
         // 元素护甲每页 2 项，按时间循环（用实体 id 错开，避免同一帧全体翻页）。
         long now = System.currentTimeMillis();
         options.armourPage = ArmourCycle.page(data.armor, now, entity.getId());
