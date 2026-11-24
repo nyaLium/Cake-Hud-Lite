@@ -39,7 +39,7 @@ jar 在 **GitHub Releases** 里：<https://github.com/nyaLium/CTT-HUD-Mod-Fork-V
 
 仓库里**不保存**任何 jar 或历史归档：完整版本索引见 [`RELEASES.md`](RELEASES.md)。
 
-> **1.0.0 / 1.0.1 已撤回**：这两个版本的 `LICENSE` 把上游版权人写成了仓库账号名（实际为 `Copyright (c) 2026 Kirin0321 (麒麟)`）。为免分发署名错误的产物，它们的 jar、归档与 tag 已从本仓库移除，**请只使用 1.0.2**。
+> **1.0.0 / 1.0.1 已撤回**：这两个版本的 `LICENSE` 把上游版权人写成了仓库账号名（实际为 `Copyright (c) 2026 Kirin0321 (麒麟)`）。为免分发署名错误的产物，它们的 jar、归档与 tag 已从本仓库移除，请使用最新的 **1.1.0**。
 
 依赖：Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；Mod Menu 可选（装了就有设置入口）。
 配置：`config/ctt-hud-fork.json`；旧的 `ctt-enemy-hud.json` 会自动复制迁移。
