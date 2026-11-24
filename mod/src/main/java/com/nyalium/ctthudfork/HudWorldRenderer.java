@@ -99,8 +99,9 @@ public final class HudWorldRenderer {
 
         HudLayout.Options options = teammate ? teamOptions(cfg) : options(cfg);
         if (berserk) {
-            // 只留血条：百分比条（绿条 / 红条按队友与敌人区分）。
-            options.showNumbers = false;
+            // 1.2.7：癫狂时只画「百分比文本 + 百分比条」。
+            // 关掉心数与护甲后，HudLayout 会走 percentOnly 分支，把 `73%` 写在血条上方；
+            // 数字开关（showNumbers）仍听配置，百分比文本本来就是这个模式唯一的文字。
             options.showHearts = false;
             options.showArmor = false;
         }

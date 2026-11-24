@@ -900,6 +900,18 @@ public final class SelfCheck {
         check(EnemyData.percent(120).percent == 100, "超过 100 应夹到 100");
         check(EnemyData.percent(-5).percent == 0, "负数应夹到 0");
 
+        // 1.2.7：癫狂的排版 = 百分比文本 + 条（关掉心数/护甲，保留数字开关）
+        HudLayout.Options p4 = new HudLayout.Options();
+        p4.showArmor = false;
+        p4.showHearts = false;
+        p4.showBar = true;
+        p4.barWidth = 100;
+        HudLayout.Result berserkLayout = HudLayout.compute(73, 100, true, 0, new int[7],
+                HeartCounts.unknown(), p4, SelfCheck::width);
+        check(rowText(berserkLayout, 0).equals("73%"),
+                "癫狂排版应写百分比文本: " + rowText(berserkLayout, 0));
+        check(berserkLayout.barWidth == 100, "癫狂排版仍应有血条: " + berserkLayout.barWidth);
+
         // 1.2.2：六类心用同一个 ❤ 字形，靠颜色区分
         for (int i = 0; i < HeartCounts.COUNT; i++) {
             check(HeartCounts.ICONS[i].equals("\u2764"), "第 " + i + " 类心应使用 ❤");
