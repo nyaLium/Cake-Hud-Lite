@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.2.3** | 属性名统一（盔甲 → 防御、真•盔甲 → 真·防御）；玩家心数改两行排版（上排 魂/黑/蓝，下排 红 当前/上限 + 碎/粉，不再轮换）；心数统一缩写（玩家也缩）；缩写去掉「整数位 ≥100 不带小数」，999999 → 999.9K；`mod/README.md` 新增「隐藏特征」一节 | [Release v1.2.3](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.3) |
 | **1.2.2** | 六类心统一 `❤` + 颜色（与地图 / 属性面板一致）；真盔甲不再参与护甲翻页、常驻显示；纯客户端队友绿条改用 `below_name` 的 `HealthPercent` 填进度（文字不变）；玩家头顶心数不缩写；缩写阈值 100000 → 1000、保留一位小数截断；血条通用透明度改为 10%~100%、默认 50%（config v23） | [Release v1.2.2](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.2) |
 | **1.2.1** | 修纯客户端（服务端未装本 Mod）时队友血量的两个问题：①「NIVEI / NIVEIV」这类前缀名会互相认领（`NIVEI` 的条目挂到 `NIVEIV` 头顶）；②蓝心 / 魂心让 AllHearts 超过 MaxHP 时，头顶数字被夹成「MaxHP/MaxHP」，与 Boss 栏对不上。现在完整玩家名只做精确匹配、宽松匹配要求唯一候选，且显示值不再夹上限 | [Release v1.2.1](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.1) |
 | **1.2.0** | 「调整位置…」（盾牌）界面新增「初始位置是否跟随副手变化」（`shieldAutoMirror`，默认开，悬停有说明，在「回到初始位置」左侧）：关掉后初始位置固定按右手（副手在左），切换主手不再镜像；配置 schema 不变（新字段默认值 = 旧行为） | [Release v1.2.0](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.0) |
@@ -99,6 +100,49 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.2.3
+
+### ① 命名
+
+| key | 旧 | 新 |
+| --- | --- | --- |
+| `config.kind.defence` | 盔甲 | 防御 |
+| `config.kind.true_armor` | 真•盔甲 | 真·防御 |
+| `config.kind.true_armor_amp` | 真•盔甲倍率 | 真·防御倍率 |
+| en_us | Armour / True armour / True armour multiplier | Defence / True defence / True defence multiplier |
+
+### ② 玩家心数排版
+
+```
+魂心N 黑心N 蓝心N
+红心N/MaxN 碎心（粉心）N
+```
+
+上排 魂→黑→蓝；下排红心在前、碎/粉在后；玩家不再轮换（敌人不变）。
+
+### ③ 心数统一缩写
+
+玩家心数也走 K/M/B（`< 1000` 原样）。
+
+### ④ 999 999 → 999.9K
+
+1.2.2 的「整数位 ≥ 100 不带小数」是代码行为（当时为控行宽），不是笔误。
+1.2.3 去掉该规则：999999 → `999.9K`、999999999 → `999.9M`，整数位仍 ≥ 1。
+
+### ⑤ 文档与注释
+
+`mod/README.md` 新增「隐藏特征（写死在代码里的常量与行为）」五组表格；
+`HudWorldRenderer.CACHE_NS`、`BossBarTracker.TEAM_CACHE_MS` 等补上单位注释，
+`HeartCycle.PLAYER_ORDER` 标注为不再使用。
+
+### ⑥ 自检
+
+`checks=4846 failures=0`。
+
+### ⑦ 未验证
+
+没有实机看两行排版；数值部分由自检覆盖。
 
 ## 1.2.2
 

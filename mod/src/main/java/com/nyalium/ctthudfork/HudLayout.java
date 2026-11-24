@@ -253,17 +253,26 @@ public final class HudLayout {
         List<Line> heartRow = new ArrayList<>(4);
         if (opt.showNumbers) {
             if (opt.showHearts && hearts != null && hearts.any()) {
-                if (hearts.has(HeartCounts.RED)) {
-                    heartRow.add(redLine(hearts.get(HeartCounts.RED), maxHp, !opt.playerStyle));
-                }
                 if (opt.playerStyle) {
-                    addKinds(top, hearts, false, HeartCounts.CRACKED, HeartCounts.PINK, HeartCounts.BLUE);
-                }
-                if (opt.cycleKind >= 0 && hearts.has(opt.cycleKind)) {
-                    if (!heartRow.isEmpty()) {
-                        heartRow.add(new Line(HEART_GAP, 0xFFFFFF));
+                    // 1.2.3 起玩家固定两行、不再轮换：
+                    //   上排：魂心 / 黑心 / 蓝心（有才写）
+                    //   下排：红心 当前/上限 + 碎心或粉心（有才写）
+                    addKinds(top, hearts,
+                            HeartCounts.SOUL, HeartCounts.BLACK, HeartCounts.BLUE);
+                    if (hearts.has(HeartCounts.RED)) {
+                        heartRow.add(redLine(hearts.get(HeartCounts.RED), maxHp));
                     }
-                    heartRow.add(kindLine(opt.cycleKind, hearts.get(opt.cycleKind), !opt.playerStyle));
+                    addKinds(heartRow, hearts, HeartCounts.CRACKED, HeartCounts.PINK);
+                } else {
+                    if (hearts.has(HeartCounts.RED)) {
+                        heartRow.add(redLine(hearts.get(HeartCounts.RED), maxHp));
+                    }
+                    if (opt.cycleKind >= 0 && hearts.has(opt.cycleKind)) {
+                        if (!heartRow.isEmpty()) {
+                            heartRow.add(new Line(HEART_GAP, 0xFFFFFF));
+                        }
+                        heartRow.add(kindLine(opt.cycleKind, hearts.get(opt.cycleKind)));
+                    }
                 }
             } else if (percentOnly) {
                 // 纯客户端只有 below_name 的 HealthPercent：拆不出各类心，但**至少把百分比数字画出来**
@@ -326,21 +335,16 @@ public final class HudLayout {
      * <p>红心上限就是 {@code MaxHP}（数据包 {@code RedHearts = min(RedHearts, MaxHP)}）；
      * 上限未知（≤ 0）时只写当前值。</p>
      */
-    private static Line redLine(int red, int maxHp, boolean abbreviate) {
+    private static Line redLine(int red, int maxHp) {
         String icon = HeartCounts.ICONS[HeartCounts.RED];
-        String cur = number(Math.max(0, red), abbreviate);
-        String text = maxHp > 0 ? icon + cur + "/" + number(maxHp, abbreviate) : icon + cur;
+        String cur = num(Math.max(0, red));
+        String text = maxHp > 0 ? icon + cur + "/" + num(maxHp) : icon + cur;
         return new Line(text, HeartCounts.COLORS[HeartCounts.RED]);
     }
 
-    /** 数字文本：{@code abbreviate} = false 时原样输出（玩家头顶的心数不缩写）。 */
-    static String number(int value, boolean abbreviate) {
-        return abbreviate ? num(value) : Integer.toString(value);
-    }
-
-    /** 某一类心的一段：图标 + 数量。 */
-    private static Line kindLine(int kind, int value, boolean abbreviate) {
-        return new Line(HeartCounts.ICONS[kind] + number(value, abbreviate), HeartCounts.COLORS[kind]);
+    /** 某一类心的一段：图标 + 数量（数量走 {@link #num} 缩写）。 */
+    private static Line kindLine(int kind, int value) {
+        return new Line(HeartCounts.ICONS[kind] + num(value), HeartCounts.COLORS[kind]);
     }
 
     /**
@@ -371,13 +375,13 @@ public final class HudLayout {
      * 把指定几类心各写成一段，追加到 {@code lines}，<b>只写存在的类型</b>。
      * 段之前补一个空格（{@code lines} 已有内容时）。碎心与粉心互斥。
      */
-    private static void addKinds(List<Line> lines, HeartCounts hearts, boolean abbreviate, int... kinds) {
+    private static void addKinds(List<Line> lines, HeartCounts hearts, int... kinds) {
         for (int kind : kinds) {
             if (!hearts.has(kind)) continue;
             if (!lines.isEmpty()) {
                 lines.add(new Line(HEART_GAP, 0xFFFFFF));
             }
-            lines.add(kindLine(kind, hearts.get(kind), abbreviate));
+            lines.add(kindLine(kind, hearts.get(kind)));
         }
     }
 
@@ -405,11 +409,16 @@ public final class HudLayout {
         return sign + scaled(n, 1_000_000_000L) + "B";
     }
 
-    /** 截断到 1 位小数；整数部分 ≥ 100 时只留整数，保证不会太长。 */
+    /**
+     * 截断到 1 位小数（不四舍五入）。
+     *
+     * <p>1.2.3：去掉「整数位 ≥ 100 就不带小数」的旧规则 —— 999999 现在写 {@code 999.9K}，
+     * 不再是 {@code 999K}。整数位仍保证 ≥ 1（不会出现 {@code 0.9K}）。</p>
+     */
     private static String scaled(long n, long unit) {
         long whole = n / unit;
         long tenth = (n % unit) / (unit / 10L);
-        if (whole >= 100 || tenth == 0) return Long.toString(whole);
+        if (tenth == 0) return Long.toString(whole);
         return whole + "." + tenth;
     }
 

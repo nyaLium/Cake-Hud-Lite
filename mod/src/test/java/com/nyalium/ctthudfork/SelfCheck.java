@@ -651,24 +651,26 @@ public final class SelfCheck {
 
         HudLayout.Result teamHearts = HudLayout.compute(150, 150, false, 0, new int[7],
                 HeartCounts.of(60, 40, 30, 20, 2), teamLike, SelfCheck::width);
-        check(teamHearts.rowCount() == 2, "玩家：特殊心 + 心数，共两行: " + teamHearts.rowCount());
-        check(rowText(teamHearts, 0).equals("❤2 ❤20"),
-                "玩家最上面一行 = 碎心 + 蓝心: " + rowText(teamHearts, 0));
-        check(rowText(teamHearts, 1).equals("❤60/150 ❤40"),
-                "玩家心数行只轮换魂/黑: " + rowText(teamHearts, 1));
+        check(teamHearts.rowCount() == 2, "玩家：上排魂/黑/蓝 + 下排红心/碎心，共两行: " + teamHearts.rowCount());
+        check(rowText(teamHearts, 0).equals("❤40 ❤30 ❤20"),
+                "玩家最上面一行 = 魂心 + 黑心 + 蓝心: " + rowText(teamHearts, 0));
+        check(rowText(teamHearts, 1).equals("❤60/150 ❤2"),
+                "玩家下排 = 红心 当前/上限 + 碎心: " + rowText(teamHearts, 1));
 
         teamLike.cycleKind = HeartCounts.BLACK;
         HudLayout.Result teamBlack = HudLayout.compute(150, 150, false, 0, new int[7],
                 HeartCounts.of(60, 40, 30, 20, 2), teamLike, SelfCheck::width);
-        check(rowText(teamBlack, 1).equals("❤60/150 ❤30"),
-                "轮换到黑心时: " + rowText(teamBlack, 1));
+        check(rowText(teamBlack, 1).equals("❤60/150 ❤2"),
+                "玩家不再轮换（cycleKind 不影响）: " + rowText(teamBlack, 1));
 
         teamLike.cycleKind = HeartCounts.SOUL;
         HudLayout.Result teamPlain = HudLayout.compute(150, 150, false, 0, new int[7],
                 HeartCounts.of(60, 40, 0, 0, 0), teamLike, SelfCheck::width);
-        check(teamPlain.rowCount() == 1, "玩家没有碎心/蓝心时只有一行: " + teamPlain.rowCount());
-        check(rowText(teamPlain, 0).equals("❤60/150 ❤40"),
-                "玩家心数行=" + rowText(teamPlain, 0));
+        check(teamPlain.rowCount() == 2, "玩家有魂心时仍是两行: " + teamPlain.rowCount());
+        check(rowText(teamPlain, 0).equals("❤40"),
+                "玩家上排只有魂心: " + rowText(teamPlain, 0));
+        check(rowText(teamPlain, 1).equals("❤60/150"),
+                "玩家下排只有红心: " + rowText(teamPlain, 1));
 
         // 玩家排版下，红心与轮换心的顺序固定：红心在前。
         check(rowText(teamHearts, 1).startsWith("❤60/150"), "红心永远在最前面");
@@ -690,7 +692,7 @@ public final class SelfCheck {
         check(!teamFlat.contains(EnemyData.ARMOR_ICONS[1]), "队友不该出现 🔥 元素护甲段: " + teamFlat);
         check(!teamFlat.contains("|"), "队友不该出现护甲分隔符: " + teamFlat);
         // join() 把几行首尾相接，去掉空格再比（玩家：特殊心行 + 红心/轮换心行）。
-        check(teamFlat.replace(" ", "").equals("❤2❤20❤60/150❤40"),
+        check(teamFlat.replace(" ", "").equals("❤40❤30❤20❤60/150❤2"),
                 "队友这几行只应有心: " + teamFlat);
         check(teamArmored.barWidth == 100, "队友的血条仍要画: " + teamArmored.barWidth);
 
@@ -837,19 +839,19 @@ public final class SelfCheck {
         check(HudLayout.num(24999).equals("24.9K"), "num(24999) 应截断成 24.9K: " + HudLayout.num(24999));
         check(HudLayout.num(99_999).equals("99.9K"), "num(99999)=" + HudLayout.num(99_999));
         check(HudLayout.num(100_000).equals("100K"), "num(100000)=" + HudLayout.num(100_000));
-        check(HudLayout.num(123_456).equals("123K"), "num(123456)=" + HudLayout.num(123_456));
-        check(HudLayout.num(999_999).equals("999K"), "num(999999)=" + HudLayout.num(999_999));
+        check(HudLayout.num(123_456).equals("123.4K"), "num(123456)=" + HudLayout.num(123_456));
+        check(HudLayout.num(999_999).equals("999.9K"), "num(999999)=" + HudLayout.num(999_999));
         check(HudLayout.num(1_100_000).equals("1.1M"), "num(1100000)=" + HudLayout.num(1_100_000));
         check(HudLayout.num(2_100_000).equals("2.1M"), "num(2100000)=" + HudLayout.num(2_100_000));
         check(HudLayout.num(12_345_678).equals("12.3M"), "num(12345678)="
                 + HudLayout.num(12_345_678));
-        check(HudLayout.num(999_999_999).equals("999M"), "num(999999999)="
+        check(HudLayout.num(999_999_999).equals("999.9M"), "num(999999999)="
                 + HudLayout.num(999_999_999));
         check(HudLayout.num(Integer.MAX_VALUE).equals("2.1B"), "num(MAX)="
                 + HudLayout.num(Integer.MAX_VALUE));
         check(HudLayout.num(Integer.MIN_VALUE).startsWith("-"), "num(MIN) 应带负号: "
                 + HudLayout.num(Integer.MIN_VALUE));
-        check(HudLayout.num(-123_456).equals("-123K"), "num(-123456)="
+        check(HudLayout.num(-123_456).equals("-123.4K"), "num(-123456)="
                 + HudLayout.num(-123_456));
 
         // 缩写的目的是行宽可控：五段 999999 以前约 40 个字符，现在每段 4~5 个。
@@ -861,7 +863,7 @@ public final class SelfCheck {
         String text = join(HudLayout.compute(999_999, 999_999, false, 0, new int[7],
                 HeartCounts.of(999_999, 999_999, 999_999, 999_999, 999_999), o, SelfCheck::width));
         check(!text.contains("999999"), "大数值应先缩写: " + text);
-        check(text.contains("999K/999K"), "大数值缩写格式: " + text);
+        check(text.contains("999.9K/999.9K"), "大数值缩写格式: " + text);
         check(text.length() < 60, "缩写后整行不该太长: " + text.length() + " -> " + text);
 
         // 1.2.2：玩家头顶的心数**不缩写**（魂/黑/蓝/碎/粉都照原样写）
@@ -872,8 +874,8 @@ public final class SelfCheck {
         p2.cycleKind = HeartCounts.SOUL;
         String pt = join(HudLayout.compute(12_345, 12_345, false, 0, new int[7],
                 HeartCounts.of(12_345, 10_000, 0, 0, 0), p2, SelfCheck::width));
-        check(pt.contains("12345") && pt.contains("10000"), "玩家心数不该缩写: " + pt);
-        check(!pt.contains("12.3K") && !pt.contains("10K"), "玩家心数不该出现缩写后缀: " + pt);
+        check(pt.contains("12.3K") && pt.contains("10K"), "玩家心数也要缩写: " + pt);
+        check(!pt.contains("12345") && !pt.contains("10000"), "玩家心数不该出现原样大数: " + pt);
 
         // 1.2.2：六类心用同一个 ❤ 字形，靠颜色区分
         for (int i = 0; i < HeartCounts.COUNT; i++) {

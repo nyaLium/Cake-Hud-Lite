@@ -7,7 +7,7 @@
 >
 > 这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版（MIT 许可；其 LICENSE 的版权声明为 Copyright (c) 2026 Kirin0321（麒麟））。
 >
-> 当前版本 **1.2.2**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.2.3**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/透明度，
 > 88 个属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
 > 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」（进服后先静默 3 s 再问）；1.20.40 把面板/盾牌的位置改成**相对位置**，窗口大小或 GUI 缩放变化后不再错位；1.20.41 面板默认位置改到**左侧偏上（y = 屏幕高 ÷ 3）**；1.20.42 容器界面那两套的默认位置也一样。
@@ -21,11 +21,11 @@
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.2.2` |
+| 版本 | `1.2.3` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/ctt-hud-fork-1.2.2.jar` |
+| 产物 | `build/libs/ctt-hud-fork-1.2.3.jar` |
 | 仓库 | <https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version>（`fabric.mod.json` 的 `contact.homepage` / `sources` / `issues` 都指向这里，Mod Menu 会显示） |
 
 ## 代码导览（每个类做什么）
@@ -240,15 +240,17 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 | 没装 | `当前/最大`（不做近似，宁缺毋假） |
 | 装了（1.16.0 起） | 和敌人一样的心数行：`❤60/150` + `❤40 ❤30 ❤20 ❤2`，碎心/粉心也在 |
 
+**1.2.3 起的玩家排版**：上排 `魂 N 黑 N 蓝 N`，下排 `红 N/上限 碎（粉）N`；敌人仍是「红 + 一种轮换心」。
+
 **1.2.2 起的显示细则**（都写在代码里，界面上没有开关）：
 
 - **六类心统一用 `❤` 字形 + 各自颜色**（红/黄/紫/蓝/暗红/亮紫），与地图 `view_stats` 的写法一致；
   以前魂/黑/蓝/碎/粉用的是 💛🖤💙💔💗，字体里落成另一套 emoji 字形，看起来和红心不是一套；
 - **真盔甲（TrueArmor）不参与元素护甲翻页**，和 `🛡 防御` 一样常驻（白 🛡，页数里不算它）；
 - **玩家绿条进度优先用 `below_name` 的 `HealthPercent`**（= 红心 ÷ MaxHP），队伍条数字只负责文字；
-- **玩家头顶的心数不缩写**（魂/黑/蓝/碎/粉照原样），敌人的数字仍走 K/M/B 缩写；
+- **心数一律走 K/M/B 缩写**（1.2.3 起玩家也一样；< 1000 原样）；
 - **缩写规则**：< 1000 原样（900 仍写 `900`，不会变 `0.9K`），≥ 1000 用 K/M/B，**截断**一位小数
-  （24999 → `24.9K`，1100 → `1.1K`，1 100 000 → `1.1M`）；整数位 ≥ 100 时不再带小数（999 999 → `999K`）。
+  （24999 → `24.9K`，1100 → `1.1K`，999 999 → `999.9K`，1 100 000 → `1.1M`）；整数位恒 ≥ 1。
 
 服务端会把**附近的其他玩家**也按 UUID 推进 `mob_health`（字段与怪完全一样），
 客户端 `resolveData` 优先用它，拿不到才回退队伍条。
@@ -681,7 +683,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/ctt-hud-fork-1.2.2.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/ctt-hud-fork-1.2.3.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革
@@ -756,6 +758,81 @@ gradlew selfCheck      # gradlew build 会自动带上
 | ~~1.0.1~~ | **只动注释与文档**（无行为变化）：三个设置页补「行 ↔ 配置字段 ↔ 范围」表、每行一句注释；校正 v1.0.0 删改后的陈旧注释；补 `Panel`/`Line`/`Result`/`BarWidth` 等字段说明；README 新增「界面文案 ↔ 配置字段对照」 |
 | **1.0.2** | 更正 `LICENSE` 的上游版权署名（上游实际为 `Copyright (c) 2026 Kirin0321 (麒麟)`），根 / `mod/` 两份 LICENSE、`NOTICE.md`、`fabric.mod.json` 同步；**1.0.0 / 1.0.1 因署名错误已撤回**，jar、归档与 tag 均已从仓库移除 |
 | **1.20.42** | **容器界面**那两套面板的默认位置也改成 x=4、y = 屏幕高 ÷ 3（打开箱子/背包时同样在偏上 1/3）；配置 v21（只有仍停在旧默认 20 的才迁移） |
+
+## 隐藏特征（写死在代码里的常量与行为）
+
+这一节把「界面上没有开关、只写在代码里」的设定集中记下来，方便对照与调参。
+数值都写在对应类的常量里（括号里是位置）。
+
+### 时间 / 轮换
+
+| 特征 | 值 | 位置 |
+| --- | --- | --- |
+| 心类轮换间隔 | **2000 ms** | `HeartCycle.KIND_MS` |
+| 心类轮换顺序（敌人） | 魂 → 黑 → 蓝 → 碎 → 粉，只挑该实体真有的 | `HeartCycle.ENEMY_ORDER` |
+| 心类轮换顺序（玩家） | 1.2.3 起**不轮换**（全部固定显示）；`PLAYER_ORDER` 仍保留但不再使用 | `HeartCycle.PLAYER_ORDER` |
+| 轮换错开 | 用**实体 id** 作 `salt`，满屏不同步跳字 | `HeartCycle.pick` / `ArmourCycle.page` |
+| 护甲翻页间隔 | **2000 ms**，每页 **2 项** | `ArmourCycle.PAGE_MS`、`HudLayout.ARMOUR_PAGE_SIZE` |
+| 真盔甲 | **不占页**、常驻（白 🛡） | `EnemyData.TRUE_ARMOR_INDEX` |
+| 护甲缓存 | 8 个槽；单槽 **18 s** 不出现失效，整条 **30 s** 失效 | `ArmourCache.SLOTS` / `SLOT_TTL_MS` / `ENTRY_TTL_MS` |
+| Boss 栏 / 队伍条刷新 | **50 ms** 一帧缓存 | `HudWorldRenderer.CACHE_NS` |
+| 队伍条解析缓存 | **200 ms** | `BossBarTracker.TEAM_CACHE_MS` |
+| 实体 `visible()` 记忆 | 一帧 **8 ms** 内复用（省 raycast） | `HudTarget.MEMO_NS` |
+| 服务端组件保鲜 | **5 s** 没收到就回落客户端通道 | `ClientMobHealthCache.FRESH_WINDOW_MS` |
+| 服务端推送 | 每 **4 tick**、半径 **64 格**、3 s 无数据视为掉线 | `CttHudForkServer.INTERVAL_TICKS` / `RADIUS` / `KEEPALIVE_MS` |
+| 诅咒检测 | 每 **100 ms** 探测，命中后 **2 s** 释放 | `CurseDetector.PROBE_INTERVAL_MS` / `RELEASE_DELAY_MS` |
+| `/trigger` 回显吞掉窗口 | **3 s** | `ChatTriggerFilter.ECHO_WINDOW_MS` |
+| 属性面板进服静默 | 开局 **3 s** 不发 trigger、丢输出 | `SelfStats.JOIN_GRACE_MS` |
+| 面板采集超时 | 软 **3 s** / 硬 **8 s**，最多 **64** 行 | `SelfStats.CAPTURE_TIMEOUT_MS` / `CAPTURE_HARD_MS` / `MAX_LINES` |
+| 配置热重载 | 每 **2 s** 检查文件是否改过 | `HudConfig.RECHECK_MS` |
+
+### 认领 / 匹配
+
+| 特征 | 值 |
+| --- | --- |
+| Boss 栏 → 实体的百分比容差 | **5 个百分点**（`BossBarTracker.PERCENT_TOLERANCE`） |
+| 粘性奖励 | **4 格²（≈2 格）**（`STICKY_BONUS`） |
+| 同名怪排序 | 百分比精确 > ≤2 > ≤5 → 名字精确 → 离玩家更近 → 上一帧绑定 |
+| 队友条目 | 完整玩家名只精确匹配；宽松（包含）匹配必须**唯一候选**且不是任何玩家全名 |
+| 认不到时 | 敌人退回 `below_name` 百分比；队友退回百分比绿条 |
+
+### 布局 / 绘制
+
+| 特征 | 值 |
+| --- | --- |
+| 文字底行 / 血条顶 / 条高 | `TEXT_TOP = -18`、`BAR_TOP = -7`、`BAR_HEIGHT = 5` |
+| 行距 | `ROW_STEP = 10`（`TEXT_BOX_HEIGHT`） |
+| 心与心 / 护甲与元素护甲 | 1 个空格 / **2 个空格**（`HEART_GAP` / `ARMOUR_GAP`） |
+| 血条长度 / 缩放 | 50~150（默认 75）/ 0.75~1.50（默认 0.9） |
+| 显示距离 | 4~256 格，默认 **48** |
+| 血条通用透明度 | 0.10~1.00，默认 **0.50**（1.2.2） |
+| 文字阴影 | 默认**关**（只管头顶血条；面板独立一项） |
+| 隐藏 `below_name` 分数 | 默认**开** |
+| 护甲配色 | 🛡 防御=蓝、真·防御=白、🔥金、☃ 白、☠ 紫、☀ 白、⚓ 水蓝、⚡ 黄 |
+| 盾牌默认位置 | 底边距底 **76 px**，水平对准副手格中心 `guiW/2 ∓ 109` |
+| 盾牌档位 | `damage/max`：<0.4 绿、<0.6 黄、<0.8 红、否则空 |
+| 盾牌缩放 / 透明度 | 0.50~1.50（默认 0.70）/ 0.10~1.00（默认 0.65） |
+| 面板默认 | x=**4**、y=**屏幕高 ÷ 3**、列数 **2**、透明度 1.0、显示方式 **2（HUD+容器）** |
+
+### 数字 / 文本
+
+| 特征 | 值 |
+| --- | --- |
+| 缩写 | `< 1000` 原样；`≥ 1000` 用 K/M/B；**截断**一位小数；整数位 ≥ 1 |
+| 例 | `900`、`1000→1K`、`1100→1.1K`、`24999→24.9K`、`999999→999.9K`、`1100000→1.1M` |
+| 百分比 | `hp*100/maxHp` 四舍五入、夹 0~100，写成 `73%` |
+| 心形 | 六类统一 `❤`，靠颜色区分（与地图 `view_stats` 一致） |
+| 玩家心数排版（1.2.3） | 上排 `魂/黑/蓝`；下排 `红 当前/上限` + `碎/粉` |
+
+### 行为
+
+| 特征 | 说明 |
+| --- | --- |
+| 自动开队伍条 | 检测到自己有个人 bossbar 才发 `/trigger TogglePartyBossbar` |
+| 诅咒 | 检测到诅咒 bossbar 时整个 UI（含名称接管）隐藏 |
+| 服务端组件 | 装了本 Mod 的服务端推 `mob_health`（uuid/hp/四色心/碎心/护甲），5 s 保鲜 |
+| 旁观/死亡 | 不画头顶 HUD，但原版 `below_name` 分数仍会被摘掉 |
+| 旧配置键 | `hideBehindEntities`、`useServerData`、`verticalOffset` 等读取时忽略 |
 
 ## 已知限制
 

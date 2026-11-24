@@ -22,7 +22,12 @@ public final class HeartCycle {
             HeartCounts.CRACKED, HeartCounts.PINK
     };
 
-    /** 玩家：只在魂 / 黑之间轮换。 */
+    /**
+     * 玩家：只在魂 / 黑之间轮换。
+     *
+     * <p>1.2.3 起玩家改为「固定两行」排版（上排 魂/黑/蓝，下排 红 + 碎/粉），
+     * 不再轮换；这个顺序保留是为了自检与旧行为对照。</p>
+     */
     public static final int[] PLAYER_ORDER = {
             HeartCounts.SOUL, HeartCounts.BLACK
     };

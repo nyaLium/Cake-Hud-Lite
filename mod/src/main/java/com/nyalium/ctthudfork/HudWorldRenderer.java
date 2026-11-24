@@ -39,7 +39,7 @@ import java.util.UUID;
  */
 public final class HudWorldRenderer {
 
-    /** 数据缓存时长（一帧之内所有实体共用一次解析）。 */
+    /** 数据缓存时长：**50 ms**（一帧之内所有实体共用一次解析）。 */
     private static final long CACHE_NS = 50_000_000L;
 
     private static long cacheStamp = 0L;

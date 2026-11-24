@@ -404,7 +404,7 @@ public final class BossBarTracker {
         return connection != null && connection.getPlayerInfo(name) != null;
     }
 
-    /** 队伍条解析结果的短缓存（{@link #isTeammate} 每帧会被问很多次）。 */
+    /** 队伍条解析结果的短缓存：**200 ms**（{@link #isTeammate} 每帧会被问很多次）。 */
     private static List<TeamBarTitle.Entry> cachedTeamEntries = null;
     private static long cachedTeamAtMs = 0L;
     private static final long TEAM_CACHE_MS = 200L;
