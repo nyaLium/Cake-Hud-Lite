@@ -78,13 +78,20 @@ public final class SelfStatsFilterScreen extends Screen {
     /**
      * 列表里的一行。
      *
-     * @param header 非 null = 这一行是分节标题（{@code left/right} 都为 null）
-     * @param left   左边的项（null = 空位）
-     * @param right  右边的项（null = 空位）
+     * @param header     非 null = 这是「节」标题（状态效果 / 其它）
+     * @param subHeader  非 null = 这是「属性」里的细分标题（心型 / 倍率 / 护甲 / 杂项）
+     * @param left       左边的项（null = 空位）
+     * @param right      右边的项（null = 空位）
      */
-    record Row(SelfStatsKind.Group header, SelfStatsKind left, SelfStatsKind right) {
+    record Row(SelfStatsKind.Group header, SelfStatsKind.Sub subHeader,
+                SelfStatsKind left, SelfStatsKind right) {
         boolean isHeader() {
-            return header != null;
+            return header != null || subHeader != null;
+        }
+
+        /** 标题的翻译键（节 / 细分）。 */
+        String headerKey() {
+            return subHeader != null ? subHeader.headerKey : header.headerKey;
         }
     }
 
@@ -104,14 +111,32 @@ public final class SelfStatsFilterScreen extends Screen {
         for (SelfStatsKind.Group group : SelfStatsKind.Group.values()) {
             SelfStatsKind[] members = SelfStatsKind.section(group);
             if (members.length == 0) continue;
-            out.add(new Row(group, null, null));
-            for (int i = 0; i < members.length; i += COLUMNS) {
-                SelfStatsKind left = members[i];
-                SelfStatsKind right = i + 1 < members.length ? members[i + 1] : null;
-                out.add(new Row(null, left, right));
+            if (group != SelfStatsKind.Group.ATTRIBUTE) {
+                out.add(new Row(group, null, null, null));
+                appendItems(out, members);
+                continue;
+            }
+            // 1.3.1：「属性」按细分再插标题（属性 / 心型 / 倍率 / 护甲 / 杂项）。
+            for (SelfStatsKind.Sub sub : SelfStatsKind.Sub.values()) {
+                java.util.List<SelfStatsKind> part = new ArrayList<>();
+                for (SelfStatsKind kind : members) {
+                    if (kind.sub() == sub) part.add(kind);
+                }
+                if (part.isEmpty()) continue;
+                out.add(new Row(null, sub, null, null));
+                appendItems(out, part.toArray(new SelfStatsKind[0]));
             }
         }
         return out;
+    }
+
+    /** 把一组项两个一行地追加进 {@code out}（不跨节合并）。 */
+    private static void appendItems(List<Row> out, SelfStatsKind[] members) {
+        for (int i = 0; i < members.length; i += COLUMNS) {
+            SelfStatsKind left = members[i];
+            SelfStatsKind right = i + 1 < members.length ? members[i + 1] : null;
+            out.add(new Row(null, null, left, right));
+        }
     }
 
     @Override

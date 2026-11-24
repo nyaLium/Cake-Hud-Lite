@@ -155,5 +155,10 @@
   "ctt_hud_fork.config.kind.fire_armor_raw": "火之加护（乘算前）",
   "ctt_hud_fork.config.kind.speed_raw": "速度（乘算前）",
   "ctt_hud_fork.config.kind.mana_power_raw": "法力强度（乘算前）",
-  "ctt_hud_fork.config.debug": "调试模式"
+  "ctt_hud_fork.config.debug": "调试模式",
+  "ctt_hud_fork.config.header.attributes.core": "属性",
+  "ctt_hud_fork.config.header.attributes.heart": "属性 - 心型",
+  "ctt_hud_fork.config.header.attributes.mult": "属性 - 倍率",
+  "ctt_hud_fork.config.header.attributes.armor": "属性 - 护甲",
+  "ctt_hud_fork.config.header.attributes.misc": "属性 - 杂项"
 }

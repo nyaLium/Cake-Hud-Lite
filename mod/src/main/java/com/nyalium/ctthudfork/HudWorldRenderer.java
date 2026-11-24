@@ -85,8 +85,25 @@ public final class HudWorldRenderer {
         }
 
         boolean teammate = entity instanceof Player;
-        // 调试模式下的「自己」按队友口径取数（绿条 + below_name 百分比）。
-        EnemyData.Snapshot data = resolveData(mc, entity, teammate);
+        EnemyData.Snapshot data;
+        if (selfDebug) {
+            // 1.3.1：自己不在「队伍血量」那条 bar 里（它只列队友），所以队友路径取不到条目；
+            // 这里改用**自己的个人状态条**（同样是 名字 (当前/上限)），逻辑与队友一致：
+            // 条按 below_name 的红心百分比填，文字写 当前/上限。
+            BossBarTracker.Bar self = BossBarTracker.selfBar(mc);
+            if (self != null) {
+                int percent = EnemyData.healthPercentOf(mc.level.getScoreboard(), entity);
+                float ratio = percent >= 0
+                        ? Math.max(0.0f, Math.min(1.0f, percent / 100.0f))
+                        : self.progress;
+                data = EnemyData.exact(self.hp, self.maxHp, ratio, 0, NO_ARMOUR,
+                        HeartCounts.unknown());
+            } else {
+                data = resolveData(mc, entity, teammate);
+            }
+        } else {
+            data = resolveData(mc, entity, teammate);
+        }
         if (data == null) return;
 
         HudLayout.Options options = teammate ? teamOptions(cfg) : options(cfg);

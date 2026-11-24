@@ -1539,31 +1539,41 @@ public final class SelfCheck {
 
         // 分节列表：每节一行标题 + 两个一项（不跨节合并）
         java.util.List<SelfStatsFilterScreen.Row> rows = SelfStatsFilterScreen.buildRows();
-        check(rows.size() == 51, "三节共 51 行（1+32+1+14+1+2），实际 " + rows.size());
-        check(rows.get(0).isHeader() && rows.get(0).header() == SelfStatsKind.Group.ATTRIBUTE,
-                "第一行应是「属性」标题");
-        check(!rows.get(1).isHeader() && rows.get(1).left() == SelfStatsKind.HEART_RED,
-                "属性一节第一项应是红心（游戏时间已挪到「其它」）");
-        check(rows.get(33).isHeader() && rows.get(33).header() == SelfStatsKind.Group.STATUS,
-                "第 33 行应是「状态效果」标题");
-        check(!rows.get(34).isHeader() && rows.get(34).left() == SelfStatsKind.STATUS_49
-                        && rows.get(34).right() == SelfStatsKind.STATUS_50,
+        check(rows.size() == 56, "三节 + 5 个属性细分共 56 行，实际 " + rows.size());
+        check(rows.get(0).isHeader() && rows.get(0).subHeader() == SelfStatsKind.Sub.CORE,
+                "第一行应是「属性」细分标题");
+        check(!rows.get(1).isHeader() && rows.get(1).left() == SelfStatsKind.HEART_SOUL,
+                "魂心不在「心型」列表里，落在「属性」第一项");
+        check(rows.get(38).isHeader() && rows.get(38).header() == SelfStatsKind.Group.STATUS,
+                "第 38 行应是「状态效果」标题");
+        check(!rows.get(39).isHeader() && rows.get(39).left() == SelfStatsKind.STATUS_49
+                        && rows.get(39).right() == SelfStatsKind.STATUS_50,
                 "状态效果一节应从 49/50 并排开始");
-        check(rows.get(48).isHeader() && rows.get(48).header() == SelfStatsKind.Group.OTHER,
-                "第 48 行应是「其它」标题");
-        check(rows.get(49).left() == SelfStatsKind.TIMER && rows.get(49).right() == SelfStatsKind.SKULLS,
+        check(rows.get(53).isHeader() && rows.get(53).header() == SelfStatsKind.Group.OTHER,
+                "第 53 行应是「其它」标题");
+        check(rows.get(54).left() == SelfStatsKind.TIMER && rows.get(54).right() == SelfStatsKind.SKULLS,
                 "其它一节第一行应是 游戏时间 + 难度骷髅");
-        check(rows.get(50).left() == SelfStatsKind.GRASS && rows.get(50).right() == SelfStatsKind.MISC,
+        check(rows.get(55).left() == SelfStatsKind.GRASS && rows.get(55).right() == SelfStatsKind.MISC,
                 "其它一节第二行应是 草方块 + 未识别行");
+        // 1.3.1：属性细分（心型 / 倍率 / 护甲 / 杂项）
+        check(SelfStatsKind.HEART_RED.sub() == SelfStatsKind.Sub.HEART, "红心应归心型");
+        check(SelfStatsKind.HP_NEG.sub() == SelfStatsKind.Sub.HEART, "负心应归心型");
+        check(SelfStatsKind.DEFENCE_AMP.sub() == SelfStatsKind.Sub.MULT, "防御倍率应归倍率");
+        check(SelfStatsKind.SIZE.sub() == SelfStatsKind.Sub.MISC, "体型应归杂项");
+        check(SelfStatsKind.KARMA_DARK.sub() == SelfStatsKind.Sub.MISC, "业力应归杂项");
+        check(SelfStatsKind.DEFENCE.sub() == SelfStatsKind.Sub.ARMOR, "防御应归护甲");
+        check(SelfStatsKind.FIRE_ARMOR.sub() == SelfStatsKind.Sub.ARMOR, "火之加护应归护甲");
+        check(SelfStatsKind.STAMINA.sub() == SelfStatsKind.Sub.CORE, "体力恢复速度应归属性");
+        check(SelfStatsKind.STATUS_49.sub() == null, "状态效果不属于属性细分");
         int headers = 0;
         for (SelfStatsFilterScreen.Row row : rows) if (row.isHeader()) headers++;
-        check(headers == 3, "应有 3 个分组标题，实际 " + headers);
+        check(headers == 7, "应有 7 个标题（5 个属性细分 + 状态效果 + 其它），实际 " + headers);
 
         // 双列按钮 + 滚动的纯函数
         check(SelfStatsFilterScreen.visibleRows(148) == 6, "148 px 列表应能放 6 行，实际 "
                 + SelfStatsFilterScreen.visibleRows(148));
         check(SelfStatsFilterScreen.visibleRows(0) == 0, "列表高度 0 应放 0 行");
-        check(SelfStatsFilterScreen.maxScroll(51, 6) == 45, "51 行 / 6 行可见 → 最大滚动 45");
+        check(SelfStatsFilterScreen.maxScroll(56, 6) == 50, "56 行 / 6 行可见 → 最大滚动 50");
         check(SelfStatsFilterScreen.maxScroll(5, 10) == 0, "内容比列表短时不该能滚");
         check(SelfStatsFilterScreen.clampScroll(-3, 41) == 0, "滚动量不该小于 0");
         check(SelfStatsFilterScreen.clampScroll(999, 41) == 41, "滚动量不该超过上限");

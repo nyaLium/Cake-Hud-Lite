@@ -155,5 +155,10 @@
   "ctt_hud_fork.config.kind.fire_armor_raw": "Fire protection (before multipliers)",
   "ctt_hud_fork.config.kind.speed_raw": "Speed (before multipliers)",
   "ctt_hud_fork.config.kind.mana_power_raw": "Mana power (before multipliers)",
-  "ctt_hud_fork.config.debug": "Debug mode"
+  "ctt_hud_fork.config.debug": "Debug mode",
+  "ctt_hud_fork.config.header.attributes.core": "Attributes",
+  "ctt_hud_fork.config.header.attributes.heart": "Attributes - Hearts",
+  "ctt_hud_fork.config.header.attributes.mult": "Attributes - Multipliers",
+  "ctt_hud_fork.config.header.attributes.armor": "Attributes - Armour",
+  "ctt_hud_fork.config.header.attributes.misc": "Attributes - Misc"
 }

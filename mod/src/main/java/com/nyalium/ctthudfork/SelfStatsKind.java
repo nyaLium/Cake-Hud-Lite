@@ -233,6 +233,56 @@ public enum SelfStatsKind {
         }
     }
 
+    /**
+     * 「属性」这一节内的细分（1.3.1）。
+     *
+     * <p>过滤界面里「属性」有 64 项，平铺太长；按需求细分成
+     * 属性 / 属性 - 心型 / 属性 - 倍率 / 属性 - 护甲 / 属性 - 杂项 五段。</p>
+     */
+    public enum Sub {
+        /** 其余普通属性（生命、攻击、速度、法力、主动物品、杂项数值…）。 */
+        CORE("ctt_hud_fork.config.header.attributes.core"),
+        /** 心型：红 / 黑 / 粉 / 碎 / 蓝 / 负心。 */
+        HEART("ctt_hud_fork.config.header.attributes.heart"),
+        /** 各项倍率（id 以 {@code _amp} 结尾）。 */
+        MULT("ctt_hud_fork.config.header.attributes.mult"),
+        /** 护甲：防御、真•防御、各类元素护甲。 */
+        ARMOR("ctt_hud_fork.config.header.attributes.armor"),
+        /** 杂项：体型、重力、酸萝卜别吃、各项业力。 */
+        MISC("ctt_hud_fork.config.header.attributes.misc");
+
+        public final String headerKey;
+
+        Sub(String headerKey) {
+            this.headerKey = headerKey;
+        }
+    }
+
+    /** 心型（按需求：红、黑、粉、碎、蓝、负;魂心不在这一组）。 */
+    private static final java.util.Set<String> HEART_IDS = java.util.Set.of(
+            "heart_red", "heart_black", "heart_pink", "heart_cracked", "heart_blue", "hp_neg");
+
+    /** 护甲组：防御 / 真•防御 / 元素护甲（含它们的「乘算前」）。 */
+    private static final java.util.Set<String> ARMOR_IDS = java.util.Set.of(
+            "defence", "true_armor", "defence_raw", "true_armor_raw",
+            "fire_armor", "true_fire_armor", "fire_armor_raw",
+            "water_armor", "electric_armor", "ice_armor", "dark_armor", "light_armor");
+
+    /** 杂项组：体型、重力、酸萝卜别吃、各项业力。 */
+    private static final java.util.Set<String> MISC_IDS = java.util.Set.of(
+            "size", "gravity", "bitches",
+            "karma_light", "karma_neutral", "karma_dark", "karma_celestial");
+
+    /** 这一项在「属性」里属于哪个细分（非属性节返回 null）。 */
+    public Sub sub() {
+        if (group != Group.ATTRIBUTE) return null;
+        if (HEART_IDS.contains(id)) return Sub.HEART;
+        if (id.endsWith("_amp")) return Sub.MULT;
+        if (ARMOR_IDS.contains(id)) return Sub.ARMOR;
+        if (MISC_IDS.contains(id)) return Sub.MISC;
+        return Sub.CORE;
+    }
+
     /** 配置里存的名字（写进 JSON，改了就迁移不了，别动）。 */
     public final String id;
     /** 是否出现在「显示内容过滤…」界面里。 */

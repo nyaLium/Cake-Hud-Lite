@@ -320,6 +320,40 @@ public final class BossBarTracker {
         return false;
     }
 
+    /**
+     * 找**自己**的个人状态条（{@code player_1001..1010}）。
+     *
+     * <p>调试模式画自己头顶时用：它和队伍条一样是 {@code 名字 (当前/上限)}，
+     * 所以「队友怎么画」的同一套逻辑也能用在自己身上。</p>
+     *
+     * @return 解析出的 bar；没有（不在对局 / 条被替换）返回 null
+     */
+    static Bar selfBar(Minecraft mc) {
+        if (mc == null || mc.player == null) return null;
+        if (mc.gui == null || mc.gui.hud == null) return null;
+        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
+        if (overlay == null) return null;
+        Map<UUID, BossEvent> bars;
+        try {
+            bars = ((BossHealthOverlayAccessor) (Object) overlay).cttHudFork$getBossBars();
+        } catch (Throwable t) {
+            return null;
+        }
+        if (bars == null || bars.isEmpty()) return null;
+        String playerName = mc.player.getName().getString();
+        for (BossEvent bar : bars.values()) {
+            Component component = bar.getName();
+            if (component == null) continue;
+            String text = component.getString();
+            if (!text.contains(playerName)) continue;
+            BossBarTitle title = BossBarTitle.parse(text);
+            if (title == null) continue;
+            return new Bar(bar.getId(), title.name, title.hp, title.maxHp, parseArmour(component),
+                    clampProgress(bar.getProgress()), kindOf(bar.getColor()));
+        }
+        return null;
+    }
+
     /** 从客户端 Boss 栏里找那条队伍血量条并解析出每个玩家的 当前/上限。 */
     static List<TeamBarTitle.Entry> teamEntries(Minecraft mc) {
         if (mc.gui == null || mc.gui.hud == null) return List.of();
