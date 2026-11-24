@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.2.5** | 癫狂（Berserk）改用**专属 Boss 栏**识别：数据包在玩家带 `Berserk` 标签时把个人状态条换成 `Misc_Bossbars_P10_Bossbar_11`（p1..p10 共用）；不再依赖聊天消息（带癫狂进服也能识别） | [Release v1.2.5](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.5) |
 | **1.2.4** | 「未知诅咒」现在也隐藏属性面板（HUD 与容器两处）；新增 `BerserkDetector`：癫狂期间隐藏玩家/敌人的头顶血条与心数（靠 `Items_status_effect21_berserk_1/_3` 聊天键识别，无开关），属性面板不受影响 | [Release v1.2.4](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.4) |
 | **1.2.3** | 属性名统一（盔甲 → 防御、真•盔甲 → 真·防御）；玩家心数改两行排版（上排 魂/黑/蓝，下排 红 当前/上限 + 碎/粉，不再轮换）；心数统一缩写（玩家也缩）；缩写去掉「整数位 ≥100 不带小数」，999999 → 999.9K；`mod/README.md` 新增「隐藏特征」一节 | [Release v1.2.3](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.3) |
 | **1.2.2** | 六类心统一 `❤` + 颜色（与地图 / 属性面板一致）；真盔甲不再参与护甲翻页、常驻显示；纯客户端队友绿条改用 `below_name` 的 `HealthPercent` 填进度（文字不变）；玩家头顶心数不缩写；缩写阈值 100000 → 1000、保留一位小数截断；血条通用透明度改为 10%~100%、默认 50%（config v23） | [Release v1.2.2](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.2) |
@@ -101,6 +102,34 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.2.5
+
+### ① 数据包里的专属 Boss 栏
+
+`misc/bossbars/p1..p10_bossbar.mcfunction` 第 7 行：
+
+```mcfunction
+execute as @a[scores={BossbarID=10NN},tag=Berserk] run bossbar set minecraft:player_10NN name {"translate":"Misc_Bossbars_P10_Bossbar_11","italic":true,"color":"dark_red"}
+```
+
+十个槽位共用翻译键 `Misc_Bossbars_P10_Bossbar_11`（文本「我只有一个想法，战…………」），
+`value` 同时被设成 `100000`。
+
+### ② 识别方式
+
+`BerserkDetector` 改为探测 Boss 栏组件树里的这个翻译键（100 ms 节流、500 ms 释放），
+不再看聊天消息；`JOIN` / `DISCONNECT` 仍 reset。
+
+行为不变：癫狂隐藏玩家/敌人的头顶血条与心数，**属性面板不受影响**。
+
+### ③ 自检
+
+`checks=4851 failures=0`。
+
+### ④ 未验证
+
+没有实机触发癫狂。
 
 ## 1.2.4
 

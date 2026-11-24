@@ -72,8 +72,6 @@ public final class CttHudForkClient implements ClientModInitializer {
         // ② 本次 ViewStats 的属性行 → 吞掉（不进聊天栏，只进面板）。
         // 注意 ALLOW_GAME 的返回值语义：true = 允许显示，false = 拦掉。
         ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
-            // 1.2.4：先观察「癫狂」的开/关消息（只记录状态，不拦消息）。
-            BerserkDetector.observe(message, overlay);
             if (SelfStats.onGameMessage(message, overlay, System.currentTimeMillis())) return false;
             return !ChatTriggerFilter.shouldHide(message, overlay);
         });

@@ -424,15 +424,19 @@ public final class SelfCheck {
 
         check(HudConfig.normalize(null) != null, "normalize(null) 不能返回 null");
 
-        // 1.2.4：癫狂靠聊天翻译键识别（写死，无开关）
-        check(BerserkDetector.isBerserkKey("Items_status_effect21_berserk_1"),
-                "癫狂开始消息应被识别");
-        check(BerserkDetector.isBerserkKey("Items_status_effect21_berserk_3"),
-                "癫狂结束消息应被识别");
-        check(!BerserkDetector.isBerserkKey("Items_status_effect21_berserk_2"),
-                "中间的提示消息不该切换状态");
+        // 1.2.5：癫狂靠专属 Boss 栏的翻译键识别（写死，无开关）
+        check(BerserkDetector.isBerserkKey("Misc_Bossbars_P10_Bossbar_11"),
+                "癫狂专属 bar 的键应被识别");
+        check(!BerserkDetector.isBerserkKey("Items_status_effect21_berserk_1"),
+                "聊天消息键不再作为识别依据");
         check(!BerserkDetector.isBerserkKey("Floors_Curse_Rooms_D_Curse02_Unknown_1"),
                 "诅咒键不该被当成癫狂");
+        check(BerserkDetector.marksBerserk(
+                net.minecraft.network.chat.Component.translatable("Misc_Bossbars_P10_Bossbar_11")),
+                "translatable 组件应被识别为癫狂 bar");
+        check(!BerserkDetector.marksBerserk(
+                net.minecraft.network.chat.Component.literal("Misc_Bossbars_P10_Bossbar_11")),
+                "普通文本不该被识别");
 
         // v23：通用透明度默认 0.75 → 0.50（下限 0.10）；v22：显示方式默认值改成「HUD + 容器界面」
         HudConfig.Cfg modeOld = new HudConfig.Cfg();

@@ -72,7 +72,7 @@ public final class HudWorldRenderer {
         // 诅咒：与地图设定一致，整个 UI 隐藏（不提供开关）。
         if (CurseDetector.isActive(mc)) return;
         // 1.2.4 癫狂：隐藏实体血条（面板另走 HudElement，不受影响）。
-        if (BerserkDetector.isActive()) return;
+        if (BerserkDetector.isActive(mc)) return;
         // 只画本 Mod 接管的实体：数据包管控的敌人 / 队伍条里的队友。
         if (!HudTarget.managed(mc, entity)) return;
         // 距离 / 被墙挡住 / 被其它实体挡住 —— 保留为「少提交一点」的额外剔除，
