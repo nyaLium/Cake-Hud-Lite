@@ -489,6 +489,16 @@ public final class SelfCheck {
         HudConfig.migrate("{\"configVersion\":2,\"scale\":1.25}", customScale);
         check(customScale.scale == 1.25, "自己调过的缩放不该被迁移覆盖: " + customScale.scale);
 
+        // 1.3.6：表驱动后仍保持旧顺序 —— 先做 v7 的跨字段复制，再由 v21 把仍为 20 的 containerY
+        // 改成「屏幕高 ÷ 3」哨兵（如果顺序反了，复制会把哨兵又覆盖回 20）。
+        HudConfig.Cfg v5 = new HudConfig.Cfg();
+        v5.configVersion = 5;
+        v5.selfStatsY = 20;
+        HudConfig.migrate("{\"configVersion\":5}", v5);
+        check(v5.containerY == HudConfig.DEFAULT_Y_SENTINEL,
+                "v5 时 containerY 应从复制值 20 再落成哨兵: " + v5.containerY);
+        check(v5.selfStatsY == 20, "v20 只搬 40，v5 的 20 不该被动: " + v5.selfStatsY);
+
         HudConfig.Cfg v3 = new HudConfig.Cfg();
         v3.configVersion = 3;
         v3.scale = 1.0;
@@ -910,6 +920,16 @@ public final class SelfCheck {
         mig.opacity = 0.75;
         HudConfig.migrate("{\"configVersion\":22,\"opacity\":0.75}", mig);
         check(mig.opacity == 0.5, "v22 的 0.75 应迁移成 0.50: " + mig.opacity);
+        HudConfig.Cfg v23 = new HudConfig.Cfg();
+        v23.configVersion = 22;
+        v23.opacity = 0.75;
+        HudConfig.migrate("{\"configVersion\":22,\"opacity\":0.75}", v23);
+        check(v23.opacity == 0.50, "v22 的 0.75 应迁移成 0.50: " + v23.opacity);
+        HudConfig.Cfg keepOpacity = new HudConfig.Cfg();
+        keepOpacity.configVersion = 22;
+        keepOpacity.opacity = 0.85;
+        HudConfig.migrate("{\"configVersion\":22,\"opacity\":0.85}", keepOpacity);
+        check(keepOpacity.opacity == 0.85, "自己调过的透明度不该被覆盖: " + keepOpacity.opacity);
 
         // 1.2.2：真盔甲不参与翻页，常驻在 🛡 防御后面
         int[] onlyTrue = new int[EnemyData.ARMOR_OBJECTIVES.length];

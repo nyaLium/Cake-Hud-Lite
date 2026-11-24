@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.3.6**（本地调整，未发布） | 配置迁移改**表驱动**（RULES / FLAG_RULES，按版本升序）；规则一条不少（含已发布 v1.0.0 / v1.1.0 / v1.0.3 时代的 v22 / v23），行为与旧 if 链逐条对齐 |
 | **1.3.5**（本地调整，未发布） | 取 bossbar 统一走 BossBarTracker.bossBars()（消掉 4 处重复反射）；BossBarKeyDetector 也改用它；删掉退化的 HudTarget.hidesBelowNameScore 包装 |
 | **1.3.4**（本地调整，未发布） | 合并 `HudWorldRenderer.options()/teamOptions()` 为 `options(cfg, teammate)`（`playerStyle` 一并收进去）；**配置项一个没动**（字段/默认值/范围/界面/文件版本全部不变） | 探测逻辑合并：诅咒/癫狂共用 `BossBarKeyDetector`（各持实例，效果仍分开）；`SelfStatsPanel` 的两处条件按状态拆成显式判断；删掉死代码 `HudTarget.visibleCore` | 魂心归入「属性 - 心型」；队伍条名册本来就含自己 —— `resolveTeam` 不再排除自己，服务端 `collect` 也不再跳过自己，调试模式的「自己」与队友完全同一条取数路径 | 过滤界面「属性」细分为 属性 / 属性 - 心型 / 属性 - 倍率 / 属性 - 护甲 / 属性 - 杂项；调试模式的「自己」改用个人状态条取数（与队友同一套逻辑） | 属性面板过滤按**新的数据包**重新对照：分类改为优先用图标上的 hover 键 `view_stats_N`；「乘算前」原始值单独成类（新增 8 项，可过滤项 88 → **96**）；修正 `Misc_View_Stats_101/104/107/115/122/124` 等倍率键；名称对齐数据包；设置页新增「调试模式」 | 癫狂改为**只隐藏自身属性面板**（数据包查证：癫狂不隐藏最近敌人条 / 队伍血量条 / below_name，实体血条与信息照常）；修「魂心溢出时血条瞬间变满」（队友百分比读不到时给 5 s 粘性缓存）；「当前/上限」前加 ❤ | [Release v1.2.10](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.10) |
 | **1.2.9** | 癫狂期间也摘原版 `below_name` 分数：1.2.6 起癫狂分支绕过 `managed()`，导致本 Mod 的 `❤ 百分比` 与原版数字重复、名字被抬高 9 px；新增 `HudTarget.hidesBelowNameScore` 统一判定 | [Release v1.2.9](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.9) |

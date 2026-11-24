@@ -568,12 +568,15 @@ public final class HudConfig {
     }
 
     /**
-     * 老配置文件升级到 {@link #CURRENT_VERSION}。
+     * 老配置文件升级到 {@link #CURRENT_VERSION}（1.3.6 起表驱动）。
      *
-     * <ul>
-     *   <li>v1（没有 {@code configVersion} 键）：血条长度还是旧默认 100 → 改成 75；</li>
-     *   <li>v2（1.18.0）：缩放还是旧默认 1.0 → 改成 0.9。</li>
-     * </ul>
+     * <h2>为什么改成表</h2>
+     * <p>以前每条规则都是一个 {@code if (version < N) { if (字段 == 旧默认) 字段 = 新默认; }}，
+     * 而且**版本号并不是按顺序写的**（13 在 14 后面、15 在 17 后面），改默认值时很容易插错位置。
+     * 现在所有「仍停在旧默认值才改」的规则集中到 {@link #RULES}，按版本升序排列，
+     * 逐条判断；跨字段复制（v7/v8/v9）与一次性哨兵（v10）仍写成代码。</p>
+     *
+     * <h2>判定惯例</h2>
      * <p>只在**仍等于旧默认值**时才跟着改；自己调过的（比如 120、1.25）保留原值 ——
      * 既不覆盖玩家的选择，也不会让老配置看起来「新默认值没生效」。</p>
      */
@@ -582,14 +585,42 @@ public final class HudConfig {
         boolean hasVersion = json != null && json.contains("\"configVersion\"");
         int version = hasVersion ? cfg.configVersion : 1;
         if (version >= CURRENT_VERSION) return;
-        if (version < 2) {
-            if (cfg.barWidth == LEGACY_BAR_WIDTH) cfg.barWidth = HudLayout.BAR_WIDTH_DEFAULT;
-            if (cfg.teamBarWidth == LEGACY_BAR_WIDTH) cfg.teamBarWidth = HudLayout.BAR_WIDTH_DEFAULT;
+
+        // ── ① 跨字段复制：新的一套先照抄旧的一套，升级后各自独立但初值一致 ──
+        //    （放在值规则之前：后面的 v20/v21 会把「仍等于旧默认 40/20」的 Y 改成哨兵，
+        //     复制过来的那些 Y 也要经历同样的判定，与旧代码顺序一致。）
+        if (version < 7) {
+            cfg.containerX = cfg.selfStatsX;
+            cfg.containerY = cfg.selfStatsY;
+            cfg.containerColumns = cfg.selfStatsColumns;
+            cfg.containerOpacity = cfg.selfStatsOpacity;
         }
-        if (version < 3) {
-            if (cfg.scale == LEGACY_SCALE) cfg.scale = DEFAULT_SCALE;
-            if (cfg.teamScale == LEGACY_SCALE) cfg.teamScale = DEFAULT_SCALE;
+        if (version < 8) {
+            cfg.bothX = cfg.selfStatsX;
+            cfg.bothY = cfg.selfStatsY;
+            cfg.bothColumns = cfg.selfStatsColumns;
+            cfg.bothOpacity = cfg.selfStatsOpacity;
         }
+        if (version < 9) {
+            cfg.bothContainerX = cfg.bothX;
+            cfg.bothContainerY = cfg.bothY;
+            cfg.bothContainerColumns = cfg.bothColumns;
+            cfg.bothContainerOpacity = cfg.bothOpacity;
+        }
+
+        // ── ② 「旧默认值 → 新默认值」：按版本升序逐条套用 ──
+        for (Rule rule : RULES) {
+            if (version < rule.version() && rule.get().applyAsDouble(cfg) == rule.from()) {
+                rule.set().accept(cfg, rule.to());
+            }
+        }
+        for (FlagRule rule : FLAG_RULES) {
+            if (version < rule.version() && rule.get().test(cfg) == rule.from()) {
+                rule.set().accept(cfg, rule.to());
+            }
+        }
+
+        // ── ③ 一次性哨兵 / 夹取 ──
         if (version < 10) {
             // 盾牌指示器改成可拖动坐标：旧的位置/偏移字段不再使用，默认交给自动位置。
             cfg.shieldX = -1;
@@ -600,93 +631,61 @@ public final class HudConfig {
             // 越界值在 normalize() 里统一夹取，这里只保证版本号被写上。
             cfg.shieldScale = Math.max(SHIELD_SCALE_MIN, Math.min(SHIELD_SCALE_MAX, cfg.shieldScale));
         }
-        if (version < 12) {
-            // 1.20.25：删掉了从未被读取的 hideBehindEntities 字段；旧文件里的这个键读取时直接忽略，
-            // 下次写盘就不再出现。这里只保证版本号被写上。
-        }
-        if (version < 14) {
-            // 1.20.31：内容过滤列表改成三节分组（属性 / 状态效果 / 其它），状态效果从「一条粗类」
-            // 拆成 28 条、其它拆成「草方块 + 未识别行」。旧配置里写下的 "status" 粗类由
-            // normalize() 里的 COARSE_KINDS 在**读取时**展开，这里只保证版本号被写上。
-        }
-        if (version < 13) {
-            // 1.20.26：盾牌换成 34×86 的新纹理，默认缩放 0.7、默认不透明度 75%。
-            // 沿用本文件的惯例：**只有仍停在旧默认值 1.0 时才跟着改**，自己调过的不覆盖。
-            if (cfg.shieldScale == 1.0) cfg.shieldScale = 0.7;
-            if (cfg.shieldOpacity == 1.0) cfg.shieldOpacity = 0.75;
-        }
-        if (version < 18) {
-            // 1.20.35：删掉 useServerData 字段 —— 服务端组件推来的权威数据写死优先
-            // （服务端没装本 Mod 时本来就会回落到客户端 Boss 栏 / HealthPercent）。
-            // 旧文件里的这个键读取时直接忽略。
-        }
-        if (version < 19) {
-            // 1.20.40：面板 / 盾牌的位置改成「相对位置」—— 坐标连同「量它的那套 GUI 尺寸」
-            // （layoutGuiW/layoutGuiH）一起存，绘制时按比例换算到当前尺寸。
-            // 老文件没有这两个字段（0 = 未知），第一次绘制时用当时的尺寸补上，
-            // 所以这里不用改任何坐标值。
-        }
-        if (version < 17) {
-            // 1.20.34：删掉 1.20.33 短暂存在的 teamShowBar —— 队友整块由 showTeammates 管，
-            // 「显示血条」关掉时血条和文字一起消失。旧文件里的这个键读取时直接忽略。
-        }
-        if (version < 15) {
-            // 1.20.32：① 实体血条的「文字阴影」跟到新默认值「关」；
-            // ② 属性面板文字阴影是**新字段**，用它自己的默认值（开）——
-            //    以前面板是被 textShadow 顺带影响的，不该把那个副作用继承下来
-            //    （不然「为了关头顶阴影而关掉 textShadow」的人，面板阴影也跟着没了）；
-            // ③ 盾牌默认不透明度 75% → 65%（放在 <13 之后：v12 的旧默认 1.0 先落到 0.75，再落到 0.65）。
-            if (cfg.textShadow) cfg.textShadow = false;
-            if (cfg.shieldOpacity == 0.75) cfg.shieldOpacity = 0.65;
-        }
-        if (version < 9) {
-            // 模式 2 的容器那套从「模式 2 的 HUD 那套」复制。
-            cfg.bothContainerX = cfg.bothX;
-            cfg.bothContainerY = cfg.bothY;
-            cfg.bothContainerColumns = cfg.bothColumns;
-            cfg.bothContainerOpacity = cfg.bothOpacity;
-        }
-        if (version < 8) {
-            // 模式 2 的那一套从 HUD 那套复制，升级后三种方式各自独立但初值一致。
-            cfg.bothX = cfg.selfStatsX;
-            cfg.bothY = cfg.selfStatsY;
-            cfg.bothColumns = cfg.selfStatsColumns;
-            cfg.bothOpacity = cfg.selfStatsOpacity;
-        }
-        if (version < 7) {
-            // 容器界面那一套从 HUD 那套复制，避免升级后两套配置对不上。
-            cfg.containerX = cfg.selfStatsX;
-            cfg.containerY = cfg.selfStatsY;
-            cfg.containerColumns = cfg.selfStatsColumns;
-            cfg.containerOpacity = cfg.selfStatsOpacity;
-        }
-        if (version < 20) {
-            // 1.20.41：面板「初始位置」从 y=40 改成「y = 屏幕高 ÷ 3」（左侧偏上）。
-            // 只动仍停在旧默认 40 的那两套（HUD / 模式 2 的 HUD 那套）；自己拖过的位置保留。
-            // 写成哨兵 -1 之后，窗口大小变化时默认位置也跟着按 1/3 走。
-            if (cfg.selfStatsY == 40) cfg.selfStatsY = DEFAULT_Y_SENTINEL;
-            if (cfg.bothY == 40) cfg.bothY = DEFAULT_Y_SENTINEL;
-        }
-        if (version < 21) {
-            // 1.20.42：容器界面那两套的默认位置也改成「屏幕高 ÷ 3」（原来是贴着顶部的 y=20）。
-            // 同样只动仍停在旧默认 20 的那两套。
-            if (cfg.containerY == 20) cfg.containerY = DEFAULT_Y_SENTINEL;
-            if (cfg.bothContainerY == 20) cfg.bothContainerY = DEFAULT_Y_SENTINEL;
-        }
-        if (version < 22) {
-            // v1.0.0：① 删掉面板「文字大小」（所有面板固定 1.0 倍）与实体血条「垂直偏移」字段；
-            //           旧文件里的这些键读取时直接忽略；
-            //        ② 面板显示方式默认值从「始终显示（HUD）」改成「HUD + 容器界面」——
-            //           只动仍停在旧默认 0 的，自己选过 1 的不动。
-            if (cfg.selfStatsMode == 0) cfg.selfStatsMode = 2;
-        }
-        if (version < 23) {
-            // 1.2.2：血条通用透明度默认值 0.75 → 0.50（下限同时放宽到 0.10）。
-            // 沿用本文件惯例：只动仍停在旧默认 0.75 的，自己调过的不覆盖。
-            if (cfg.opacity == 0.75) cfg.opacity = 0.50;
-        }
+
+        // ④ 只写版本号、不改字段的版本（保留注释备查）：
+        //    v12 删 hideBehindEntities、v14 过滤列表分节、v17 删 teamShowBar、
+        //    v18 删 useServerData、v19 位置改相对坐标（字段由 normalize / 首次绘制补）。
+
         cfg.configVersion = CURRENT_VERSION;
     }
+
+    /**
+     * 一条「值仍等于旧默认值时才改」的数值迁移规则。
+     *
+     * @param version 这条规则从哪个配置版本开始生效（{@code version < version} 才跑）
+     * @param get     读字段
+     * @param set     写字段
+     * @param from    旧默认值
+     * @param to      新默认值
+     */
+    private record Rule(int version, java.util.function.ToDoubleFunction<Cfg> get,
+                        java.util.function.ObjDoubleConsumer<Cfg> set, double from, double to) {}
+
+    /** 布尔迁移规则（目前只有 textShadow 一条）。 */
+    private record FlagRule(int version, java.util.function.Predicate<Cfg> get,
+                            java.util.function.BiConsumer<Cfg, Boolean> set, boolean from, boolean to) {}
+
+    /** 所有「旧默认值 → 新默认值」规则，**必须按版本升序**（同一版本内按原代码顺序）。 */
+    private static final java.util.List<Rule> RULES = java.util.List.of(
+            // v2：血条长度默认 100 → 75（1.18.0）
+            new Rule(2, c -> c.barWidth, (c, v) -> c.barWidth = v,
+                    LEGACY_BAR_WIDTH, HudLayout.BAR_WIDTH_DEFAULT),
+            new Rule(2, c -> c.teamBarWidth, (c, v) -> c.teamBarWidth = v,
+                    LEGACY_BAR_WIDTH, HudLayout.BAR_WIDTH_DEFAULT),
+            // v3：缩放默认 1.0 → 0.9
+            new Rule(3, c -> c.scale, (c, v) -> c.scale = v, LEGACY_SCALE, DEFAULT_SCALE),
+            new Rule(3, c -> c.teamScale, (c, v) -> c.teamScale = v, LEGACY_SCALE, DEFAULT_SCALE),
+            // v13：盾牌新纹理，默认缩放 0.7、默认不透明度 75%
+            new Rule(13, c -> c.shieldScale, (c, v) -> c.shieldScale = v, 1.0, 0.7),
+            new Rule(13, c -> c.shieldOpacity, (c, v) -> c.shieldOpacity = v, 1.0, 0.75),
+            // v15：盾牌默认不透明度 75% → 65%（在 v13 之后：1.0 先落到 0.75，再落到 0.65）
+            new Rule(15, c -> c.shieldOpacity, (c, v) -> c.shieldOpacity = v, 0.75, 0.65),
+            // v20：面板默认 y=40 → 「屏幕高 ÷ 3」哨兵
+            new Rule(20, c -> c.selfStatsY, (c, v) -> c.selfStatsY = (int) v, 40, DEFAULT_Y_SENTINEL),
+            new Rule(20, c -> c.bothY, (c, v) -> c.bothY = (int) v, 40, DEFAULT_Y_SENTINEL),
+            // v21：容器两套默认 y=20 → 同一哨兵
+            new Rule(21, c -> c.containerY, (c, v) -> c.containerY = (int) v, 20, DEFAULT_Y_SENTINEL),
+            new Rule(21, c -> c.bothContainerY, (c, v) -> c.bothContainerY = (int) v, 20, DEFAULT_Y_SENTINEL),
+            // v22：面板显示方式默认 0（仅 HUD）→ 2（HUD + 容器）
+            new Rule(22, c -> c.selfStatsMode, (c, v) -> c.selfStatsMode = (int) v, 0, 2),
+            // v23：血条通用透明度默认 0.75 → 0.50
+            new Rule(23, c -> c.opacity, (c, v) -> c.opacity = v, 0.75, 0.50)
+    );
+
+    /** 布尔规则：v15 实体血条「文字阴影」新默认关。 */
+    private static final java.util.List<FlagRule> FLAG_RULES = java.util.List.of(
+            new FlagRule(15, c -> c.textShadow, (c, v) -> c.textShadow = v, true, false)
+    );
 
     /**
      * 把任意（含非法 / 缺省 / NaN）配置夹到安全范围。
