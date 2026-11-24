@@ -424,6 +424,16 @@ public final class SelfCheck {
 
         check(HudConfig.normalize(null) != null, "normalize(null) 不能返回 null");
 
+        // 1.2.4：癫狂靠聊天翻译键识别（写死，无开关）
+        check(BerserkDetector.isBerserkKey("Items_status_effect21_berserk_1"),
+                "癫狂开始消息应被识别");
+        check(BerserkDetector.isBerserkKey("Items_status_effect21_berserk_3"),
+                "癫狂结束消息应被识别");
+        check(!BerserkDetector.isBerserkKey("Items_status_effect21_berserk_2"),
+                "中间的提示消息不该切换状态");
+        check(!BerserkDetector.isBerserkKey("Floors_Curse_Rooms_D_Curse02_Unknown_1"),
+                "诅咒键不该被当成癫狂");
+
         // v23：通用透明度默认 0.75 → 0.50（下限 0.10）；v22：显示方式默认值改成「HUD + 容器界面」
         HudConfig.Cfg modeOld = new HudConfig.Cfg();
         modeOld.configVersion = 21;

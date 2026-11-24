@@ -14,7 +14,7 @@
 > 纯客户端（Fork 自 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud)，MIT）；**客户端必装、服务端选装**，
 > 服务端只装 Fabric API 也能用完整功能。
 >
-> 当前正式版 **1.2.3**。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
+> 当前正式版 **1.2.4**。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
 
 ## 功能
 
@@ -34,7 +34,8 @@ jar 在 **GitHub Releases** 里：<https://github.com/nyaLium/CTT-HUD-Mod-Fork-V
 
 | 版本 | 附件 | 说明 |
 | --- | --- | --- |
-| **1.2.3**（最新） | `ctt-hud-fork-1.2.3.jar` + `-sources.jar` | 玩家心数改两行（魂/黑/蓝 + 红/碎）；心数统一缩写（999.9K）；盔甲改名防御 |
+| **1.2.4**（最新） | `ctt-hud-fork-1.2.4.jar` + `-sources.jar` | 未知诅咒也隐藏属性面板；癫狂（Berserk）隐藏实体血条、保留面板 |
+| 1.2.3 | `ctt-hud-fork-1.2.3.jar` + `-sources.jar` | 玩家心数两行排版；心数统一缩写（999.9K）；盔甲改名防御 |
 | 1.2.2 | `ctt-hud-fork-1.2.2.jar` + `-sources.jar` | 六类心统一 ❤ + 颜色；真盔甲常驻；队友绿条用 below_name 百分比；透明度 10%~100% |
 | 1.2.1 | `ctt-hud-fork-1.2.1.jar` + `-sources.jar` | 修队友血量：前缀名误认领、蓝/魂心被夹到 MaxHP |
 | 1.1.0 | `ctt-hud-fork-1.1.0.jar` + `-sources.jar` | 盾牌指示器换新纹理（34×86 四档）；Mod 简介改为「蛋糕塔」版本 |
@@ -70,7 +71,7 @@ jar 在 **GitHub Releases** 里：<https://github.com/nyaLium/CTT-HUD-Mod-Fork-V
 ```bash
 cd mod
 ./gradlew build        # 需要 JDK 25；会自动跑 selfCheck（4786 条断言）
-# 产物：mod/build/libs/ctt-hud-fork-1.2.3.jar（本地构建用；正式包见 Releases）
+# 产物：mod/build/libs/ctt-hud-fork-1.2.4.jar（本地构建用；正式包见 Releases）
 ```
 
 ## 目录结构
@@ -93,7 +94,7 @@ cd mod
 
 - 功能与配置详解：[`mod/README.md`](mod/README.md)（代码导览、配置字段表、界面文案 ↔ 字段对照）
 - 版本沿革：[`CHANGELOG.md`](CHANGELOG.md)
-- 最新版说明：[`RELEASES.md`](RELEASES.md) 或 [Release v1.2.3](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.3)
+- 最新版说明：[`RELEASES.md`](RELEASES.md) 或 [Release v1.2.4](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.4)
 - 发布清单：[`RELEASES.md`](RELEASES.md)
 - 版本规则：[`VERSIONING.md`](VERSIONING.md)
 

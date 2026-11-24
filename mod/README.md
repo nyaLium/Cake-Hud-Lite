@@ -7,7 +7,7 @@
 >
 > 这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版（MIT 许可；其 LICENSE 的版权声明为 Copyright (c) 2026 Kirin0321（麒麟））。
 >
-> 当前版本 **1.2.3**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.2.4**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/透明度，
 > 88 个属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
 > 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」（进服后先静默 3 s 再问）；1.20.40 把面板/盾牌的位置改成**相对位置**，窗口大小或 GUI 缩放变化后不再错位；1.20.41 面板默认位置改到**左侧偏上（y = 屏幕高 ÷ 3）**；1.20.42 容器界面那两套的默认位置也一样。
@@ -21,11 +21,11 @@
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.2.3` |
+| 版本 | `1.2.4` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/ctt-hud-fork-1.2.3.jar` |
+| 产物 | `build/libs/ctt-hud-fork-1.2.4.jar` |
 | 仓库 | <https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version>（`fabric.mod.json` 的 `contact.homepage` / `sources` / `issues` 都指向这里，Mod Menu 会显示） |
 
 ## 代码导览（每个类做什么）
@@ -683,7 +683,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/ctt-hud-fork-1.2.3.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/ctt-hud-fork-1.2.4.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革
@@ -829,7 +829,8 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 特征 | 说明 |
 | --- | --- |
 | 自动开队伍条 | 检测到自己有个人 bossbar 才发 `/trigger TogglePartyBossbar` |
-| 诅咒 | 检测到诅咒 bossbar 时整个 UI（含名称接管）隐藏 |
+| 诅咒 | 检测到诅咒 bossbar 时整个 UI（含名称接管）隐藏；**1.2.4 起属性面板（HUD 与容器）也隐藏** |
+| 癫狂（Berserk） | 靠聊天翻译键 `Items_status_effect21_berserk_1/_3` 识别；期间隐藏玩家/敌人的头顶血条与心数，**属性面板不受影响**（1.2.4） |
 | 服务端组件 | 装了本 Mod 的服务端推 `mob_health`（uuid/hp/四色心/碎心/护甲），5 s 保鲜 |
 | 旁观/死亡 | 不画头顶 HUD，但原版 `below_name` 分数仍会被摘掉 |
 | 旧配置键 | `hideBehindEntities`、`useServerData`、`verticalOffset` 等读取时忽略 |

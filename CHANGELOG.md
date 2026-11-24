@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.2.4** | 「未知诅咒」现在也隐藏属性面板（HUD 与容器两处）；新增 `BerserkDetector`：癫狂期间隐藏玩家/敌人的头顶血条与心数（靠 `Items_status_effect21_berserk_1/_3` 聊天键识别，无开关），属性面板不受影响 | [Release v1.2.4](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.4) |
 | **1.2.3** | 属性名统一（盔甲 → 防御、真•盔甲 → 真·防御）；玩家心数改两行排版（上排 魂/黑/蓝，下排 红 当前/上限 + 碎/粉，不再轮换）；心数统一缩写（玩家也缩）；缩写去掉「整数位 ≥100 不带小数」，999999 → 999.9K；`mod/README.md` 新增「隐藏特征」一节 | [Release v1.2.3](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.3) |
 | **1.2.2** | 六类心统一 `❤` + 颜色（与地图 / 属性面板一致）；真盔甲不再参与护甲翻页、常驻显示；纯客户端队友绿条改用 `below_name` 的 `HealthPercent` 填进度（文字不变）；玩家头顶心数不缩写；缩写阈值 100000 → 1000、保留一位小数截断；血条通用透明度改为 10%~100%、默认 50%（config v23） | [Release v1.2.2](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.2) |
 | **1.2.1** | 修纯客户端（服务端未装本 Mod）时队友血量的两个问题：①「NIVEI / NIVEIV」这类前缀名会互相认领（`NIVEI` 的条目挂到 `NIVEIV` 头顶）；②蓝心 / 魂心让 AllHearts 超过 MaxHP 时，头顶数字被夹成「MaxHP/MaxHP」，与 Boss 栏对不上。现在完整玩家名只做精确匹配、宽松匹配要求唯一候选，且显示值不再夹上限 | [Release v1.2.1](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.1) |
@@ -100,6 +101,31 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.2.4
+
+### ① 未知诅咒也隐藏属性面板
+
+之前只挡实体血条；现在 `SelfStatsPanel` 的两条绘制路径（HUD / 容器）都加了
+`CurseDetector.isActive(mc)` 判断。诅咒识别方式不变（bossbar 翻译键前缀 + 100 ms 探测 + 2 s 释放）。
+
+### ② 癫狂（Berserk）只挡实体血条
+
+新增 `BerserkDetector`：聊天里出现 `Items_status_effect21_berserk_1` 置为癫狂、
+`Items_status_effect21_berserk_3` 清除；进服 / 断线 reset。
+癫狂期间 `HudTarget.managed()` 返回 false（玩家与敌人的血条 / 心数 / 护甲都不画，名字交还原版），
+`HudWorldRenderer` 兜底再挡一次；**属性面板不受影响**。
+
+> 只能靠聊天：标签/分数不进客户端，地图也没给原版状态效果。
+> 局限：带癫狂进服会收不到开场消息。
+
+### ③ 自检
+
+`checks=4850 failures=0`。
+
+### ④ 未验证
+
+没有实机触发癫狂 / 诅咒。
 
 ## 1.2.3
 

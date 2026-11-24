@@ -72,6 +72,8 @@ public final class CttHudForkClient implements ClientModInitializer {
         // ② 本次 ViewStats 的属性行 → 吞掉（不进聊天栏，只进面板）。
         // 注意 ALLOW_GAME 的返回值语义：true = 允许显示，false = 拦掉。
         ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
+            // 1.2.4：先观察「癫狂」的开/关消息（只记录状态，不拦消息）。
+            BerserkDetector.observe(message, overlay);
             if (SelfStats.onGameMessage(message, overlay, System.currentTimeMillis())) return false;
             return !ChatTriggerFilter.shouldHide(message, overlay);
         });
@@ -79,11 +81,16 @@ public final class CttHudForkClient implements ClientModInitializer {
         ClientMobHealthCache.register();
         // 1.20.39：进存档 / 进服先安静 3 s 再问 ViewStats（世界还在载入时问了只会得到一批迟到输出，
         // 反而整屏刷进聊天栏）。
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) ->
-                SelfStats.onWorldJoined(System.currentTimeMillis()));
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            BerserkDetector.reset();
+            CurseDetector.reset();
+            SelfStats.onWorldJoined(System.currentTimeMillis());
+        });
         // 断线 / 换服清缓存，避免看到上一局的残留数据。
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ClientMobHealthCache.reset();
+            BerserkDetector.reset();
+            CurseDetector.reset();
             SelfStats.reset();
         });
     }

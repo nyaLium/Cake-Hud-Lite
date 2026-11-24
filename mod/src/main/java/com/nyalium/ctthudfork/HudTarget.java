@@ -48,6 +48,8 @@ public final class HudTarget {
         if (mc.level == null || mc.player == null) return false;
         // 诅咒：与地图设定一致，整个 UI 隐藏（名称也不接管，否则名字会凭空消失）。
         if (CurseDetector.isActive(mc)) return false;
+        // 1.2.4 癫狂：同样隐藏玩家 / 敌人的头顶血条与心数（属性面板不受影响）。
+        if (BerserkDetector.isActive()) return false;
         if (entity == mc.player) return false;
         if (entity instanceof ArmorStand) return false;
         if (!entity.isAlive() || entity.isInvisible()) return false;
