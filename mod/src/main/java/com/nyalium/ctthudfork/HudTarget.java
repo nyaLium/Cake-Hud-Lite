@@ -58,15 +58,6 @@ public final class HudTarget {
         return !CurseDetector.isActive(mc);
     }
 
-    /**
-     * 是否要把原版 {@code below_name} 分数摘掉（1.2.9）。
-     *
-     * <p>1.2.10 起癫狂不再影响它（实体 HUD 恢复正常），与 {@link #managed} 完全一致。</p>
-     */
-    public static boolean hidesBelowNameScore(Minecraft mc, Entity entity) {
-        return managed(mc, entity);
-    }
-
     /** 不看诅咒 / 癫狂、只看「这只实体归不归本 Mod 管」。 */
     static boolean managedCore(Minecraft mc, Entity entity) {
         if (mc == null || entity == null) return false;

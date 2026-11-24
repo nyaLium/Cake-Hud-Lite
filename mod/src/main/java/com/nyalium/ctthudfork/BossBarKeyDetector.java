@@ -82,16 +82,10 @@ final class BossBarKeyDetector {
     }
 
     private boolean probe(Minecraft mc) {
-        if (mc == null || mc.player == null || mc.gui == null || mc.gui.hud == null) return false;
-        try {
-            var bars = ((com.nyalium.ctthudfork.mixin.BossHealthOverlayAccessor) (Object)
-                    mc.gui.hud.getBossOverlay()).cttHudFork$getBossBars();
-            if (bars == null || bars.isEmpty()) return false;
-            for (var bar : bars.values()) {
-                if (bar != null && marks(bar.getName())) return true;
-            }
-        } catch (Throwable ignored) {
-            // 结构不符就当作没触发，绝不因为探测失败崩游戏。
+        if (mc == null || mc.player == null) return false;
+        // 1.3.5：统一走 BossBarTracker 的取条入口（同一个反射点，只此一处）。
+        for (var bar : BossBarTracker.bossBars(mc).values()) {
+            if (bar != null && marks(bar.getName())) return true;
         }
         return false;
     }

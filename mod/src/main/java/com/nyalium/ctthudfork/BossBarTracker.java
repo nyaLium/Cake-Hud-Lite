@@ -101,19 +101,25 @@ public final class BossBarTracker {
 
     private BossBarTracker() {}
 
+    /** 当前客户端所有 bossbar；取不到（不在世界 / 结构不符）返回空表。 */
+    static Map<UUID, BossEvent> bossBars(Minecraft mc) {
+        if (mc == null || mc.gui == null || mc.gui.hud == null) return Map.of();
+        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
+        if (overlay == null) return Map.of();
+        try {
+            Map<UUID, BossEvent> bars =
+                    ((BossHealthOverlayAccessor) (Object) overlay).cttHudFork$getBossBars();
+            return bars != null ? bars : Map.of();
+        } catch (Throwable ignored) {
+            // 结构不符就当作没有条，绝不因为探测失败崩游戏。
+            return Map.of();
+        }
+    }
+
     /** 每帧取一次当前客户端所有「怪物血量条」。 */
     static List<Bar> snapshot(Minecraft mc) {
-        if (mc.gui == null || mc.gui.hud == null) return List.of();
-        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
-        if (overlay == null) return List.of();
-
-        Map<UUID, BossEvent> bars;
-        try {
-            bars = ((BossHealthOverlayAccessor) (Object) overlay).cttHudFork$getBossBars();
-        } catch (Throwable t) {
-            return List.of();
-        }
-        if (bars == null || bars.isEmpty()) return List.of();
+        Map<UUID, BossEvent> bars = bossBars(mc);
+        if (bars.isEmpty()) return List.of();
 
         String playerName = mc.player != null ? mc.player.getName().getString() : "";
         List<Bar> out = new ArrayList<>(2);
@@ -299,16 +305,9 @@ public final class BossBarTracker {
      * 大厅里没有。自动开队伍条必须以此为前提，否则会在菜单里白发命令。</p>
      */
     static boolean hasPersonalBar(Minecraft mc) {
-        if (mc.gui == null || mc.gui.hud == null || mc.player == null) return false;
-        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
-        if (overlay == null) return false;
-        Map<UUID, BossEvent> bars;
-        try {
-            bars = ((BossHealthOverlayAccessor) (Object) overlay).cttHudFork$getBossBars();
-        } catch (Throwable t) {
-            return false;
-        }
-        if (bars == null || bars.isEmpty()) return false;
+        if (mc.player == null) return false;
+        Map<UUID, BossEvent> bars = bossBars(mc);
+        if (bars.isEmpty()) return false;
         String playerName = mc.player.getName().getString();
         if (playerName.isEmpty()) return false;
         for (BossEvent bar : bars.values()) {
@@ -330,16 +329,8 @@ public final class BossBarTracker {
      */
     static Bar selfBar(Minecraft mc) {
         if (mc == null || mc.player == null) return null;
-        if (mc.gui == null || mc.gui.hud == null) return null;
-        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
-        if (overlay == null) return null;
-        Map<UUID, BossEvent> bars;
-        try {
-            bars = ((BossHealthOverlayAccessor) (Object) overlay).cttHudFork$getBossBars();
-        } catch (Throwable t) {
-            return null;
-        }
-        if (bars == null || bars.isEmpty()) return null;
+        Map<UUID, BossEvent> bars = bossBars(mc);
+        if (bars.isEmpty()) return null;
         String playerName = mc.player.getName().getString();
         for (BossEvent bar : bars.values()) {
             Component component = bar.getName();
@@ -356,17 +347,8 @@ public final class BossBarTracker {
 
     /** 从客户端 Boss 栏里找那条队伍血量条并解析出每个玩家的 当前/上限。 */
     static List<TeamBarTitle.Entry> teamEntries(Minecraft mc) {
-        if (mc.gui == null || mc.gui.hud == null) return List.of();
-        BossHealthOverlay overlay = mc.gui.hud.getBossOverlay();
-        if (overlay == null) return List.of();
-
-        Map<UUID, BossEvent> bars;
-        try {
-            bars = ((BossHealthOverlayAccessor) (Object) overlay).cttHudFork$getBossBars();
-        } catch (Throwable t) {
-            return List.of();
-        }
-        if (bars == null || bars.isEmpty()) return List.of();
+        Map<UUID, BossEvent> bars = bossBars(mc);
+        if (bars.isEmpty()) return List.of();
 
         String playerName = mc.player != null ? mc.player.getName().getString() : "";
         for (BossEvent bar : bars.values()) {
