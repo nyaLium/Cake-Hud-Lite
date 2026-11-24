@@ -3,7 +3,7 @@
   "id": "ctt-hud-fork",
   "version": "${version}",
   "name": "CTT HUD - Fork",
-  "description": "Fork of Cake-Hud (MIT): enemy / teammate health above name plates, plus a client-side stats panel (/trigger ViewStats) with per-attribute filtering.",
+  "description": "为地图“蛋糕塔”（Cake Team Towers）制作！能在敌人、玩家的头顶显示血量条及相关信息；盾牌进入冷却时，会显示冷却指示器；能够随时查看属性的属性面板。",
   "authors": [
     "nyaLium",
     "Fork of Cake-Hud (TheHolyLord/Cake-Hud, MIT, (c) Kirin0321)"

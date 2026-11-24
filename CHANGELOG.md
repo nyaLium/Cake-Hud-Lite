@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.1.0** | 盾牌指示器纹理换成新的 34×86 四档（`meter_0..3`）；Mod 简介改为「为地图“蛋糕塔”（Cake Team Towers）制作」的三条卖点；版本号 1.1.0（语义化：新内容，非修 bug） | [Release v1.1.0](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.1.0) |
 | **1.0.3** | `fabric.mod.json` 增加 `contact`（homepage / sources / issues 指向 [nyaLium/CTT-HUD-Mod-Fork-Version](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version)），Mod Menu 的模组页会显示这三个链接；无代码改动 | [Release v1.0.3](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.0.3) |
 | **1.0.2** | 修正 LICENSE 里的上游版权署名：上游 Cake-Hud 的 LICENSE 写的是 `Copyright (c) 2026 Kirin0321 (麒麟)`（不是仓库账号名），根 `LICENSE` / `NOTICE.md` / `mod/LICENSE`（内嵌进 jar）与 `fabric.mod.json` 的 authors 一并更正；无代码改动 | [Release v1.0.2](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.0.2) |
 | ~~1.0.1~~ | 注释与文档岗位（无行为变化）—— **已撤回**（许可署名错误），归档从仓库移除 | — |
@@ -95,6 +96,31 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.1.0
+
+### ① 内容
+
+| 文件 | 改动 |
+| --- | --- |
+| `assets/ctt-hud-fork/textures/gui/meter_0..3.png` | 换成新的一套四档纹理（34×86，对应 空 / 红 ~30% / 黄 ~55% / 绿 满），旧图被替换 |
+| `fabric.mod.json` | `description` 改为「为地图“蛋糕塔”（Cake Team Towers）制作！能在敌人、玩家的头顶显示血量条及相关信息；盾牌进入冷却时，会显示冷却指示器；能够随时查看属性的属性面板。」 |
+| `gradle.properties` | `mod_version=1.1.0` |
+
+> 说明：`fabric.mod.json` 的 `description` 是**单行**字段（Mod Menu 一行渲染）。
+> README 里的简介保留原来的四条列表排版。
+
+### ② 自检
+
+`checks=4786 failures=0`（改的是资源与元数据，没有动逻辑）。
+
+### ③ 纹理档位映射（未变）
+
+`damage / maxDamage`：`<0.4 → meter_3`、`<0.6 → meter_2`、`<0.8 → meter_1`、否则 `meter_0`。
+
+### ④ 未验证
+
+新纹理在游戏里的实际观感（透明度 65% / 默认缩放 0.7 下的叠加效果）没有实机截图。
 
 ## 1.0.3
 

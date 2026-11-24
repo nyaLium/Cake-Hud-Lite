@@ -5,13 +5,16 @@
 [![Fabric](https://img.shields.io/badge/loader-Fabric%20%E2%89%A5%200.20.1-blueviolet.svg)](https://fabricmc.net/)
 [![Java](https://img.shields.io/badge/Java-%E2%89%A5%2025-orange.svg)](https://adoptium.net/)
 
-> Cake Team Towers 的客户端 HUD（Fork 自 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud)，MIT）：
-> 敌人 / 队友头顶血条（原版 bossbar 纹理）、队友心数、以及纯客户端的**自身属性面板**
-> （`/trigger ViewStats`，88 个属性逐项开关，分「属性 / 状态效果 / 其它」三节）。
+> **为地图“蛋糕塔”（Cake Team Towers）制作！**
 >
-> **客户端必装、服务端选装**：服务端只装 Fabric API 也能用完整功能。
+> - 能在敌人、玩家的头顶显示血量条及相关信息
+> - 盾牌进入冷却时，会显示冷却指示器
+> - 能够随时查看属性的属性面板
 >
-> 当前正式版 **1.0.3**。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
+> 纯客户端（Fork 自 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud)，MIT）；**客户端必装、服务端选装**，
+> 服务端只装 Fabric API 也能用完整功能。
+>
+> 当前正式版 **1.1.0**。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
 
 ## 功能
 
@@ -31,7 +34,8 @@ jar 在 **GitHub Releases** 里：<https://github.com/nyaLium/CTT-HUD-Mod-Fork-V
 
 | 版本 | 附件 | 说明 |
 | --- | --- | --- |
-| **1.0.3**（最新） | `ctt-hud-fork-1.0.3.jar` + `-sources.jar` | 客户端必装；同一个 jar 放服务端即启用权威数据推送（选装）。jar 里带仓库地址（Mod Menu 的 Homepage / Source / Issues 会显示） |
+| **1.1.0**（最新） | `ctt-hud-fork-1.1.0.jar` + `-sources.jar` | 盾牌指示器换新纹理（34×86 四档）；Mod 简介改为「蛋糕塔」版本 |
+| 1.0.3 | `ctt-hud-fork-1.0.3.jar` + `-sources.jar` | 上一版：jar 内带仓库地址（Mod Menu 的 Homepage / Source / Issues） |
 | 1.0.2 | `ctt-hud-fork-1.0.2.jar` + `-sources.jar` | 上一版，除联系方式外功能相同 |
 
 仓库里**不保存**任何 jar 或历史归档：完整版本索引见 [`RELEASES.md`](RELEASES.md)。
@@ -63,7 +67,7 @@ jar 在 **GitHub Releases** 里：<https://github.com/nyaLium/CTT-HUD-Mod-Fork-V
 ```bash
 cd mod
 ./gradlew build        # 需要 JDK 25；会自动跑 selfCheck（4786 条断言）
-# 产物：mod/build/libs/ctt-hud-fork-1.0.3.jar（本地构建用；正式包见 Releases）
+# 产物：mod/build/libs/ctt-hud-fork-1.1.0.jar（本地构建用；正式包见 Releases）
 ```
 
 ## 目录结构
@@ -86,7 +90,7 @@ cd mod
 
 - 功能与配置详解：[`mod/README.md`](mod/README.md)（代码导览、配置字段表、界面文案 ↔ 字段对照）
 - 版本沿革：[`CHANGELOG.md`](CHANGELOG.md)
-- 最新版说明：[`RELEASES.md`](RELEASES.md) 或 [Release v1.0.3](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.0.3)
+- 最新版说明：[`RELEASES.md`](RELEASES.md) 或 [Release v1.1.0](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.1.0)
 - 发布清单：[`RELEASES.md`](RELEASES.md)
 - 版本规则：[`VERSIONING.md`](VERSIONING.md)
 
