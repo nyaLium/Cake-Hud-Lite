@@ -116,6 +116,12 @@ public final class BossBarTracker {
         }
     }
 
+    /** 从一条客户端 bossbar 生成 {@link Bar}（名字/血量由调用方解析好）。 */
+    private static Bar toBar(BossEvent bar, BossBarTitle title, Component component) {
+        return new Bar(bar.getId(), title.name, title.hp, title.maxHp, parseArmour(component),
+                clampProgress(bar.getProgress()), kindOf(bar.getColor()));
+    }
+
     /** 每帧取一次当前客户端所有「怪物血量条」。 */
     static List<Bar> snapshot(Minecraft mc) {
         Map<UUID, BossEvent> bars = bossBars(mc);
@@ -134,8 +140,7 @@ public final class BossBarTracker {
 
             BossBarTitle title = BossBarTitle.parse(text);
             if (title == null) continue;
-            out.add(new Bar(bar.getId(), title.name, title.hp, title.maxHp, parseArmour(component),
-                    clampProgress(bar.getProgress()), kindOf(bar.getColor())));
+            out.add(toBar(bar, title, component));
         }
         return out;
     }
@@ -339,8 +344,7 @@ public final class BossBarTracker {
             if (!text.contains(playerName)) continue;
             BossBarTitle title = BossBarTitle.parse(text);
             if (title == null) continue;
-            return new Bar(bar.getId(), title.name, title.hp, title.maxHp, parseArmour(component),
-                    clampProgress(bar.getProgress()), kindOf(bar.getColor()));
+            return toBar(bar, title, component);
         }
         return null;
     }
