@@ -65,21 +65,27 @@ public final class HudWorldRenderer {
         if (mc == null || mc.level == null || mc.player == null) return;
 
         Entity entity = HudRenderBridge.entityOf(state);
-        if (entity == null || entity == mc.player) return;
+        if (entity == null) return;
 
         HudConfig.Cfg cfg = HudConfig.get();
         if (!cfg.enabled) return;
+        // 1.3.0：调试模式会在自己头顶也画一份（正常跳过本地玩家）。
+        boolean selfDebug = entity == mc.player;
+        if (selfDebug && !cfg.debug) return;
         // 诅咒：与地图设定一致，整个 UI 隐藏（不提供开关）。
         if (CurseDetector.isActive(mc)) return;
         // 1.2.10：癫狂**不再影响实体 HUD** —— 地图本身不会隐藏最近敌人条 / 队伍血量条 / below_name，
         // 按本 Mod 的口径也只隐藏「自身属性面板」（见 SelfStatsPanel）。
-        // 只画本 Mod 接管的实体：数据包管控的敌人 / 队伍条里的队友。
-        if (!HudTarget.managed(mc, entity)) return;
-        // 距离 / 被墙挡住 / 被其它实体挡住 —— 保留为「少提交一点」的额外剔除，
-        // 真正的遮挡由深度测试负责。
-        if (!HudTarget.visible(mc, entity)) return;
+        if (!selfDebug) {
+            // 只画本 Mod 接管的实体：数据包管控的敌人 / 队伍条里的队友。
+            if (!HudTarget.managed(mc, entity)) return;
+            // 距离 / 被墙挡住 / 被其它实体挡住 —— 保留为「少提交一点」的额外剔除，
+            // 真正的遮挡由深度测试负责。
+            if (!HudTarget.visible(mc, entity)) return;
+        }
 
         boolean teammate = entity instanceof Player;
+        // 调试模式下的「自己」按队友口径取数（绿条 + below_name 百分比）。
         EnemyData.Snapshot data = resolveData(mc, entity, teammate);
         if (data == null) return;
 

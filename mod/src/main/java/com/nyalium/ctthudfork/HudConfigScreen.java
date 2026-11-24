@@ -82,6 +82,16 @@ public final class HudConfigScreen extends Screen {
             HudConfig.reset();
             this.rebuildWidgets();
         }).bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build());
+        y += ROW_GAP;
+
+        // 1.3.0：调试模式（写 cfg.debug）。开着时：
+        //   ① 头顶 HUD 也画**自己**（正常跳过本地玩家）；
+        //   ② 属性面板左下角打印一行调试信息。
+        CycleButton<Boolean> debug = CycleButton.onOffBuilder(cfg.debug)
+                .create(x, y, BUTTON_WIDTH, ROW_HEIGHT,
+                        Component.translatable("ctt_hud_fork.config.debug"),
+                        (b, v) -> HudConfig.get().debug = v);
+        addRenderableWidget(debug);
 
         // 完成：永远贴屏幕最底部。
         int doneY = Math.max(y + ROW_GAP, this.height - ROW_HEIGHT - 8);

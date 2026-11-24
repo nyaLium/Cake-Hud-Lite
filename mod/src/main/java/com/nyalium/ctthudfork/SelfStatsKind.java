@@ -59,8 +59,14 @@ public enum SelfStatsKind {
 
     // ── 攻击 ──
     CLASS_STAT("class_stat", true, Group.ATTRIBUTE),
+    /** 职业点（乘算前）：地图 {@code Misc_View_Stats_9} / hover {@code view_stats_9}。 */
+    CLASS_STAT_RAW("class_stat_raw", true, Group.ATTRIBUTE),
     STRENGTH("strength", true, Group.ATTRIBUTE),
+    /** 力量（乘算前）：{@code Misc_View_Stats_11}。 */
+    STRENGTH_RAW("strength_raw", true, Group.ATTRIBUTE),
     ATTACK_SPEED("attack_speed", true, Group.ATTRIBUTE),
+    /** 攻击速度（乘算前）：{@code Misc_View_Stats_13}。 */
+    ATTACK_SPEED_RAW("attack_speed_raw", true, Group.ATTRIBUTE),
     ATTACK_RANGE("attack_range", true, Group.ATTRIBUTE),
     STAMINA("stamina", true, Group.ATTRIBUTE),
     ARCHERY("archery", true, Group.ATTRIBUTE),
@@ -70,12 +76,18 @@ public enum SelfStatsKind {
 
     // ── 防御 ──
     DEFENCE("defence", true, Group.ATTRIBUTE),
+    /** 防御（乘算和转化前）：{@code Misc_View_Stats_17}。 */
+    DEFENCE_RAW("defence_raw", true, Group.ATTRIBUTE),
     TRUE_ARMOR("true_armor", true, Group.ATTRIBUTE),
+    /** 真•盔甲（乘算前）：{@code Misc_View_Stats_19}。 */
+    TRUE_ARMOR_RAW("true_armor_raw", true, Group.ATTRIBUTE),
     DEFENCE_AMP("defence_amp", true, Group.ATTRIBUTE),
     TRUE_ARMOR_AMP("true_armor_amp", true, Group.ATTRIBUTE),
 
     // ── 元素护甲 ──
     FIRE_ARMOR("fire_armor", true, Group.ATTRIBUTE),
+    /** 火之加护（乘算前）：{@code Misc_View_Stats_26}。 */
+    FIRE_ARMOR_RAW("fire_armor_raw", true, Group.ATTRIBUTE),
     TRUE_FIRE_ARMOR("true_fire_armor", true, Group.ATTRIBUTE),
     WATER_ARMOR("water_armor", true, Group.ATTRIBUTE),
     ELECTRIC_ARMOR("electric_armor", true, Group.ATTRIBUTE),
@@ -86,12 +98,16 @@ public enum SelfStatsKind {
 
     // ── 速度 / 跳跃 ──
     MAX_SPEED("max_speed", true, Group.ATTRIBUTE),
+    /** 速度（乘算前）：{@code Misc_View_Stats_34}。 */
+    SPEED_RAW("speed_raw", true, Group.ATTRIBUTE),
     SPEED_AMP("speed_amp", true, Group.ATTRIBUTE),
     JUMP("jump", true, Group.ATTRIBUTE),
     DOUBLE_JUMP("double_jump", true, Group.ATTRIBUTE),
 
     // ── 法力 ──
     MANA_POWER("mana_power", true, Group.ATTRIBUTE),
+    /** 法力强度（乘算前）：{@code Misc_View_Stats_41}。 */
+    MANA_POWER_RAW("mana_power_raw", true, Group.ATTRIBUTE),
     MANA_RECHARGE("mana_recharge", true, Group.ATTRIBUTE),
     MANA_AMP("mana_amp", true, Group.ATTRIBUTE),
 

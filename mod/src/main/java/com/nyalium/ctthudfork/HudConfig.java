@@ -753,12 +753,15 @@ public final class HudConfig {
         m.put("health", new String[]{"hp_amp", "hp_raw", "hp_neg", "heal_amp", "heal_raw",
                 "heal_percent", "heal_extra"});
         m.put("attack", new String[]{"class_stat", "strength", "attack_speed", "attack_range",
-                "stamina", "archery", "class_stat_amp", "strength_amp", "attack_speed_amp"});
-        m.put("defence", new String[]{"defence", "true_armor", "defence_amp", "true_armor_amp"});
+                "stamina", "archery", "class_stat_amp", "strength_amp", "attack_speed_amp",
+                "class_stat_raw", "strength_raw", "attack_speed_raw"});
+        m.put("defence", new String[]{"defence", "true_armor", "defence_amp", "true_armor_amp",
+                "defence_raw", "true_armor_raw"});
         m.put("element", new String[]{"fire_armor", "true_fire_armor", "water_armor",
-                "electric_armor", "ice_armor", "dark_armor", "light_armor", "fire_armor_amp"});
-        m.put("speed", new String[]{"max_speed", "speed_amp", "jump", "double_jump"});
-        m.put("mana", new String[]{"mana_power", "mana_recharge", "mana_amp"});
+                "electric_armor", "ice_armor", "dark_armor", "light_armor", "fire_armor_amp",
+                "fire_armor_raw"});
+        m.put("speed", new String[]{"max_speed", "speed_amp", "speed_raw", "jump", "double_jump"});
+        m.put("mana", new String[]{"mana_power", "mana_recharge", "mana_amp", "mana_power_raw"});
         m.put("time", new String[]{"timer"});
         m.put("misc", new String[]{"active_charge", "max_charge", "active_speed", "summoning",
                 "size", "gravity", "towers_regen", "skulls", "bitches", "fishing", "bee", "ant",

@@ -1426,14 +1426,24 @@ public final class SelfCheck {
         check(kindOfKey(8) == SelfStatsKind.CLASS_STAT_AMP, "键 8 应归为职业属性倍率");
         check(kindOfKey(10) == SelfStatsKind.STRENGTH_AMP, "键 10 应归为力量倍率");
         check(kindOfKey(12) == SelfStatsKind.ATTACK_SPEED_AMP, "键 12 应归为攻速倍率");
-        check(kindOfKey(16) == SelfStatsKind.DEFENCE_AMP, "键 16 应归为防御倍率");
-        check(kindOfKey(18) == SelfStatsKind.TRUE_ARMOR_AMP, "键 18 应归为真伤护甲倍率");
+        check(kindOfKey(101) == SelfStatsKind.DEFENCE_AMP, "键 101 应归为防御倍率");
+        check(kindOfKey(17) == SelfStatsKind.DEFENCE_RAW, "键 17 应归为防御（乘算前）");
+        check(kindOfKey(104) == SelfStatsKind.TRUE_ARMOR_AMP, "键 104 应归为真•盔甲倍率");
+        check(kindOfKey(19) == SelfStatsKind.TRUE_ARMOR_RAW, "键 19 应归为真•盔甲（乘算前）");
         check(kindOfKey(20) == SelfStatsKind.HEAL_AMP, "键 20 应归为治疗倍率");
         check(kindOfKey(25) == SelfStatsKind.FIRE_ARMOR_AMP, "键 25 应归为火焰护甲倍率");
         check(kindOfKey(33) == SelfStatsKind.SPEED_AMP, "键 33 应归为速度倍率");
         check(kindOfKey(40) == SelfStatsKind.MANA_AMP, "键 40 应归为法力倍率");
         check(kindOfKey(56) == SelfStatsKind.STATUS_56, "键 56 应归为「胸骨断裂」那条状态效果");
         check(kindOfKey(78) == SelfStatsKind.TIMER, "键 78 应归为计时");
+
+        // hover 键（view_stats_N）是属性行最可靠的锚点
+        check(SelfStats.hoverKind("view_stats_17") == SelfStatsKind.DEFENCE, "view 17 应是盔甲");
+        check(SelfStats.hoverKind("view_stats_18") == SelfStatsKind.DEFENCE_AMP, "view 18 应是防御倍率");
+        check(SelfStats.hoverKind("view_stats_19") == SelfStatsKind.TRUE_ARMOR, "view 19 应是真•盔甲");
+        check(SelfStats.hoverKind("view_stats_21") == SelfStatsKind.TRUE_ARMOR_AMP, "view 21 应是真•盔甲倍率");
+        check(SelfStats.hoverKind("view_stats_42") == SelfStatsKind.JUMP, "view 42 应是跳跃");
+        check(SelfStats.hoverKind("view_stats_47") == SelfStatsKind.SUMMONING, "view 47 应是召唤力");
 
         // 只有图标的数值行：图标 + 颜色 → 具体属性
         check(glyphKind("120\u2764", SelfStats.RED) == SelfStatsKind.HEART_RED, "红心行应归为红心");
@@ -1487,9 +1497,9 @@ public final class SelfCheck {
                 "私有区字形 + 亮紫应归为粉心");
 
         // 过滤表：细类、分节、粗类展开、非法值（1.20.31：属性 / 状态效果 / 其它；1.20.32 游戏时间与难度骷髅移到「其它」）
-        check(SelfStatsKind.FILTERABLE.length == 88,
-                "可过滤项应为 88 项，实际 " + SelfStatsKind.FILTERABLE.length);
-        check(SelfStatsKind.section(SelfStatsKind.Group.ATTRIBUTE).length == 56, "「属性」一节应有 56 项");
+        check(SelfStatsKind.FILTERABLE.length == 96,
+                "可过滤项应为 96 项（1.2.11 新增 8 个「乘算前」原始值），实际 " + SelfStatsKind.FILTERABLE.length);
+        check(SelfStatsKind.section(SelfStatsKind.Group.ATTRIBUTE).length == 64, "「属性」一节应有 64 项");
         check(SelfStatsKind.section(SelfStatsKind.Group.STATUS).length == 28, "「状态效果」一节应有 28 项");
         check(SelfStatsKind.section(SelfStatsKind.Group.OTHER).length == 4,
                 "「其它」一节应为 游戏时间 / 难度骷髅 / 草方块 / 未识别行 4 项");
@@ -1512,8 +1522,8 @@ public final class SelfCheck {
         java.util.List<String> expandedHealth = HudConfig.sanitizeKinds(java.util.List.of("health"));
         check(expandedHealth.contains("hp_neg") && expandedHealth.contains("heal_percent"),
                 "health 展开应包含负生命与治疗百分比");
-        check(HudConfig.sanitizeKinds(java.util.List.of("attack")).size() == 9,
-                "旧粗类 attack 应展开成 9 个细类");
+        check(HudConfig.sanitizeKinds(java.util.List.of("attack")).size() == 12,
+                "旧粗类 attack 应展开成 12 个细类（含 3 个乘算前）");
         check(HudConfig.sanitizeKinds(java.util.List.of("misc")).contains("skulls"),
                 "misc 展开应包含骷髅数");
         check(HudConfig.sanitizeKinds(java.util.List.of("misc")).contains("grass"),
@@ -1529,21 +1539,21 @@ public final class SelfCheck {
 
         // 分节列表：每节一行标题 + 两个一项（不跨节合并）
         java.util.List<SelfStatsFilterScreen.Row> rows = SelfStatsFilterScreen.buildRows();
-        check(rows.size() == 47, "三节共 47 行（1+28+1+14+1+2），实际 " + rows.size());
+        check(rows.size() == 51, "三节共 51 行（1+32+1+14+1+2），实际 " + rows.size());
         check(rows.get(0).isHeader() && rows.get(0).header() == SelfStatsKind.Group.ATTRIBUTE,
                 "第一行应是「属性」标题");
         check(!rows.get(1).isHeader() && rows.get(1).left() == SelfStatsKind.HEART_RED,
                 "属性一节第一项应是红心（游戏时间已挪到「其它」）");
-        check(rows.get(29).isHeader() && rows.get(29).header() == SelfStatsKind.Group.STATUS,
-                "第 29 行应是「状态效果」标题");
-        check(!rows.get(30).isHeader() && rows.get(30).left() == SelfStatsKind.STATUS_49
-                        && rows.get(30).right() == SelfStatsKind.STATUS_50,
+        check(rows.get(33).isHeader() && rows.get(33).header() == SelfStatsKind.Group.STATUS,
+                "第 33 行应是「状态效果」标题");
+        check(!rows.get(34).isHeader() && rows.get(34).left() == SelfStatsKind.STATUS_49
+                        && rows.get(34).right() == SelfStatsKind.STATUS_50,
                 "状态效果一节应从 49/50 并排开始");
-        check(rows.get(44).isHeader() && rows.get(44).header() == SelfStatsKind.Group.OTHER,
-                "第 44 行应是「其它」标题");
-        check(rows.get(45).left() == SelfStatsKind.TIMER && rows.get(45).right() == SelfStatsKind.SKULLS,
+        check(rows.get(48).isHeader() && rows.get(48).header() == SelfStatsKind.Group.OTHER,
+                "第 48 行应是「其它」标题");
+        check(rows.get(49).left() == SelfStatsKind.TIMER && rows.get(49).right() == SelfStatsKind.SKULLS,
                 "其它一节第一行应是 游戏时间 + 难度骷髅");
-        check(rows.get(46).left() == SelfStatsKind.GRASS && rows.get(46).right() == SelfStatsKind.MISC,
+        check(rows.get(50).left() == SelfStatsKind.GRASS && rows.get(50).right() == SelfStatsKind.MISC,
                 "其它一节第二行应是 草方块 + 未识别行");
         int headers = 0;
         for (SelfStatsFilterScreen.Row row : rows) if (row.isHeader()) headers++;
@@ -1553,7 +1563,7 @@ public final class SelfCheck {
         check(SelfStatsFilterScreen.visibleRows(148) == 6, "148 px 列表应能放 6 行，实际 "
                 + SelfStatsFilterScreen.visibleRows(148));
         check(SelfStatsFilterScreen.visibleRows(0) == 0, "列表高度 0 应放 0 行");
-        check(SelfStatsFilterScreen.maxScroll(47, 6) == 41, "47 行 / 6 行可见 → 最大滚动 41");
+        check(SelfStatsFilterScreen.maxScroll(51, 6) == 45, "51 行 / 6 行可见 → 最大滚动 45");
         check(SelfStatsFilterScreen.maxScroll(5, 10) == 0, "内容比列表短时不该能滚");
         check(SelfStatsFilterScreen.clampScroll(-3, 41) == 0, "滚动量不该小于 0");
         check(SelfStatsFilterScreen.clampScroll(999, 41) == 41, "滚动量不该超过上限");

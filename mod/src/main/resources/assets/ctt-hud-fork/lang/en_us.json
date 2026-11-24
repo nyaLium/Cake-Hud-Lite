@@ -146,5 +146,14 @@
   "ctt_hud_fork.config.shieldAutoMirror.tooltip": "Only affects the initial position, before you move it.\n\nOn: switching your main hand mirrors the shield indicator automatically.\nOff: always placed as if your main hand were the right one.",
   "ctt_hud_fork.config.shieldMove": "Adjust position...",
   "ctt_hud_fork.config.selfStatsMove.dragHint": "Drag to move; arrow keys nudge (Shift = 16 px per press)",
-  "key.category.ctt-hud-fork.main": "CTT HUD - Fork"
+  "key.category.ctt-hud-fork.main": "CTT HUD - Fork",
+  "ctt_hud_fork.config.kind.class_stat_raw": "Class points (before multipliers)",
+  "ctt_hud_fork.config.kind.strength_raw": "Strength (before multipliers)",
+  "ctt_hud_fork.config.kind.attack_speed_raw": "Attack speed (before multipliers)",
+  "ctt_hud_fork.config.kind.defence_raw": "Defence (before multipliers)",
+  "ctt_hud_fork.config.kind.true_armor_raw": "True armour (before multipliers)",
+  "ctt_hud_fork.config.kind.fire_armor_raw": "Fire protection (before multipliers)",
+  "ctt_hud_fork.config.kind.speed_raw": "Speed (before multipliers)",
+  "ctt_hud_fork.config.kind.mana_power_raw": "Mana power (before multipliers)",
+  "ctt_hud_fork.config.debug": "Debug mode"
 }

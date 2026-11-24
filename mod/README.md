@@ -7,7 +7,7 @@
 >
 > 这是 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud) 的 Fork 版（MIT 许可；其 LICENSE 的版权声明为 Copyright (c) 2026 Kirin0321（麒麟））。
 >
-> 当前版本 **1.2.10**：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
+> 当前版本 **1.3.0**（本地调整，未发布）：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/透明度，
 > 88 个属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
 > 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」（进服后先静默 3 s 再问）；1.20.40 把面板/盾牌的位置改成**相对位置**，窗口大小或 GUI 缩放变化后不再错位；1.20.41 面板默认位置改到**左侧偏上（y = 屏幕高 ÷ 3）**；1.20.42 容器界面那两套的默认位置也一样。
@@ -21,11 +21,11 @@
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.2.10` |
+| 版本 | `1.3.0` |
 | Minecraft | `26.3` |
 | 环境 | 仅客户端 |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/ctt-hud-fork-1.2.10.jar` |
+| 产物 | `build/libs/ctt-hud-fork-1.3.0.jar` |
 | 仓库 | <https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version>（`fabric.mod.json` 的 `contact.homepage` / `sources` / `issues` 都指向这里，Mod Menu 会显示） |
 
 ## 代码导览（每个类做什么）
@@ -683,7 +683,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/ctt-hud-fork-1.2.10.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/ctt-hud-fork-1.3.0.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革
@@ -809,6 +809,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 血条通用透明度 | 0.10~1.00，默认 **0.50**（1.2.2） |
 | 文字阴影 | 默认**关**（只管头顶血条；面板独立一项） |
 | 隐藏 `below_name` 分数 | 默认**开**（名称落回原位） |
+| 调试模式（`debug`） | 默认**关**；开着时头顶 HUD 也画**自己**（正常跳过本地玩家），属性面板左下角多一行调试信息（1.3.0） |
 | 护甲配色 | 🛡 防御=蓝、真·防御=白、🔥金、☃ 白、☠ 紫、☀ 白、⚓ 水蓝、⚡ 黄 |
 | 盾牌默认位置 | 底边距底 **76 px**，水平对准副手格中心 `guiW/2 ∓ 109` |
 | 盾牌档位 | `damage/max`：<0.4 绿、<0.6 黄、<0.8 红、否则空 |

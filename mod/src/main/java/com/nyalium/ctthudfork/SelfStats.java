@@ -98,6 +98,8 @@ public final class SelfStats {
     static final String TIME_KEY = KEY_PREFIX + "78";
     /** 键 → 分类（键与属性一一对应，见地图 view_stats.mcfunction）。 */
     private static final java.util.Map<String, SelfStatsKind> KEY_KINDS = buildKeyKinds();
+    /** hover 键 {@code view_stats_N} → 分类（1.2.11：属性行优先用这个认）。 */
+    private static final java.util.Map<String, SelfStatsKind> HOVER_KINDS = buildHoverKinds();
 
     /** 面板里真正上屏的行（上一趟的完整结果）。 */
     private static final List<Line> SHOWN = new ArrayList<>();
@@ -142,6 +144,11 @@ public final class SelfStats {
     private static boolean timeFrozen;
 
     private SelfStats() {}
+
+    /** hover 键 → 分类（供自检）。 */
+    static SelfStatsKind hoverKind(String key) {
+        return HOVER_KINDS.get(key);
+    }
 
     /** 面板上的一行：渲染用的原始 Component + 分类。 */
     static final class Line {
@@ -595,6 +602,13 @@ public final class SelfStats {
         final StringBuilder flat = new StringBuilder();
         final List<Integer> colors = new ArrayList<>();
         final Set<String> keys = new LinkedHashSet<>();
+        /**
+         * 图标上的 hover 翻译键（{@code view_stats_N}）。
+         *
+         * <p>1.2.11：数据包给每个属性图标都挂了 {@code hover_event.show_text -> view_stats_N}，
+         * 这是**每个属性唯一且稳定**的标识（比「字形 + 颜色」可靠得多）。</p>
+         */
+        final Set<String> hoverKeys = new LinkedHashSet<>();
         /** true = 有翻译键没被客户端解析出来（没装地图资源包时会这样）。 */
         boolean unresolvedKey;
 
@@ -618,10 +632,26 @@ public final class SelfStats {
             int rgb = style.getColor() != null ? style.getColor().getValue() : 0xFFFFFF;
             a.flat.append(text);
             for (int i = 0; i < text.length(); i++) a.colors.add(rgb);
+            // 1.2.11：把图标 hover 里的 view_stats_N 也收集起来（属性身份的唯一锚点）。
+            if (style.getHoverEvent() instanceof net.minecraft.network.chat.HoverEvent.ShowText show) {
+                collectHoverKeys(show.value(), a);
+            }
             return Optional.empty();
         }, Style.EMPTY);
         collectKeys(message, a);
         return a;
+    }
+
+    /** 递归收集 hover 文本里的 {@code view_stats_N} 键。 */
+    private static void collectHoverKeys(Component component, Analyzed a) {
+        if (component == null) return;
+        if (component.getContents() instanceof TranslatableContents tc) {
+            String key = tc.getKey();
+            if (key != null && key.startsWith("view_stats_")) a.hoverKeys.add(key);
+        }
+        for (Component sibling : component.getSiblings()) {
+            collectHoverKeys(sibling, a);
+        }
     }
 
     private static void collectKeys(Component component, Analyzed a) {
@@ -815,6 +845,11 @@ public final class SelfStats {
         for (String key : a.keys) {
             if (TIME_KEY.equals(key)) return SelfStatsKind.TIMER;
         }
+        // 1.2.11：先按 hover 键（view_stats_N）认 —— 每个属性一个键，精确且不依赖颜色。
+        for (String key : a.hoverKeys) {
+            SelfStatsKind kind = HOVER_KINDS.get(key);
+            if (kind != null) return kind;
+        }
         for (String key : a.keys) {
             SelfStatsKind kind = KEY_KINDS.get(key);
             if (kind != null) return kind;
@@ -977,27 +1012,98 @@ public final class SelfStats {
             SelfStatsKind kind = SelfStatsKind.status(i);
             if (kind != null) m.put(KEY_PREFIX + i, kind);
         }
-        // 倍率 / 基础值那一行都带地图翻译键，键和属性一一对应
+        // 倍率 / 基础值：地图的键号分两套（旧 4/8/10/12/16/18/20/25/33/40，新 83/87/90/93/101/104/107/115/122/124），
+        // 1.2.11 起**原始值（乘算前）单独成类**，不再并进「倍率」。
         m.put(KEY_PREFIX + "4", SelfStatsKind.HP_AMP);
+        m.put(KEY_PREFIX + "83", SelfStatsKind.HP_AMP);
         m.put(KEY_PREFIX + "5", SelfStatsKind.HP_RAW);
         m.put(KEY_PREFIX + "8", SelfStatsKind.CLASS_STAT_AMP);
-        m.put(KEY_PREFIX + "9", SelfStatsKind.CLASS_STAT_AMP);
+        m.put(KEY_PREFIX + "87", SelfStatsKind.CLASS_STAT_AMP);
+        m.put(KEY_PREFIX + "9", SelfStatsKind.CLASS_STAT_RAW);
         m.put(KEY_PREFIX + "10", SelfStatsKind.STRENGTH_AMP);
-        m.put(KEY_PREFIX + "11", SelfStatsKind.STRENGTH_AMP);
+        m.put(KEY_PREFIX + "90", SelfStatsKind.STRENGTH_AMP);
+        m.put(KEY_PREFIX + "11", SelfStatsKind.STRENGTH_RAW);
         m.put(KEY_PREFIX + "12", SelfStatsKind.ATTACK_SPEED_AMP);
-        m.put(KEY_PREFIX + "13", SelfStatsKind.ATTACK_SPEED_AMP);
+        m.put(KEY_PREFIX + "93", SelfStatsKind.ATTACK_SPEED_AMP);
+        m.put(KEY_PREFIX + "13", SelfStatsKind.ATTACK_SPEED_RAW);
         m.put(KEY_PREFIX + "16", SelfStatsKind.DEFENCE_AMP);
-        m.put(KEY_PREFIX + "17", SelfStatsKind.DEFENCE_AMP);
+        m.put(KEY_PREFIX + "101", SelfStatsKind.DEFENCE_AMP);
+        m.put(KEY_PREFIX + "17", SelfStatsKind.DEFENCE_RAW);
         m.put(KEY_PREFIX + "18", SelfStatsKind.TRUE_ARMOR_AMP);
-        m.put(KEY_PREFIX + "19", SelfStatsKind.TRUE_ARMOR_AMP);
+        m.put(KEY_PREFIX + "104", SelfStatsKind.TRUE_ARMOR_AMP);
+        m.put(KEY_PREFIX + "19", SelfStatsKind.TRUE_ARMOR_RAW);
         m.put(KEY_PREFIX + "20", SelfStatsKind.HEAL_AMP);
-        m.put(KEY_PREFIX + "21", SelfStatsKind.HEAL_AMP);
+        m.put(KEY_PREFIX + "107", SelfStatsKind.HEAL_AMP);
+        m.put(KEY_PREFIX + "21", SelfStatsKind.HEAL_RAW);
         m.put(KEY_PREFIX + "25", SelfStatsKind.FIRE_ARMOR_AMP);
-        m.put(KEY_PREFIX + "26", SelfStatsKind.FIRE_ARMOR_AMP);
+        m.put(KEY_PREFIX + "115", SelfStatsKind.FIRE_ARMOR_AMP);
+        m.put(KEY_PREFIX + "26", SelfStatsKind.FIRE_ARMOR_RAW);
         m.put(KEY_PREFIX + "33", SelfStatsKind.SPEED_AMP);
-        m.put(KEY_PREFIX + "34", SelfStatsKind.SPEED_AMP);
+        m.put(KEY_PREFIX + "122", SelfStatsKind.SPEED_AMP);
+        m.put(KEY_PREFIX + "34", SelfStatsKind.SPEED_RAW);
         m.put(KEY_PREFIX + "40", SelfStatsKind.MANA_AMP);
-        m.put(KEY_PREFIX + "41", SelfStatsKind.MANA_AMP);
+        m.put(KEY_PREFIX + "124", SelfStatsKind.MANA_AMP);
+        m.put(KEY_PREFIX + "41", SelfStatsKind.MANA_POWER_RAW);
+        return java.util.Map.copyOf(m);
+    }
+
+    /** hover 键 {@code view_stats_1..54} → 分类（与地图 view_stats.mcfunction 一一对应）。 */
+    private static java.util.Map<String, SelfStatsKind> buildHoverKinds() {
+        java.util.Map<String, SelfStatsKind> m = new java.util.HashMap<>();
+        m.put("view_stats_1", SelfStatsKind.HEART_RED);
+        m.put("view_stats_2", SelfStatsKind.HEART_SOUL);
+        m.put("view_stats_3", SelfStatsKind.HEART_BLACK);
+        m.put("view_stats_4", SelfStatsKind.HEART_BLUE);
+        m.put("view_stats_5", SelfStatsKind.HEART_CRACKED);
+        m.put("view_stats_6", SelfStatsKind.HEART_PINK);
+        m.put("view_stats_7", SelfStatsKind.HP_NEG);
+        m.put("view_stats_8", SelfStatsKind.CLASS_STAT);
+        m.put("view_stats_9", SelfStatsKind.CLASS_STAT_AMP);
+        m.put("view_stats_10", SelfStatsKind.STRENGTH);
+        m.put("view_stats_11", SelfStatsKind.STRENGTH_AMP);
+        m.put("view_stats_12", SelfStatsKind.ATTACK_SPEED);
+        m.put("view_stats_13", SelfStatsKind.ATTACK_SPEED_AMP);
+        m.put("view_stats_14", SelfStatsKind.ATTACK_RANGE);
+        m.put("view_stats_15", SelfStatsKind.STAMINA);
+        m.put("view_stats_16", SelfStatsKind.ARCHERY);
+        m.put("view_stats_17", SelfStatsKind.DEFENCE);
+        m.put("view_stats_18", SelfStatsKind.DEFENCE_AMP);
+        m.put("view_stats_19", SelfStatsKind.TRUE_ARMOR);
+        m.put("view_stats_20", SelfStatsKind.TRUE_ARMOR);
+        m.put("view_stats_21", SelfStatsKind.TRUE_ARMOR_AMP);
+        m.put("view_stats_22", SelfStatsKind.HEAL_RAW);
+        m.put("view_stats_23", SelfStatsKind.HEAL_AMP);
+        m.put("view_stats_24", SelfStatsKind.TOWERS_REGEN);
+        m.put("view_stats_25", SelfStatsKind.HEAL_PERCENT);
+        m.put("view_stats_26", SelfStatsKind.HEAL_EXTRA);
+        m.put("view_stats_27", SelfStatsKind.TRUE_FIRE_ARMOR);
+        m.put("view_stats_28", SelfStatsKind.FIRE_ARMOR);
+        m.put("view_stats_29", SelfStatsKind.FIRE_ARMOR_AMP);
+        m.put("view_stats_30", SelfStatsKind.WATER_ARMOR);
+        m.put("view_stats_31", SelfStatsKind.ELECTRIC_ARMOR);
+        m.put("view_stats_32", SelfStatsKind.ICE_ARMOR);
+        m.put("view_stats_33", SelfStatsKind.DARK_ARMOR);
+        m.put("view_stats_34", SelfStatsKind.LIGHT_ARMOR);
+        m.put("view_stats_35", SelfStatsKind.MAX_SPEED);
+        m.put("view_stats_36", SelfStatsKind.SPEED_AMP);
+        m.put("view_stats_37", SelfStatsKind.SIZE);
+        m.put("view_stats_38", SelfStatsKind.GRAVITY);
+        m.put("view_stats_39", SelfStatsKind.MANA_POWER);
+        m.put("view_stats_40", SelfStatsKind.MANA_AMP);
+        m.put("view_stats_41", SelfStatsKind.MANA_RECHARGE);
+        m.put("view_stats_42", SelfStatsKind.JUMP);
+        m.put("view_stats_43", SelfStatsKind.DOUBLE_JUMP);
+        m.put("view_stats_44", SelfStatsKind.ACTIVE_CHARGE);
+        m.put("view_stats_45", SelfStatsKind.MAX_CHARGE);
+        m.put("view_stats_46", SelfStatsKind.ACTIVE_SPEED);
+        m.put("view_stats_47", SelfStatsKind.SUMMONING);
+        m.put("view_stats_48", SelfStatsKind.FISHING);
+        m.put("view_stats_49", SelfStatsKind.BEE);
+        m.put("view_stats_50", SelfStatsKind.ANT);
+        m.put("view_stats_51", SelfStatsKind.BITCHES);
+        m.put("view_stats_52", SelfStatsKind.KARMA_LIGHT);
+        m.put("view_stats_53", SelfStatsKind.KARMA_NEUTRAL);
+        m.put("view_stats_54", SelfStatsKind.KARMA_CELESTIAL);
         return java.util.Map.copyOf(m);
     }
 }
