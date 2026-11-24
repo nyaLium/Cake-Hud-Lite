@@ -107,7 +107,10 @@ public final class EnemyData {
             System.arraycopy(armor, 0, fixed, 0, Math.min(armor.length, fixed.length));
         }
         int safeMax = Math.max(1, maxHp);
-        int safeHp = Math.max(0, Math.min(hp, safeMax));
+        // 1.2.1：**不再把 hp 夹到 maxHp**。数据包的队伍条写的是 AllHearts/MaxHP，
+        // 蓝心 / 魂心可以突破红心上限（AllHearts > MaxHP），夹了就会显示成「红心上限/上限」，
+        // 与 Boss 栏对不上。只把百分比夹到 0~100，血量本身原样保留。
+        int safeHp = Math.max(0, hp);
         HeartCounts h = hearts != null ? hearts : HeartCounts.forMob(safeHp, safeMax);
         return new Snapshot(safeHp, safeMax, false, pct(safeHp, safeMax), defence, fixed, h, ratio);
     }

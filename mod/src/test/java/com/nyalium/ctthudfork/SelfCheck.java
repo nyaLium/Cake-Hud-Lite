@@ -1536,6 +1536,21 @@ public final class SelfCheck {
         check(ShieldIndicatorHud.defaultX(false, 400, 24) == 400 / 2 + 109 - 12,
                 "副手在右时 x 应镜像到另一侧");
 
+        // 1.2.1：显示值不再夹到 MaxHP（蓝心 / 魂心可以超过上限）
+        EnemyData.Snapshot over = EnemyData.exact(300, 200, 1.0f, 0, null, null);
+        check(over.hp == 300, "AllHearts 300 / MaxHP 200 时显示值应保留 300");
+        check(over.maxHp == 200, "上限仍应是 MaxHP");
+        check(over.percent == 100, "超过上限时百分比应夹到 100");
+        EnemyData.Snapshot under = EnemyData.exact(124, 200, 0.62f, 0, null, null);
+        check(under.hp == 124 && under.maxHp == 200, "普通血量应原样保留");
+        check(under.percent == 62, "124/200 应算出 62%");
+
+        // 1.2.1：队伍条认领 —— 完整玩家名绝不走「包含匹配」（NIVEI vs NIVEIV）
+        check(!BossBarTracker.allowLooseMatch(true, 1), "已知全名时不允许宽松匹配");
+        check(BossBarTracker.allowLooseMatch(false, 1), "未知名字且唯一候选时允许宽松匹配");
+        check(!BossBarTracker.allowLooseMatch(false, 2), "未知名字但有多个候选时不允许宽松匹配");
+        check(!BossBarTracker.allowLooseMatch(false, 0), "没有候选时不允许宽松匹配");
+
         HudConfig.Cfg wild = new HudConfig.Cfg();
         wild.selfStatsOpacity = -3.0;
         wild.selfStatsHidden = new java.util.ArrayList<>(java.util.List.of("heart_red", "hint", "heart_red", "health"));

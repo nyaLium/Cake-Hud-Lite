@@ -350,6 +350,19 @@ public final class BossBarTracker {
     }
 
     /**
+     * 宽松（包含关系）匹配是否可以被接受。
+     *
+     * <p>1.2.1：队伍条里的名字是**完整玩家名**（数据包 {@code @a} 选择器渲染出来的就是玩家名），
+     * 所以只要这条名字已经能精确对到某位真实玩家（自己 / 视野内 / Tab 名单），就<b>绝不允许</b>
+     * 再用包含关系去认别的实体 —— 否则 {@code NIVEI} 会认领到 {@code NIVEIV} 头上
+     * （前者是后者的前缀），队友头顶就会显示成别人的血量。
+     * 只有「不是任何玩家全名、且恰好只有一个候选」的残渣名才允许宽松匹配。</p>
+     */
+    static boolean allowLooseMatch(boolean knownPlayerName, int looseCandidates) {
+        return !knownPlayerName && looseCandidates == 1;
+    }
+
+    /**
      * 这条标题是不是「队员血量条」。
      *
      * <p>{@link TeamBarTitle} 只做形状匹配，而数据包的 {@code floor} 条
@@ -410,13 +423,40 @@ public final class BossBarTracker {
     /** 这名玩家是否在队伍条里（= 是不是队友）。 */
     static boolean isTeammate(Minecraft mc, Player player) {
         if (player == null) return false;
-        for (TeamBarTitle.Entry entry : teamEntriesCached(mc)) {
+        List<TeamBarTitle.Entry> entries = teamEntriesCached(mc);
+        for (TeamBarTitle.Entry entry : entries) {
             if (nameMatches(player, entry.name, true)) return true;
         }
-        for (TeamBarTitle.Entry entry : teamEntriesCached(mc)) {
-            if (nameMatches(player, entry.name, false)) return true;
+        for (TeamBarTitle.Entry entry : entries) {
+            if (!nameMatches(player, entry.name, false)) continue;
+            if (allowLooseMatch(knowsPlayerName(mc, entry.name), looseMatchCount(mc, entry.name))) {
+                return true;
+            }
         }
         return false;
+    }
+
+    /** 这个名字是不是某位真实玩家的完整名字（自己 / 视野内 / Tab 名单）。 */
+    private static boolean knowsPlayerName(Minecraft mc, String name) {
+        if (mc == null || name == null || name.isEmpty()) return false;
+        if (mc.player != null && nameMatches(mc.player, name, true)) return true;
+        if (mc.level != null) {
+            for (Player player : mc.level.players()) {
+                if (player != mc.player && nameMatches(player, name, true)) return true;
+            }
+        }
+        var connection = mc.getConnection();
+        return connection != null && connection.getPlayerInfo(name) != null;
+    }
+
+    /** 宽松匹配能对上几名玩家（不含自己）。 */
+    private static int looseMatchCount(Minecraft mc, String name) {
+        if (mc == null || mc.level == null || name == null || name.isEmpty()) return 0;
+        int n = 0;
+        for (Player player : mc.level.players()) {
+            if (player != mc.player && nameMatches(player, name, false)) n++;
+        }
+        return n;
     }
 
     /** 把队伍条目认领到附近的同名玩家实体（自己永不参与）。 */
@@ -433,25 +473,54 @@ public final class BossBarTracker {
         if (candidates.isEmpty()) return out;
 
         Vec3 self = mc.player.position();
+        Set<UUID> used = new HashSet<>();
         for (TeamBarTitle.Entry entry : entries) {
-            for (int pass = 0; pass < 2; pass++) {
-                Player best = null;
-                double bestDist = Double.MAX_VALUE;
-                for (Player player : candidates) {
-                    if (!nameMatches(player, entry.name, pass == 0)) continue;
-                    double dist = player.position().distanceToSqr(self);
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        best = player;
-                    }
+            Player best = nearestExact(candidates, used, entry.name, self);
+            if (best == null) {
+                // 1.2.1：只有「不是任何玩家全名、且唯一候选」时才放宽到包含匹配。
+                boolean known = knowsPlayerName(mc, entry.name);
+                if (allowLooseMatch(known, looseMatchCount(mc, entry.name))) {
+                    best = nearestLoose(candidates, used, entry.name, self);
                 }
-                if (best != null) {
-                    out.put(best.getUUID(), entry);
-                    break;
-                }
+            }
+            if (best != null) {
+                used.add(best.getUUID());
+                out.put(best.getUUID(), entry);
             }
         }
         return out;
+    }
+
+    /** 精确匹配里离自己最近的那名候选（未被占用）。 */
+    private static Player nearestExact(List<Player> candidates, Set<UUID> used, String name, Vec3 self) {
+        Player best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Player player : candidates) {
+            if (used.contains(player.getUUID())) continue;
+            if (!nameMatches(player, name, true)) continue;
+            double dist = player.position().distanceToSqr(self);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = player;
+            }
+        }
+        return best;
+    }
+
+    /** 包含匹配里离自己最近的那名候选（未被占用）。 */
+    private static Player nearestLoose(List<Player> candidates, Set<UUID> used, String name, Vec3 self) {
+        Player best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Player player : candidates) {
+            if (used.contains(player.getUUID())) continue;
+            if (!nameMatches(player, name, false)) continue;
+            double dist = player.position().distanceToSqr(self);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = player;
+            }
+        }
+        return best;
     }
 
     private static boolean nameMatches(Entity entity, String barName, boolean exact) {

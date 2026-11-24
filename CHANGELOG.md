@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.2.1** | 修纯客户端（服务端未装本 Mod）时队友血量的两个问题：①「NIVEI / NIVEIV」这类前缀名会互相认领（`NIVEI` 的条目挂到 `NIVEIV` 头顶）；②蓝心 / 魂心让 AllHearts 超过 MaxHP 时，头顶数字被夹成「MaxHP/MaxHP」，与 Boss 栏对不上。现在完整玩家名只做精确匹配、宽松匹配要求唯一候选，且显示值不再夹上限 | [Release v1.2.1](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.1) |
 | **1.2.0** | 「调整位置…」（盾牌）界面新增「初始位置是否跟随副手变化」（`shieldAutoMirror`，默认开，悬停有说明，在「回到初始位置」左侧）：关掉后初始位置固定按右手（副手在左），切换主手不再镜像；配置 schema 不变（新字段默认值 = 旧行为） | [Release v1.2.0](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.0) |
 | **1.1.0** | 盾牌指示器纹理换成新的 34×86 四档（`meter_0..3`）；Mod 简介改为「为地图“蛋糕塔”（Cake Team Towers）制作」的三条卖点；版本号 1.1.0（语义化：新内容，非修 bug） | [Release v1.1.0](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.1.0) |
 | **1.0.3** | `fabric.mod.json` 增加 `contact`（homepage / sources / issues 指向 [nyaLium/CTT-HUD-Mod-Fork-Version](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version)），Mod Menu 的模组页会显示这三个链接；无代码改动 | [Release v1.0.3](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.0.3) |
@@ -97,6 +98,40 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.2.1
+
+修**纯客户端**（服务端未装本 Mod）时，队友头顶血条的读数问题。服务端装了本 Mod 时走 `MobHealthPayload`，不受影响。
+
+### ① 问题一：前缀名互相认领（NIVEI / NIVEIV）
+
+队伍条标题是数据包拼出来的 `名字 (AllHearts/MaxHP)`。原来的认领流程是「先精确匹配、再包含匹配」，
+而包含匹配对**前缀关系**没有防护：`NIVEI` 是 `NIVEIV` 的前缀，于是当 `NIVEI` 的条目找不到对应实体
+（例如 `NIVEI` 就是本地玩家、被 `candidates` 排除）时，它会落到 `NIVEIV` 身上 —— 队友头顶显示成别人的血量。
+
+修法（`BossBarTracker`）：
+
+- 新增 `knowsPlayerName()`：判断条目里的名字是不是某位真实玩家的**完整名字**（自己 / 视野内 / Tab 名单）；
+- `allowLooseMatch(knownPlayerName, looseCandidates)`：只有「不是完整玩家名 **且** 宽松候选恰好 1 个」才允许包含匹配；
+- `resolveTeam()` 增加 `used` 集合，一条条目只认领一名玩家，一名玩家也只被一条条目认领；
+- `isTeammate()` 用同一套判定，避免把路人误判成队友。
+
+### ② 问题二：蓝心 / 魂心超过上限时被夹掉
+
+`EnemyData.exact()` 原来把显示值 `hp` 夹到 `maxHp`（`min(hp, maxHp)`）。队伍条写的是
+`AllHearts/MaxHP`，蓝心 / 魂心可以突破红心上限（`AllHearts > MaxHP`），夹完就变成
+「MaxHP/MaxHP」= 红心上限，与 Boss 栏不符。
+
+修法：`hp` 原样保留（只夹到 `>= 0`），**百分比**仍然夹在 0~100；血条进度仍用 `hp/maxHp`（>1 时按满格画）。
+
+### ③ 自检
+
+`checks=4801 failures=0`（新增 9 条：`exact(300,200)` 保留 300、百分比 100、`124/200 → 62%`、
+`allowLooseMatch` 的四种组合）。
+
+### ④ 未验证
+
+没有实机复现「蓝心超过上限」的场景；两项修复分别由代码路径与自检覆盖，建议进游戏用蓝心 / 魂心场景复核一次。
 
 ## 1.2.0
 
