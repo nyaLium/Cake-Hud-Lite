@@ -145,8 +145,8 @@ public final class SelfCheck {
             var r = run("percentOnly " + c[0] + "/" + c[1], d, o);
             if (r == null) continue;
             check(r.hasText, "percentOnly " + c[0] + "/" + c[1] + " 应有文字");
-            check(flatten(r).equals(c[2] + "%"),
-                    "percentOnly " + c[0] + "/" + c[1] + " 应显示 " + c[2] + "%，实际 " + flatten(r));
+            check(flatten(r).equals("❤ " + c[2] + "%"),
+                    "percentOnly " + c[0] + "/" + c[1] + " 应显示 ❤ " + c[2] + "%，实际 " + flatten(r));
             check(r.barWidth > 0, "percentOnly 仍应有血条宽度");
 
             o.showNumbers = false;
@@ -164,7 +164,7 @@ public final class SelfCheck {
         team.playerStyle = true;
         team.showBar = true;
         var tr = HudLayout.compute(63, 100, true, 0, new int[7], unknown, team, SelfCheck::width);
-        check(tr != null && flatten(tr).equals("63%"), "队友百分比回退应显示 63%，实际 " + flatten(tr));
+        check(tr != null && flatten(tr).equals("❤ 63%"), "队友百分比回退应显示 ❤ 63%，实际 " + flatten(tr));
 
         // 「拆不出心数但已知当前/上限」（队伍条那一份）仍然写 当前/最大
         var exact = HudLayout.compute(63, 120, false, 0, new int[7], unknown, team, SelfCheck::width);
@@ -601,7 +601,7 @@ public final class SelfCheck {
         // 拆不出心数（percentOnly）→ 1.20.7 起显示百分比数字；已知当前/上限但拆不出心数 → 当前/最大。
         HudLayout.Result fallback = run("回退", new Data("只有百分比", 73, 100, true, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
-        check(join(fallback).equals("73%"), "只有百分比时应显示 73%: " + join(fallback));
+        check(join(fallback).equals("❤ 73%"), "只有百分比时应显示 ❤ 73%: " + join(fallback));
 
         HudLayout.Options noHearts = new HudLayout.Options();
         noHearts.showHearts = false;
@@ -908,8 +908,8 @@ public final class SelfCheck {
         p4.barWidth = 100;
         HudLayout.Result berserkLayout = HudLayout.compute(73, 100, true, 0, new int[7],
                 HeartCounts.unknown(), p4, SelfCheck::width);
-        check(rowText(berserkLayout, 0).equals("73%"),
-                "癫狂排版应写百分比文本: " + rowText(berserkLayout, 0));
+        check(rowText(berserkLayout, 0).equals("❤ 73%"),
+                "癫狂排版应写「❤ 百分比文本」: " + rowText(berserkLayout, 0));
         check(berserkLayout.barWidth == 100, "癫狂排版仍应有血条: " + berserkLayout.barWidth);
 
         // 1.2.2：六类心用同一个 ❤ 字形，靠颜色区分

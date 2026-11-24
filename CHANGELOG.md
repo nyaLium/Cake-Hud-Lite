@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.2.8** | 百分比文本前加红心：`❤ 73%`（`percentOnly` 分支统一处理，癫狂 / 队友回退 / 敌人回退都生效） | [Release v1.2.8](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.8) |
 | **1.2.7** | 癫狂下补上百分比**文本**：只关心数/护甲，`showNumbers` 保留 → `HudLayout` 走 percentOnly 分支写 `73%`，配上百分比条（1.2.6 只有条没有字） | [Release v1.2.7](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.7) |
 | **1.2.6** | 癫狂下改画**百分比血条**：地图不清 `below_name` 的 `HealthPercent`，所以只画条、不写数字/心数/护甲（`EnemyData.percent` 新工厂）；未知诅咒仍整块隐藏（地图 `setdisplay below_name` 清空，百分比本就不在） | [Release v1.2.6](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.6) |
 | **1.2.5** | 癫狂（Berserk）改用**专属 Boss 栏**识别：数据包在玩家带 `Berserk` 标签时把个人状态条换成 `Misc_Bossbars_P10_Bossbar_11`（p1..p10 共用）；不再依赖聊天消息（带癫狂进服也能识别） | [Release v1.2.5](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.2.5) |
@@ -104,6 +105,21 @@
 
 > 1.0.0 – 1.9.0 采用「同目录改名」的工作方式，源码与 jar 已不可回溯，仅保留功能记录。
 > 从 1.10.0 起改为 `versions/vX.Y.Z/` 独立归档。
+
+## 1.2.8
+
+### ① 百分比文本带红心
+
+`HudLayout` 的 `percentOnly` 分支改成三段：`❤`（`#FF5555`）+ 空格 + 百分比（白）→ **`❤ 73%`**。
+覆盖：癫狂下的百分比显示、队友无队伍条的百分比回退、敌人无 Boss 栏的百分比。
+
+### ② 自检
+
+`checks=4875 failures=0`（percentOnly 系列与队友回退的期望改为 `❤ NN%`）。
+
+### ③ 未验证
+
+没有实机看间距。
 
 ## 1.2.7
 

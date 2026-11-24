@@ -277,6 +277,9 @@ public final class HudLayout {
             } else if (percentOnly) {
                 // 纯客户端只有 below_name 的 HealthPercent：拆不出各类心，但**至少把百分比数字画出来**
                 // —— 血条本来就是按这个百分比填的，带上数字才读得懂（队友无队伍条时同一条路径）。
+                // 1.2.8：HealthPercent 是「红心 ÷ MaxHP」，所以前面加一个红心图标（与心数行同款）。
+                heartRow.add(new Line(HeartCounts.ICONS[HeartCounts.RED], HeartCounts.COLORS[HeartCounts.RED]));
+                heartRow.add(new Line(HEART_GAP, 0xFFFFFF));
                 heartRow.add(new Line(percentText(hp, maxHp), 0xFFFFFF));
             } else {
                 // 拆不出各类心（例如队友只有 AllHearts/MaxHP）：退回原来的「当前/最大」。

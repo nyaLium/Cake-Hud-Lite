@@ -37,7 +37,7 @@ REPO_URL = 'https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version'
 
 # 已经发过 GitHub Release 的版本：`RELEASES.md` 只列这些；其余只算本地归档。
 # 发布新 Release 后，把版本号加进这个集合，再跑一次本脚本。
-PUBLISHED = {'v1.2.7', 'v1.1.0', 'v1.0.3'}
+PUBLISHED = {'v1.2.8', 'v1.1.0', 'v1.0.3'}
 RELEASES_URL = REPO_URL + '/releases'
 
 # 1.20.37 起项目/产物改名为 ctt-hud-fork；更早的归档仍是 cake_team_tower_hud_fork-*。
