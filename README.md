@@ -36,7 +36,6 @@ jar 在 **GitHub Releases** 里：<https://github.com/nyaLium/CTT-HUD-Mod-Fork-V
 | --- | --- | --- |
 | **1.1.0**（最新） | `ctt-hud-fork-1.1.0.jar` + `-sources.jar` | 盾牌指示器换新纹理（34×86 四档）；Mod 简介改为「蛋糕塔」版本 |
 | 1.0.3 | `ctt-hud-fork-1.0.3.jar` + `-sources.jar` | 上一版：jar 内带仓库地址（Mod Menu 的 Homepage / Source / Issues） |
-| 1.0.2 | `ctt-hud-fork-1.0.2.jar` + `-sources.jar` | 上一版，除联系方式外功能相同 |
 
 仓库里**不保存**任何 jar 或历史归档：完整版本索引见 [`RELEASES.md`](RELEASES.md)。
 

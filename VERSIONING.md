@@ -26,7 +26,8 @@
 1. 改 `mod/gradle.properties` 的 `mod_version`；
 2. `./gradlew clean build`（会自动跑 `selfCheck`）；
 3. 本地建归档目录 `versions/vX.Y.Z/`：jar + sources + README 快照 + `RELEASE.md`；
-4. 更新 `CHANGELOG.md`，并用 `python tools/archive_audit.py` 刷新 `RELEASES.md`；
+4. 更新 `CHANGELOG.md`，把版本号加进 `tools/archive_audit.py` 的 `PUBLISHED` 集合，
+   再跑 `python tools/archive_audit.py` 刷新 `RELEASES.md`（公开清单只列已发布的版本）；
 5. `git add -A && git commit -m "X.Y.Z: …" && git tag vX.Y.Z && git push origin main vX.Y.Z`；
 6. 在 GitHub 上为 `vX.Y.Z` 建 **Release**：正文粘 `versions/vX.Y.Z/RELEASE.md`，
    附件上传 `ctt-hud-fork-X.Y.Z.jar` 与 `-sources.jar`；

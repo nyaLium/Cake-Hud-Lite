@@ -34,6 +34,10 @@ else:
     REPO = os.path.abspath(os.path.join(HERE, '..'))
 VERSIONS = os.path.join(REPO, 'versions')
 REPO_URL = 'https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version'
+
+# 已经发过 GitHub Release 的版本：`RELEASES.md` 只列这些；其余只算本地归档。
+# 发布新 Release 后，把版本号加进这个集合，再跑一次本脚本。
+PUBLISHED = {'v1.1.0', 'v1.0.3'}
 RELEASES_URL = REPO_URL + '/releases'
 
 # 1.20.37 起项目/产物改名为 ctt-hud-fork；更早的归档仍是 cake_team_tower_hud_fork-*。
@@ -183,12 +187,17 @@ def main():
            '| 版本 | 日期 | jar 大小 | jar SHA-256（前 16 位） | 附件 |',
            '| --- | --- | --- | --- | --- |']
     for r in reversed(rows):
+        if r['name'] not in PUBLISHED:
+            continue
         pub.append('| [{n}]({rel}/tag/{n}) | {d} | {s:,} B | `{h}…` | `ctt-hud-fork-{v}.jar`、`-sources.jar`、`RELEASE.md` |'.format(
             n=r['name'], rel=RELEASES_URL, d=r['date'] or '?', s=r['size'],
             h=r['digest'][:16].upper(), v=r['version']))
     pub.append('| ~~1.0.1~~ | — | — | — | 已撤回：LICENSE 上游署名错误，不再分发 |')
     pub.append('| ~~1.0.0~~ | — | — | — | 已撤回：同上 |')
     pub.append('')
+    local_only = [r['version'] for r in rows if r['name'] not in PUBLISHED]
+    if local_only:
+        pub.append('> 另有 %s 只做本地归档、未单独发布（产物未上传）。\n' % '、'.join(local_only))
     if local_tests:
         pub.append('发布前的 67 个测试版（1.10.0 – 1.20.42）不公开，只保存在维护者本地 `versions/pre-release/`。')
     pub_path = os.path.join(REPO, 'RELEASES.md')
