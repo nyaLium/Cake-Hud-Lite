@@ -231,7 +231,11 @@ public final class HudLayout {
             // 数据包里它是 ArmorDisplay 的一页（白 🛡），但它属于「护甲」类而不是元素抗性。
             int trueArmor = trueArmorValue(armor);
             if (trueArmor != 0) {
-                top.add(new Line(HEART_GAP, 0xFFFFFF));
+                // 1.4.7：只有前面已经有内容（🛡 防御）时才补分隔空格 ——
+                // 没有防御、只有真·防御/元素护甲时，行首不会再顶一个空格。
+                if (!top.isEmpty()) {
+                    top.add(new Line(HEART_GAP, 0xFFFFFF));
+                }
                 top.add(new Line(EnemyData.ARMOR_ICONS[EnemyData.TRUE_ARMOR_INDEX]
                         + num(trueArmor), EnemyData.ARMOR_COLORS[EnemyData.TRUE_ARMOR_INDEX]));
             }
@@ -278,13 +282,13 @@ public final class HudLayout {
                 // 纯客户端只有 below_name 的 HealthPercent：拆不出各类心，但**至少把百分比数字画出来**
                 // —— 血条本来就是按这个百分比填的，带上数字才读得懂（队友无队伍条时同一条路径）。
                 // 1.2.8：HealthPercent 是「红心 ÷ MaxHP」，所以前面加一个红心图标（与心数行同款）。
-                heartRow.add(new Line(HeartCounts.ICONS[HeartCounts.RED], HeartCounts.COLORS[HeartCounts.RED]));
+                heartRow.add(new Line(HeartCounts.icon(HeartCounts.RED), HeartCounts.COLORS[HeartCounts.RED]));
                 heartRow.add(new Line(HEART_GAP, 0xFFFFFF));
                 heartRow.add(new Line(percentText(hp, maxHp), 0xFFFFFF));
             } else {
                 // 拆不出各类心（例如纯客户端队友只有 AllHearts/MaxHP）：退回「当前/最大」。
                 // 1.2.10：前面加红心（这是红心血量的口径），与 percentOnly / 心数行统一。
-                heartRow.add(new Line(HeartCounts.ICONS[HeartCounts.RED], HeartCounts.COLORS[HeartCounts.RED]));
+                heartRow.add(new Line(HeartCounts.icon(HeartCounts.RED), HeartCounts.COLORS[HeartCounts.RED]));
                 heartRow.add(new Line(HEART_GAP, 0xFFFFFF));
                 heartRow.add(new Line(num(Math.max(0, hp)) + "/" + num(Math.max(0, maxHp)), 0xFFFFFF));
             }
@@ -342,7 +346,7 @@ public final class HudLayout {
      * 上限未知（≤ 0）时只写当前值。</p>
      */
     private static Line redLine(int red, int maxHp) {
-        String icon = HeartCounts.ICONS[HeartCounts.RED];
+        String icon = HeartCounts.icon(HeartCounts.RED);
         String cur = num(Math.max(0, red));
         String text = maxHp > 0 ? icon + cur + "/" + num(maxHp) : icon + cur;
         return new Line(text, HeartCounts.COLORS[HeartCounts.RED]);
@@ -350,7 +354,7 @@ public final class HudLayout {
 
     /** 某一类心的一段：图标 + 数量（数量走 {@link #num} 缩写）。 */
     private static Line kindLine(int kind, int value) {
-        return new Line(HeartCounts.ICONS[kind] + num(value), HeartCounts.COLORS[kind]);
+        return new Line(HeartCounts.icon(kind) + num(value), HeartCounts.COLORS[kind]);
     }
 
     /**

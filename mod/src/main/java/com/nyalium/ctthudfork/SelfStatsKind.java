@@ -79,7 +79,7 @@ public enum SelfStatsKind {
     /** 防御（乘算和转化前）：{@code Misc_View_Stats_17}。 */
     DEFENCE_RAW("defence_raw", true, Group.ATTRIBUTE),
     TRUE_ARMOR("true_armor", true, Group.ATTRIBUTE),
-    /** 真•盔甲（乘算前）：{@code Misc_View_Stats_19}。 */
+    /** 真•防御（乘算前）：{@code Misc_View_Stats_19}。 */
     TRUE_ARMOR_RAW("true_armor_raw", true, Group.ATTRIBUTE),
     DEFENCE_AMP("defence_amp", true, Group.ATTRIBUTE),
     TRUE_ARMOR_AMP("true_armor_amp", true, Group.ATTRIBUTE),

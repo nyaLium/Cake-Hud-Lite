@@ -1,6 +1,6 @@
 {
-  "modmenu.nameTranslation.ctt-hud-fork": "CTT HUD - Fork",
-  "modmenu.descriptionTranslation.ctt-hud-fork": "Client-side heart counts / armour readout and vanilla boss-bar health bar above Cake Team Towers enemies, plus a stats panel (/trigger ViewStats).",
+  "modmenu.nameTranslation.ctt-hud-fork": "Cake Team Towers HUD - Fork",
+  "modmenu.descriptionTranslation.ctt-hud-fork": "Built for the Cake Team Towers map: health bars and info above enemies and players, a shield cooldown indicator, and a stats panel (/trigger ViewStats). Client-side only; server component optional.",
   "ctt_hud_fork.config.title": "CTT HUD - Fork Settings",
   "ctt_hud_fork.config.section.general": "General settings",
   "ctt_hud_fork.config.section.enemy": "Enemy settings",
@@ -152,7 +152,7 @@
   "ctt_hud_fork.config.kind.strength_raw": "Strength (before multipliers)",
   "ctt_hud_fork.config.kind.attack_speed_raw": "Attack speed (before multipliers)",
   "ctt_hud_fork.config.kind.defence_raw": "Defence (before multipliers)",
-  "ctt_hud_fork.config.kind.true_armor_raw": "True armour (before multipliers)",
+  "ctt_hud_fork.config.kind.true_armor_raw": "True defence (before multipliers)",
   "ctt_hud_fork.config.kind.fire_armor_raw": "Fire protection (before multipliers)",
   "ctt_hud_fork.config.kind.speed_raw": "Speed (before multipliers)",
   "ctt_hud_fork.config.kind.mana_power_raw": "Mana power (before multipliers)",
@@ -168,5 +168,7 @@
   "ctt_hud_fork.config.header.attributes.armor": "—— Attributes - Armour ——",
   "ctt_hud_fork.config.header.attributes.misc": "—— Attributes - Misc ——",
   "ctt_hud_fork.config.showSelf": "Show own bar",
-  "ctt_hud_fork.config.resetSection": "Reset settings"
+  "ctt_hud_fork.config.resetSection": "Reset settings",
+  "ctt_hud_fork.config.teamBarOpacity": "Player bar opacity: %s",
+  "ctt_hud_fork.config.teamTextOpacity": "Player text opacity: %s"
 }

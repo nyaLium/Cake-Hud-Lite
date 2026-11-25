@@ -47,6 +47,10 @@ public final class HudConfig {
          * <p>1.4.6 从 {@code opacity} 拆出来，默认 <b>1.00</b>（文字保持清晰）。</p>
          */
         public double textOpacity = 1.00;
+        /** 1.4.7：**玩家**（含自己）血条的不透明度，默认 0.65。 */
+        public double teamBarOpacity = 0.65;
+        /** 1.4.7：**玩家**（含自己）头顶文字的不透明度，默认 1.00。 */
+        public double teamTextOpacity = 1.00;
         /**
          * 实体血条（名字 / 心数 / 护甲）是否带文字阴影。
          *
@@ -711,12 +715,12 @@ public final class HudConfig {
         Cfg d = new Cfg();
         Cfg c = get();
         c.showBar = d.showBar;
-        c.hideEnemyBossBar = d.hideEnemyBossBar;
-        c.hideBelowNameScore = d.hideBelowNameScore;
         c.barWidth = d.barWidth;
         c.scale = d.scale;
         c.barOpacity = d.barOpacity;
         c.textOpacity = d.textOpacity;
+        c.teamBarOpacity = d.teamBarOpacity;
+        c.teamTextOpacity = d.teamTextOpacity;
         c.textShadow = d.textShadow;
         c.maxDistance = d.maxDistance;
         c.showTeammates = d.showTeammates;
@@ -724,7 +728,6 @@ public final class HudConfig {
         c.teamBarWidth = d.teamBarWidth;
         c.teamScale = d.teamScale;
         c.teamMaxDistance = d.teamMaxDistance;
-        c.hideTeamBossBar = d.hideTeamBossBar;
     }
 
     /** 重置「属性面板」这一页的设置。 */
@@ -754,6 +757,9 @@ public final class HudConfig {
         c.debug = d.debug;
         c.preferServerData = d.preferServerData;
         c.payloadLimit = d.payloadLimit;
+        c.hideBelowNameScore = d.hideBelowNameScore;
+        c.hideEnemyBossBar = d.hideEnemyBossBar;
+        c.hideTeamBossBar = d.hideTeamBossBar;
     }
 
     /** 重置「盾牌指示器」这一页的设置。 */
@@ -775,9 +781,11 @@ public final class HudConfig {
      */
     static Cfg normalize(Cfg read) {
         if (read == null) read = new Cfg();
-        // 1.4.6：血条与文字的不透明度分开（各自 0.10 ~ 1.00）
+        // 1.4.6：血条与文字的不透明度分开；1.4.7：敌人 / 玩家再各一套（各自 0.10 ~ 1.00）
         read.barOpacity = clamp(read.barOpacity, 0.1, 1.0);
         read.textOpacity = clamp(read.textOpacity, 0.1, 1.0);
+        read.teamBarOpacity = clamp(read.teamBarOpacity, 0.1, 1.0);
+        read.teamTextOpacity = clamp(read.teamTextOpacity, 0.1, 1.0);
         read.scale = clamp(read.scale, 0.75, 1.5);
         read.maxDistance = clamp(read.maxDistance, 4.0, 256.0);
         // 血条长度：非法值回落默认 75，其余夹在 50~150。

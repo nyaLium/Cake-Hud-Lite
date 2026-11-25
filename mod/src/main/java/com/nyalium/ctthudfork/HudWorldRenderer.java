@@ -63,6 +63,7 @@ public final class HudWorldRenderer {
                               SubmitNodeCollector collector, CameraRenderState camera) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.level == null || mc.player == null) return;
+        probeCrackedGlyph(mc);
 
         Entity entity = HudRenderBridge.entityOf(state);
         if (entity == null) return;
@@ -128,9 +129,10 @@ public final class HudWorldRenderer {
         // ② 文字行：自己用 submitText 提交。
         //    原版 submitNameTag 把颜色写死成不透明白、缩放写死 0.025，导致「不透明度」和
         //    「缩放」对文字完全无效；自己提交后两者都生效（背景框仍按原版 y-1 ~ y+9 画）。
-        // 1.4.6：文字与血条的不透明度分开（文字默认 1.00，血条默认 0.65）。
-        int alpha = (int) Math.round(255.0 * cfg.textOpacity);
-        int bgAlpha = (int) Math.round(0x40 * cfg.textOpacity);   // 原版名牌底色 ≈ 25% 黑
+        // 1.4.6：文字与血条的不透明度分开；1.4.7：敌人 / 玩家再各一套。
+        double textOpacity = teammate ? cfg.teamTextOpacity : cfg.textOpacity;
+        int alpha = (int) Math.round(255.0 * textOpacity);
+        int bgAlpha = (int) Math.round(0x40 * textOpacity);   // 原版名牌底色 ≈ 25% 黑
         submitRows(collector, pose, camera, attachment, layout, options.scale,
                 cfg, light, alpha, bgAlpha);
 
@@ -197,6 +199,25 @@ public final class HudWorldRenderer {
         if (!state.displayFireAnimation) return 0.0f;
         float width = Math.max(0.0f, state.boundingBoxWidth);
         return Math.min(FIRE_PUSH_MAX, 0.7f * width + 0.05f);
+    }
+
+    /** 字体实例（语言 / 资源包重载会换一个新的）；换了就重新探测裂心字形。 */
+    private static Font probedFont;
+    private static Boolean probedCracked;
+
+    /**
+     * 探测地图资源包里有没有裂心字形（{@code U+E026}）。
+     *
+     * <p>没有资源包时 {@code Font.width} 为 0（缺字字形没有宽度），此时 HUD 退回 ❤，
+     * 避免头顶出现空白 / 方块。每次字体实例变化（切语言、换资源包）重新探一次。</p>
+     */
+    private static void probeCrackedGlyph(Minecraft mc) {
+        Font font = mc.font;
+        if (font == null || font == probedFont) return;
+        probedFont = font;
+        boolean ok = font.width(HeartCounts.CRACKED_GLYPH) > 0;
+        probedCracked = ok;
+        HeartCounts.setCrackedGlyphAvailable(ok);
     }
 
     /** 着火时最多把 HUD 往相机方向推多远（格）。 */
@@ -370,8 +391,9 @@ public final class HudWorldRenderer {
         BossBarTexture.Tint tint = teammate
                 ? BossBarTexture.Tint.GREEN
                 : BossBarTexture.tintFor(data.kind);
-        // 1.4.6：血条用自己的不透明度（默认 0.65），不再跟文字共用一个值。
-        int alpha = (int) Math.round(255.0 * cfg.barOpacity);
+        // 1.4.6：血条用自己的不透明度；1.4.7：敌人 / 玩家各一套（玩家默认同 0.65）。
+        double barOpacity = teammate ? cfg.teamBarOpacity : cfg.barOpacity;
+        int alpha = (int) Math.round(255.0 * barOpacity);
         int color = BossBarTexture.argb(0xFFFFFF, alpha);
 
         float x0 = -layout.barWidth / 2.0f;

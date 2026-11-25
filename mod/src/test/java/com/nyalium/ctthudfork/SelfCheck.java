@@ -440,6 +440,8 @@ public final class SelfCheck {
         // 1.4.6：血条 / 文字的不透明度分开，默认 65% / 100%
         check(defaults.barOpacity == 0.65, "默认血条不透明度应为 0.65: " + defaults.barOpacity);
         check(defaults.textOpacity == 1.0, "默认文字不透明度应为 1.00: " + defaults.textOpacity);
+        check(defaults.teamBarOpacity == 0.65, "玩家默认血条不透明度应为 0.65: " + defaults.teamBarOpacity);
+        check(defaults.teamTextOpacity == 1.0, "玩家默认文字不透明度应为 1.00: " + defaults.teamTextOpacity);
         check(defaults.showBar, "默认应画血条");
         check(defaults.hideBelowNameScore, "默认应隐藏 below_name 分数");
         check(defaults.hideEnemyBossBar, "默认应隐藏上方 Boss 栏里的最近敌人信息");
@@ -928,18 +930,32 @@ public final class SelfCheck {
         check(pt.contains("12.3K") && pt.contains("10K"), "玩家心数也要缩写: " + pt);
         check(!pt.contains("12345") && !pt.contains("10000"), "玩家心数不该出现原样大数: " + pt);
 
-        // 1.2.2：六类心用同一个 ❤ 字形，靠颜色区分
-        for (int i = 0; i < HeartCounts.COUNT; i++) {
+        // 1.2.2：红 / 魂 / 黑 / 蓝 用 ❤；1.4.7：碎 / 粉用地图资源包的裂心字形 U+E026（颜色区分）。
+        for (int i = 0; i <= HeartCounts.BLUE; i++) {
             check(HeartCounts.ICONS[i].equals("\u2764"), "第 " + i + " 类心应使用 ❤");
         }
+        check(HeartCounts.ICONS[HeartCounts.CRACKED].equals("\uE026"), "碎心应使用地图裂心字形");
+        check(HeartCounts.ICONS[HeartCounts.PINK].equals("\uE026"), "粉心应使用地图裂心字形");
+        // 没资源包时退回 ❤，有资源包时用裂心字形（两种状态都测）
+        HeartCounts.setCrackedGlyphAvailable(false);
+        check(HeartCounts.icon(HeartCounts.CRACKED).equals("\u2764"), "无资源包时碎心应退回 ❤");
+        check(HeartCounts.icon(HeartCounts.RED).equals("\u2764"), "红心永远用 ❤");
+        HeartCounts.setCrackedGlyphAvailable(true);
+        check(HeartCounts.icon(HeartCounts.CRACKED).equals("\uE026"), "有资源包时碎心用裂心字形");
+        check(HeartCounts.icon(HeartCounts.PINK).equals("\uE026"), "有资源包时粉心用裂心字形");
+        HeartCounts.setCrackedGlyphAvailable(false);
 
         // 1.4.6：不透明度拆成「血条」与「文字」两条，各自 0.10 ~ 1.00，越界夹回。
         HudConfig.Cfg low = new HudConfig.Cfg();
         low.barOpacity = 0.05;
         low.textOpacity = 0.02;
+        low.teamBarOpacity = 0.0;
+        low.teamTextOpacity = 0.04;
         HudConfig.normalize(low);
-        check(low.barOpacity == 0.1 && low.textOpacity == 0.1,
-                "0.05 / 0.02 都应夹到 0.10: " + low.barOpacity + "/" + low.textOpacity);
+        check(low.barOpacity == 0.1 && low.textOpacity == 0.1 && low.teamBarOpacity == 0.1
+                        && low.teamTextOpacity == 0.1,
+                "四条不透明度都应夹到 0.10: " + low.barOpacity + "/" + low.textOpacity
+                        + "/" + low.teamBarOpacity + "/" + low.teamTextOpacity);
         HudConfig.Cfg kept = new HudConfig.Cfg();
         kept.barOpacity = 0.4;
         kept.textOpacity = 0.9;
@@ -958,6 +974,12 @@ public final class SelfCheck {
         String trueTop = join(HudLayout.compute(100, 100, false, 0, onlyTrue,
                 HeartCounts.forMob(100, 100), p3, SelfCheck::width));
         check(trueTop.contains("20"), "只有真盔甲时也应显示: " + trueTop);
+        // 1.4.7：没有 🛡 防御、只有真·防御时，行首不能带空格
+        check(!trueTop.startsWith(" "), "没有防御时护甲行不该以空格开头: [" + trueTop + "]");
+        // 有防御时，真·防御前面仍要有分隔空格
+        String defTrue = join(HudLayout.compute(100, 100, false, 7, onlyTrue,
+                HeartCounts.forMob(100, 100), p3, SelfCheck::width));
+        check(defTrue.startsWith("\uD83D\uDEE17 "), "防御后面应有一个空格再跟真·防御: " + defTrue);
         int[] bothArmor = new int[EnemyData.ARMOR_OBJECTIVES.length];
         bothArmor[0] = 10;                       // 火
         bothArmor[EnemyData.TRUE_ARMOR_INDEX] = 20;
@@ -1500,8 +1522,8 @@ public final class SelfCheck {
         check(kindOfKey(12) == SelfStatsKind.ATTACK_SPEED_AMP, "键 12 应归为攻速倍率");
         check(kindOfKey(101) == SelfStatsKind.DEFENCE_AMP, "键 101 应归为防御倍率");
         check(kindOfKey(17) == SelfStatsKind.DEFENCE_RAW, "键 17 应归为防御（乘算前）");
-        check(kindOfKey(104) == SelfStatsKind.TRUE_ARMOR_AMP, "键 104 应归为真•盔甲倍率");
-        check(kindOfKey(19) == SelfStatsKind.TRUE_ARMOR_RAW, "键 19 应归为真•盔甲（乘算前）");
+        check(kindOfKey(104) == SelfStatsKind.TRUE_ARMOR_AMP, "键 104 应归为真•防御倍率");
+        check(kindOfKey(19) == SelfStatsKind.TRUE_ARMOR_RAW, "键 19 应归为真•防御（乘算前）");
         check(kindOfKey(20) == SelfStatsKind.HEAL_AMP, "键 20 应归为治疗倍率");
         check(kindOfKey(25) == SelfStatsKind.FIRE_ARMOR_AMP, "键 25 应归为火焰护甲倍率");
         check(kindOfKey(33) == SelfStatsKind.SPEED_AMP, "键 33 应归为速度倍率");
@@ -1512,8 +1534,8 @@ public final class SelfCheck {
         // hover 键（view_stats_N）是属性行最可靠的锚点
         check(SelfStats.hoverKind("view_stats_17") == SelfStatsKind.DEFENCE, "view 17 应是盔甲");
         check(SelfStats.hoverKind("view_stats_18") == SelfStatsKind.DEFENCE_AMP, "view 18 应是防御倍率");
-        check(SelfStats.hoverKind("view_stats_19") == SelfStatsKind.TRUE_ARMOR, "view 19 应是真•盔甲");
-        check(SelfStats.hoverKind("view_stats_21") == SelfStatsKind.TRUE_ARMOR_AMP, "view 21 应是真•盔甲倍率");
+        check(SelfStats.hoverKind("view_stats_19") == SelfStatsKind.TRUE_ARMOR, "view 19 应是真•防御");
+        check(SelfStats.hoverKind("view_stats_21") == SelfStatsKind.TRUE_ARMOR_AMP, "view 21 应是真•防御倍率");
         check(SelfStats.hoverKind("view_stats_42") == SelfStatsKind.JUMP, "view 42 应是跳跃");
         check(SelfStats.hoverKind("view_stats_47") == SelfStatsKind.SUMMONING, "view 47 应是召唤力");
 

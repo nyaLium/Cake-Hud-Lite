@@ -28,8 +28,9 @@ import java.util.function.DoubleSupplier;
  *   <tr><td>通用</td><td>隐藏名称下方分数</td><td>{@code hideBelowNameScore}</td><td>—</td></tr>
  *   <tr><td>通用</td><td>隐藏上方 Boss 栏（最近敌人）</td><td>{@code hideEnemyBossBar}</td><td>数据照常读取</td></tr>
  *   <tr><td>通用</td><td>隐藏上方 Boss 栏（队伍血量）</td><td>{@code hideTeamBossBar}</td><td>队友数据源</td></tr>
- *   <tr><td>通用</td><td>血条不透明度</td><td>{@code barOpacity}</td><td>10%~100%，1% 一档，默认 65%</td></tr>
- *   <tr><td>通用</td><td>文字不透明度</td><td>{@code textOpacity}</td><td>10%~100%，1% 一档，默认 100%</td></tr>
+ *   <tr><td>敌人</td><td>血条不透明度</td><td>{@code barOpacity}</td><td>10%~100%，1% 一档，默认 65%</td></tr>
+ *   <tr><td>敌人</td><td>文字不透明度</td><td>{@code textOpacity}</td><td>10%~100%，1% 一档，默认 100%</td></tr>
+ *   <tr><td>玩家</td><td>玩家血条 / 文字不透明度</td><td>{@code teamBarOpacity} / {@code teamTextOpacity}</td><td>各 10%~100%，默认 65% / 100%</td></tr>
  *   <tr><td>敌人</td><td>显示血条</td><td>{@code showBar}</td><td>整块开关</td></tr>
  *   <tr><td>敌人</td><td>最远显示距离</td><td>{@code maxDistance}</td><td>4~256 格，默认 48</td></tr>
  *   <tr><td>敌人</td><td>血条长度</td><td>{@code barWidth}</td><td>50~150，默认 75</td></tr>
@@ -96,22 +97,8 @@ public final class EntityHudSettingsScreen extends Screen {
         y = header("ctt_hud_fork.config.header.general", y);
         // 文字阴影：textShadow（只管头顶血条，默认关；面板有自己的一项）
         y = toggle("textShadow", y, 0, () -> HudConfig.get().textShadow, v -> HudConfig.get().textShadow = v);
-        // 隐藏名称下方分数：hideBelowNameScore（信息已由血条表达）
-        y = toggle("hideBelowNameScore", y, 0, () -> HudConfig.get().hideBelowNameScore,
-                v -> HudConfig.get().hideBelowNameScore = v);
-        // 隐藏上方「最近敌人」Boss 栏：hideEnemyBossBar（数据照常读取）
-        y = toggle("hideEnemyBossBar", y, 0, () -> HudConfig.get().hideEnemyBossBar,
-                v -> HudConfig.get().hideEnemyBossBar = v);
-        // 隐藏上方「队伍血量」Boss 栏：hideTeamBossBar（队友数据源，读不画）
-        y = toggle("hideTeamBossBar", y, 0, () -> HudConfig.get().hideTeamBossBar,
-                v -> HudConfig.get().hideTeamBossBar = v);
-        // 1.4.6：不透明度拆成两条 —— 血条（默认 65%）与上方文字（默认 100%），各自 10~100%。
-        y = slider("barOpacity", y, 10, 100, 1, () -> HudConfig.get().barOpacity * 100,
-                v -> key("barOpacity", Math.round(v) + "%"),
-                v -> HudConfig.get().barOpacity = v / 100.0, 0);
-        y = slider("textOpacity", y, 10, 100, 1, () -> HudConfig.get().textOpacity * 100,
-                v -> key("textOpacity", Math.round(v) + "%"),
-                v -> HudConfig.get().textOpacity = v / 100.0, 0);
+        // 1.4.7：三个「隐藏」开关移到「调试功能」页（hideBelowNameScore / hideEnemyBossBar /
+        // hideTeamBossBar），实体页的「通用」只留文字阴影。
         // ── 敌人 ──
         y = header("ctt_hud_fork.config.header.enemy", y);
         // 显示血条：showBar（整块开关：关掉后血条 + 心数/护甲文字都不画，只剩原版名字）
@@ -125,7 +112,13 @@ public final class EntityHudSettingsScreen extends Screen {
         // 缩放比例：scale（0.75~1.50，默认 0.9；整组 UI 缩放）
         y = slider("scale", y, 0.75, 1.5, 0.05, () -> HudConfig.get().scale,
                 v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> HudConfig.get().scale = v, 1);
-        // 1.20.35：「优先使用服务端数据」写死开启，界面不再提供开关。
+        // 1.4.7：敌人自己的血条 / 文字不透明度（各 10~100%）
+        y = slider("barOpacity", y, 10, 100, 1, () -> HudConfig.get().barOpacity * 100,
+                v -> key("barOpacity", Math.round(v) + "%"),
+                v -> HudConfig.get().barOpacity = v / 100.0, 1);
+        y = slider("textOpacity", y, 10, 100, 1, () -> HudConfig.get().textOpacity * 100,
+                v -> key("textOpacity", Math.round(v) + "%"),
+                v -> HudConfig.get().textOpacity = v / 100.0, 1);
         // ── 玩家 ──
         y = header("ctt_hud_fork.config.header.player", y);
         // 1.20.34：玩家那边只有一个「显示血条」＝整块开关（关掉后血条和文字都不画）。
@@ -144,6 +137,13 @@ public final class EntityHudSettingsScreen extends Screen {
         // 缩放比例：teamScale
         y = slider("teamScale", y, 0.75, 1.5, 0.05, () -> HudConfig.get().teamScale,
                 v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> HudConfig.get().teamScale = v, 2);
+        // 1.4.7：玩家（含自己）的血条 / 文字不透明度（各 10~100%）
+        y = slider("teamBarOpacity", y, 10, 100, 1, () -> HudConfig.get().teamBarOpacity * 100,
+                v -> key("teamBarOpacity", Math.round(v) + "%"),
+                v -> HudConfig.get().teamBarOpacity = v / 100.0, 2);
+        y = slider("teamTextOpacity", y, 10, 100, 1, () -> HudConfig.get().teamTextOpacity * 100,
+                v -> key("teamTextOpacity", Math.round(v) + "%"),
+                v -> HudConfig.get().teamTextOpacity = v / 100.0, 2);
         lastY = y;
     }
 
@@ -174,7 +174,8 @@ public final class EntityHudSettingsScreen extends Screen {
         this.contentRows.clear();
         HudConfig.Cfg cfg = HudConfig.get();
         boolean enemyActive = cfg.showBar;
-        boolean playerActive = cfg.showTeammates;
+        // 1.4.7：玩家那组只在自己或队友任一开着时才可调（自己用的是玩家那套不透明度）
+        boolean playerActive = cfg.showTeammates || cfg.showSelf;
         int width = Math.max(120, Math.min(WIDTH_MAX, this.width - 60));
         int x = this.width / 2 - width / 2;
         for (Row row : rows) {

@@ -23,6 +23,9 @@ import java.util.function.DoubleFunction;
  *       <td>关掉后完全忽略 payload，强制走 Boss 栏 + HealthPercent 的纯客户端回退</td></tr>
  *   <tr><td>筛选实体数量</td><td>{@code payloadLimit}</td><td>1 ~ {@link MobHealthPayload#MAX_ENTRIES}，默认 64</td>
  *       <td>客户端只保留 payload 的前 N 条（服务端已按「玩家优先、其余按距离」排好序）</td></tr>
+ *   <tr><td>隐藏名称下方分数</td><td>{@code hideBelowNameScore}</td><td>默认开</td><td>1.4.7 从「血条设置」挪进来</td></tr>
+ *   <tr><td>隐藏上方 Boss 栏（最近敌人）</td><td>{@code hideEnemyBossBar}</td><td>默认开</td><td>同上</td></tr>
+ *   <tr><td>隐藏上方 Boss 栏（队伍血量）</td><td>{@code hideTeamBossBar}</td><td>默认开</td><td>同上（数据照常读取）</td></tr>
  * </table>
  *
  * <p>「优先使用服务端数据」关掉时，「筛选实体数量」灰掉 —— 都不读 payload 了，条数没有意义。</p>
@@ -72,6 +75,23 @@ public final class DebugSettingsScreen extends Screen {
                 v -> HudConfig.get().payloadLimit = (int) Math.round(v));
         limit.active = cfg.preferServerData;
         addRenderableWidget(limit);
+        y += ROW_GAP;
+
+        // 1.4.7：原来在「血条设置 → 通用」里的三个隐藏开关，挪到调试功能页。
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideBelowNameScore)
+                .create(x, y, width, ROW_HEIGHT,
+                        Component.translatable("ctt_hud_fork.config.hideBelowNameScore"),
+                        (b, v) -> HudConfig.get().hideBelowNameScore = v));
+        y += ROW_GAP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideEnemyBossBar)
+                .create(x, y, width, ROW_HEIGHT,
+                        Component.translatable("ctt_hud_fork.config.hideEnemyBossBar"),
+                        (b, v) -> HudConfig.get().hideEnemyBossBar = v));
+        y += ROW_GAP;
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideTeamBossBar)
+                .create(x, y, width, ROW_HEIGHT,
+                        Component.translatable("ctt_hud_fork.config.hideTeamBossBar"),
+                        (b, v) -> HudConfig.get().hideTeamBossBar = v));
 
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.resetSection"), b -> {
             HudConfig.resetDebug();
