@@ -409,7 +409,8 @@ public final class HudWorldRenderer {
         float y0 = layout.barTop;
         float y1 = layout.barTop + HudLayout.BAR_HEIGHT;
         float width = layout.barWidth;
-        float fill = Math.round(width * Math.max(0.0f, Math.min(1.0f, data.ratio)));
+        // 1.5.2：改成纯函数，残血（比例小到乘完 <1 px）时至少画 1 px。
+        float fill = HudLayout.fillPixels(layout.barWidth, data.ratio);
 
         pose.pushPose();
         pose.translate(attachment.x, attachment.y + 0.5, attachment.z);

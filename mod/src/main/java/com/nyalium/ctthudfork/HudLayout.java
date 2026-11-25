@@ -458,6 +458,21 @@ public final class HudLayout {
         return Math.max(0, Math.min(pages - 1, page));
     }
 
+    /**
+     * 血条要画多长（像素）：{@code ratio <= 0} 时 0，超小比例（残血）至少 **1 px**。
+     *
+     * <p>1.5.2：地图的分数是整数，{@code 红心 1 / 上限 325} 算出来是 0.3%，乘条宽后
+     * {@code Math.round} 会变成 0 —— 看上去像「血条完全不渲染」。这里保证比例 &gt; 0 时
+     * 至少留 1 px，让「还剩一点」看得出来。</p>
+     */
+    public static int fillPixels(int width, float ratio) {
+        if (width <= 0) return 0;
+        float r = Math.max(0.0f, Math.min(1.0f, ratio));
+        int fill = Math.round(width * r);
+        if (fill <= 0 && r > 0.0f) fill = 1;
+        return Math.min(width, fill);
+    }
+
     /** 血条长度：夹在 [BAR_WIDTH_MIN, BAR_WIDTH_MAX]，非法值回落默认值。 */
     public static int resolveBarWidth(double configured) {
         if (Double.isNaN(configured)) return BAR_WIDTH_DEFAULT;

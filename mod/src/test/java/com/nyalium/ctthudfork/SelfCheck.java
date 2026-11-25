@@ -1144,6 +1144,15 @@ public final class SelfCheck {
         check(!pctOnly.hearts.any(), "percentOnly 心数应为未知");
         check(EnemyData.percentOnly(-5, 0, new int[7]).percent == 0, "percentOnly 负值应夹到 0");
         check(EnemyData.percentOnly(150, 0, new int[7]).percent == 100, "percentOnly 超 100 应夹到 100");
+
+        // 1.5.2：残血时血条至少 1 px（整数分数下 1/325 = 0.3%，乘条宽 round 后会是 0）
+        check(HudLayout.fillPixels(75, 0.0f) == 0, "比例 0 不应有填充");
+        check(HudLayout.fillPixels(75, -1.0f) == 0, "负比例不应有填充");
+        check(HudLayout.fillPixels(75, 1.0f) == 75, "满血应填满");
+        check(HudLayout.fillPixels(75, 0.5f) == 38, "半血约 38 px: " + HudLayout.fillPixels(75, 0.5f));
+        check(HudLayout.fillPixels(75, 1.0f / 325.0f) == 1,
+                "1/325 应至少 1 px: " + HudLayout.fillPixels(75, 1.0f / 325.0f));
+        check(HudLayout.fillPixels(0, 1.0f) == 0, "宽度 0 不应有填充");
     }
 
     // ── 6. Boss 栏标题解析 ──

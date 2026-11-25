@@ -233,8 +233,10 @@ public final class EnemyData {
         }
 
         // 绝对值通道没打通：退回 below_name 的百分比（每只怪都有）。
-        int p = score(sb, "HealthPercent", entity);
-        if (p > 0) {
+        // 1.5.2：**0 也是合法分数**——红心 1 / 上限 325 的整数除法就是 0%，
+        // 以前用 `p > 0` 判定「没有数据」，于是残血怪整块 HUD 直接消失。
+        int p = healthPercentOf(sb, entity);
+        if (p >= 0) {
             p = Math.min(100, p);
             return new Snapshot(p, 100, true, p, defence, armor,
                     HeartCounts.unknown(), p / 100.0f);
@@ -250,10 +252,18 @@ public final class EnemyData {
      */
     public static boolean hasData(Scoreboard sb, Entity entity) {
         if (sb == null || entity == null) return false;
-        return score(sb, "AllHearts", entity) > 0
-                || score(sb, "RedHearts", entity) > 0
-                || score(sb, "MaxHP", entity) > 0
-                || score(sb, "HealthPercent", entity) > 0;
+        // 1.5.2：判据从「值 > 0」改成「这条分数存在」——0 是合法值
+        // （1 点红心 / 325 上限整数除就是 0%，按旧判据会让残血怪的 HUD 整块消失）。
+        return hasScore(sb, "AllHearts", entity)
+                || hasScore(sb, "RedHearts", entity)
+                || hasScore(sb, "MaxHP", entity)
+                || hasScore(sb, "HealthPercent", entity);
+    }
+
+    /** 这个实体在指定 objective 上有没有分数（0 也算有；没有条目才算没有）。 */
+    private static boolean hasScore(Scoreboard sb, String objectiveName, ScoreHolder holder) {
+        Objective obj = sb.getObjective(objectiveName);
+        return obj != null && sb.getPlayerScoreInfo(holder, obj) != null;
     }
 
     /**
