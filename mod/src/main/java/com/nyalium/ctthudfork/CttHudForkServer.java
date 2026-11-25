@@ -120,7 +120,11 @@ public final class CttHudForkServer implements ModInitializer {
     /** 取这名玩家周围最近的 CTT 怪，外加附近的其他玩家（队友）。 */
     private static List<MobHealthPayload.Entry> collect(Scoreboard scoreboard, ServerPlayer player) {
         AABB box = player.getBoundingBox().inflate(RADIUS);
-        List<Entity> nearby = player.level().getEntities(player, box);
+        // 1.4.2：getEntities(player, box) **排除**了 source 实体本身，
+        // 所以「自己」永远不会出现在 nearby 里 —— 必须先手动加进来，
+        // 否则 showSelf 在双端也拿不到自己的 payload（只有百分比）。
+        List<Entity> nearby = new ArrayList<>(player.level().getEntities(player, box));
+        nearby.add(player);
         double px = player.getX();
         double py = player.getY();
         double pz = player.getZ();
