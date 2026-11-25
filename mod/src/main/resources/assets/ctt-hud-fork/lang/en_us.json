@@ -143,7 +143,7 @@
   "ctt_hud_fork.config.shieldEnabled": "Show shield indicator",
   "ctt_hud_fork.config.shieldScale": "Scale: %s",
   "ctt_hud_fork.config.shieldOpacity": "Opacity: %s",
-  "ctt_hud_fork.config.shieldAutoMirror": "Initial position follows the offhand side",
+  "ctt_hud_fork.config.shieldAutoMirror": "Auto-adjust initial position",
   "ctt_hud_fork.config.shieldAutoMirror.tooltip": "Only affects the initial position, before you move it.\n\nOn: switching your main hand mirrors the shield indicator automatically.\nOff: always placed as if your main hand were the right one.",
   "ctt_hud_fork.config.shieldMove": "Adjust position...",
   "ctt_hud_fork.config.selfStatsMove.dragHint": "Drag to move; arrow keys nudge (Shift = 16 px per press)",
