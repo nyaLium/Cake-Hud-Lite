@@ -56,17 +56,6 @@ final class SelfStatsPanel implements HudElement {
                 g.guiWidth(), g.guiHeight());
         // 1.20.32：面板文字阴影有自己的开关，不再跟着实体血条的 textShadow。
         draw(g, mc.font, lines, panel, cfg.selfStatsTextShadow);
-        if (cfg.debug) {
-            // 排查用：屏幕/面板尺寸、过滤前后的行数（debug=true 时左下角一行，避开地图顶部的字）。
-            int guiW = mc.getWindow().getGuiScaledWidth();
-            int guiH = mc.getWindow().getGuiScaledHeight();
-            String info = String.format(java.util.Locale.ROOT,
-                    "panel %d,%d cols=%d op=%.2f | lines %d/%d | gui %dx%d fb %dx%d",
-                    panel.x, panel.y, panel.columns, panel.opacity,
-                    lines.size(), SelfStats.storedLineCount(),
-                    guiW, guiH, mc.getWindow().getWidth(), mc.getWindow().getHeight());
-            g.text(mc.font, info, 4, Math.max(4, guiH - 12), 0xFFFFFFFF, true);
-        }
     }
 
     /** 在容器界面上画属性面板（「在容器界面显示」模式），并在光标下显示该属性的官方名称。 */

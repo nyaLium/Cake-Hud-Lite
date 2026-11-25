@@ -94,8 +94,6 @@ public final class HudConfig {
         public double barWidth = 75.0;
         /** 整组 UI 的额外缩放，0.75 ~ 1.50，0.9 = 默认（1.19.0 起）。 */
         public double scale = 0.9;
-        /** 左上角打印面板调试行（排查用，见 {@code SelfStatsPanel} 里 {@code debug} 分支）。 */
-        public boolean debug = false;
         /**
          * 1.4.5 调试功能：**优先使用服务端数据**（服务端组件推来的 payload）。
          *
@@ -754,7 +752,6 @@ public final class HudConfig {
     static void resetDebug() {
         Cfg d = new Cfg();
         Cfg c = get();
-        c.debug = d.debug;
         c.preferServerData = d.preferServerData;
         c.payloadLimit = d.payloadLimit;
         c.hideBelowNameScore = d.hideBelowNameScore;

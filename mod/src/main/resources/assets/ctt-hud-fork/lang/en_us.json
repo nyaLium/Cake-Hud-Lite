@@ -156,7 +156,6 @@
   "ctt_hud_fork.config.kind.fire_armor_raw": "Fire protection (before multipliers)",
   "ctt_hud_fork.config.kind.speed_raw": "Speed (before multipliers)",
   "ctt_hud_fork.config.kind.mana_power_raw": "Mana power (before multipliers)",
-  "ctt_hud_fork.config.debug": "Debug mode",
   "ctt_hud_fork.config.section.debug": "Debug features…",
   "ctt_hud_fork.config.debugTitle": "Debug features",
   "ctt_hud_fork.config.debugHint": "For testing only — keep the defaults for normal play",

@@ -18,7 +18,6 @@ import java.util.function.DoubleFunction;
  * <h2>行 ↔ 配置字段</h2>
  * <table>
  *   <tr><th>行</th><th>字段</th><th>范围 / 默认</th><th>作用</th></tr>
- *   <tr><td>调试模式</td><td>{@code debug}</td><td>默认关</td><td>属性面板左下角多一行调试信息</td></tr>
  *   <tr><td>优先使用服务端数据</td><td>{@code preferServerData}</td><td>默认开</td>
  *       <td>关掉后完全忽略 payload，强制走 Boss 栏 + HealthPercent 的纯客户端回退</td></tr>
  *   <tr><td>筛选实体数量</td><td>{@code payloadLimit}</td><td>1 ~ {@link MobHealthPayload#MAX_ENTRIES}，默认 64</td>
@@ -50,12 +49,6 @@ public final class DebugSettingsScreen extends Screen {
         int x = this.width / 2 - width / 2;
         int y = TOP;
         HudConfig.Cfg cfg = HudConfig.get();
-
-        // 调试模式：debug（属性面板左下角打印一行调试信息）
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.debug)
-                .create(x, y, width, ROW_HEIGHT, Component.translatable("ctt_hud_fork.config.debug"),
-                        (b, v) -> HudConfig.get().debug = v));
-        y += ROW_GAP;
 
         // 优先使用服务端数据：preferServerData（关掉后强制纯客户端回退，方便双端对比）
         addRenderableWidget(CycleButton.onOffBuilder(cfg.preferServerData)
