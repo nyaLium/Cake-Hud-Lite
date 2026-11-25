@@ -128,6 +128,9 @@ public final class EntityHudSettingsScreen extends Screen {
         // showTeammates：自己永远不显示，只画队友
         y = toggle("showTeammates", y, 0, () -> HudConfig.get().showTeammates,
                 v -> HudConfig.get().showTeammates = v);
+        // 1.4.0：自己的血条（原「调试模式绘制自己」正式化，默认关）。
+        y = toggle("showSelf", y, 0, () -> HudConfig.get().showSelf,
+                v -> HudConfig.get().showSelf = v);
         // 最远显示距离：teamMaxDistance（与敌人同区间，文案共用 maxDistance 那一行）
         y = slider("teamMaxDistance", y, 4, 128, 4, () -> HudConfig.get().teamMaxDistance,
                 v -> key("maxDistance", (int) Math.round(v)), v -> HudConfig.get().teamMaxDistance = v, 2);

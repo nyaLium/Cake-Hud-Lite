@@ -160,5 +160,6 @@
   "ctt_hud_fork.config.header.attributes.heart": "属性 - 心型",
   "ctt_hud_fork.config.header.attributes.mult": "属性 - 倍率",
   "ctt_hud_fork.config.header.attributes.armor": "属性 - 护甲",
-  "ctt_hud_fork.config.header.attributes.misc": "属性 - 杂项"
+  "ctt_hud_fork.config.header.attributes.misc": "属性 - 杂项",
+  "ctt_hud_fork.config.entity.showSelf": "显示自己的血条"
 }

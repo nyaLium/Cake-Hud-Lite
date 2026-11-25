@@ -68,6 +68,8 @@ public final class HudConfig {
          * 只剩原版名字。自己永远不显示。</p>
          */
         public boolean showTeammates = true;
+    /** 是否绘制**自己**头顶的血条（1.4.0；默认关，设置页「玩家 → 显示自己的血条」）。 */
+    public boolean showSelf = false;
         /** 隐藏上方 Boss 栏里「队伍血量」那一条（数据照常读取）。 */
         public boolean hideTeamBossBar = true;
         /** 玩家血条长度（原版名牌像素），默认 75。 */

@@ -69,14 +69,16 @@ public final class HudWorldRenderer {
 
         HudConfig.Cfg cfg = HudConfig.get();
         if (!cfg.enabled) return;
-        // 1.3.0：调试模式会在自己头顶也画一份（正常跳过本地玩家）。
-        boolean selfDebug = entity == mc.player;
-        if (selfDebug && !cfg.debug) return;
         // 诅咒：与地图设定一致，整个 UI 隐藏（不提供开关）。
         if (CurseDetector.isActive(mc)) return;
-        // 1.2.10：癫狂**不再影响实体 HUD** —— 地图本身不会隐藏最近敌人条 / 队伍血量条 / below_name，
-        // 按本 Mod 的口径也只隐藏「自身属性面板」（见 SelfStatsPanel）。
-        if (!selfDebug) {
+        // 1.4.0：旁观者（含自己）不画任何玩家血条。
+        if (entity instanceof Player spectator && spectator.isSpectator()) return;
+        // 1.4.0：自己的血条由「玩家 → 显示自己的血条」控制（默认关），癫狂期间不画。
+        boolean self = entity == mc.player;
+        if (self) {
+            if (!cfg.showSelf) return;
+            if (BerserkDetector.isActive(mc)) return;
+        } else {
             // 只画本 Mod 接管的实体：数据包管控的敌人 / 队伍条里的队友。
             if (!HudTarget.managed(mc, entity)) return;
             // 距离 / 被墙挡住 / 被其它实体挡住 —— 保留为「少提交一点」的额外剔除，
@@ -85,31 +87,12 @@ public final class HudWorldRenderer {
         }
 
         boolean teammate = entity instanceof Player;
-        EnemyData.Snapshot data;
-        if (selfDebug) {
-            // 1.3.2：队伍条的名册包含自己（@a[scores={BossbarID=1001..1010}]），
-            // 所以「自己」直接走**队友同一条路径**：
-            //   ① 服务端 payload（选装服务端：四色心 / 碎心 / 护甲）；
-            //   ② 队伍条条目 名字 (当前/上限)；
-            //   ③ below_name 百分比（兜底）。
-            data = resolveData(mc, entity, true);
-            if (data == null) {
-                BossBarTracker.Bar self = BossBarTracker.selfBar(mc);
-                if (self != null) {
-                    int percent = EnemyData.healthPercentOf(mc.level.getScoreboard(), entity);
-                    float ratio = percent >= 0
-                            ? Math.max(0.0f, Math.min(1.0f, percent / 100.0f))
-                            : self.progress;
-                    data = EnemyData.exact(self.hp, self.maxHp, ratio, 0, NO_ARMOUR,
-                            HeartCounts.unknown());
-                }
-            }
-        } else {
-            data = resolveData(mc, entity, teammate);
-        }
+        EnemyData.Snapshot data = resolveData(mc, entity, teammate, self);
         if (data == null) return;
 
         HudLayout.Options options = options(cfg, teammate);
+        // 自己按「玩家」的完整排版：两排心 + 护甲（服务端装了才有精确值）。
+        if (self) options.showArmor = true;
         // 元素护甲每页 2 项，按时间循环（用实体 id 错开，避免同一帧全体翻页）。
         long now = System.currentTimeMillis();
         options.armourPage = ArmourCycle.page(data.armor, now, entity.getId());
@@ -220,7 +203,8 @@ public final class HudWorldRenderer {
 
     // ── 数据 ──
 
-    private static EnemyData.Snapshot resolveData(Minecraft mc, Entity entity, boolean teammate) {
+    private static EnemyData.Snapshot resolveData(Minecraft mc, Entity entity, boolean teammate,
+                                                 boolean self) {
         UUID id = entity.getUUID();
 
         // 服务端选装组件写死优先（1.20.35 起没有开关）：玩家和怪一样有 uuid/hp/四色心/碎心/粉心，
@@ -245,6 +229,32 @@ public final class HudWorldRenderer {
             return data;
         }
 
+        if (self) {
+            // 1.4.0：自己 —— payload（双端：四色心 / 碎心 / 护甲）优先，其次个人条，最后百分比。
+            // 血条进度统一用 below_name 的 HealthPercent（魂心/黑心/蓝心不该把条撑满）。
+            int percent = percentWithSticky(mc, entity);
+            MobHealthPayload.Entry selfPayload = ClientMobHealthCache.lookup(id);
+            if (selfPayload != null) {
+                EnemyData.Snapshot snapshot = EnemyData.fromPayloadPlayer(
+                        selfPayload.hp(), selfPayload.maxHp(), selfPayload.soul(), selfPayload.black(),
+                        selfPayload.blue(), selfPayload.cracked(), selfPayload.maxSoul(),
+                        selfPayload.maxBlack(), selfPayload.maxBlue(), selfPayload.defence(),
+                        selfPayload.armour());
+                return percent >= 0
+                        ? EnemyData.withRatio(snapshot, percent / 100.0f)
+                        : snapshot;
+            }
+            BossBarTracker.Bar selfBar = BossBarTracker.selfBar(mc);
+            if (selfBar != null) {
+                float ratio = percent >= 0
+                        ? Math.max(0.0f, Math.min(1.0f, percent / 100.0f))
+                        : selfBar.progress;
+                return EnemyData.exact(selfBar.hp, selfBar.maxHp, ratio, 0, NO_ARMOUR,
+                        HeartCounts.unknown());
+            }
+            return EnemyData.read(mc.level.getScoreboard(), entity);
+        }
+
         if (teammate) {
             refresh(mc);
             TeamBarTitle.Entry entry = teamEntries.get(id);
@@ -253,15 +263,7 @@ public final class HudWorldRenderer {
                 // （数据包 health.mcfunction 对所有参战玩家都算），比队伍条的 AllHearts/MaxHP
                 // 更贴近血条本意（蓝心/魂心不该撑满绿条）。有百分比就用它填进度，
                 // 文字仍按队伍条的 当前/上限 显示。
-                int percent = EnemyData.healthPercentOf(mc.level.getScoreboard(), entity);
-                if (percent < 0) {
-                    // 1.2.10：百分比短暂读不到时用**最近的已知值**兜底，不要退到
-                    // entry.ratio() —— 魂心把 AllHearts 顶到 MaxHP 以上时它恒等于 1，
-                    // 血条会「瞬间变满再掉回来」。这里粘 5 s。
-                    percent = stickyPercent(id);
-                } else {
-                    rememberPercent(id, percent);
-                }
+                int percent = percentWithSticky(mc, entity);
                 float ratio = percent >= 0
                         ? Math.max(0.0f, Math.min(1.0f, percent / 100.0f))
                         : entry.ratio();
@@ -285,7 +287,13 @@ public final class HudWorldRenderer {
             int[] slots = ArmourCache.snapshot(id);
             int[] elements = new int[EnemyData.ARMOR_OBJECTIVES.length];
             System.arraycopy(slots, 1, elements, 0, elements.length);
-            data = EnemyData.exact(bar.hp, bar.maxHp, bar.progress, slots[0], elements,
+            // 1.4.0：条进度优先用 below_name 的百分比 —— bossbar 的 progress 是按「当前心类」
+            // 重新从满格算的，直接拿它填条会「瞬间变满再回退」。百分比读不到才退回去。
+            int percent = percentWithSticky(mc, entity);
+            float ratio = percent >= 0
+                    ? Math.max(0.0f, Math.min(1.0f, percent / 100.0f))
+                    : bar.progress;
+            data = EnemyData.exact(bar.hp, bar.maxHp, ratio, slots[0], elements,
                     HeartCounts.forMob(bar.hp, bar.maxHp));
             data.kind = bar.kind;
         }
@@ -297,6 +305,16 @@ public final class HudWorldRenderer {
     private static final java.util.Map<UUID, Long> LAST_PERCENT_AT = new java.util.HashMap<>();
     /** 粘性时长：5 s（比分同步的抖动窗口大得多，又不会把旧值留太久）。 */
     private static final long PERCENT_STICKY_MS = 5_000L;
+
+    /** 读 below_name 的 HealthPercent；读不到时用最近的已知值（5 s 粘性）。 */
+    private static int percentWithSticky(Minecraft mc, Entity entity) {
+        int percent = EnemyData.healthPercentOf(mc.level.getScoreboard(), entity);
+        if (percent >= 0) {
+            rememberPercent(entity.getUUID(), percent);
+            return percent;
+        }
+        return stickyPercent(entity.getUUID());
+    }
 
     private static int stickyPercent(UUID id) {
         Long at = LAST_PERCENT_AT.get(id);

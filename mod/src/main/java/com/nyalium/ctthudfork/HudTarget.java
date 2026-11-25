@@ -69,6 +69,7 @@ public final class HudTarget {
         if (!entity.isAlive() || entity.isInvisible()) return false;
 
         if (entity instanceof Player player) {
+            if (player.isSpectator()) return false;   // 1.4.0：旁观者不画
             if (!cfg.showTeammates) return false;
             if (BossBarTracker.isTeammate(mc, player)) return true;
             // 队伍条里没有他时的回退：地图给本局参战玩家（tag CTTAll）都算了

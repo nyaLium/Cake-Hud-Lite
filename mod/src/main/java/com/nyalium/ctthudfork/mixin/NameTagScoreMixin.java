@@ -36,7 +36,9 @@ public abstract class NameTagScoreMixin {
         // 而头顶血条要按实体 UUID 取数据（见 HudRenderBridge）。
         HudRenderBridge.attach(state, entity);
         if (!HudConfig.get().hideBelowNameScore) return;
-        if (HudTarget.managed(Minecraft.getInstance(), entity)) {
+        // 1.4.0：分数对**所有玩家**一律隐藏（含旁观、自己、非队友）；其它实体仍只摘接管的。
+        if (entity instanceof net.minecraft.world.entity.player.Player
+                || HudTarget.managed(Minecraft.getInstance(), entity)) {
             state.scoreText = null;
         }
     }

@@ -27,8 +27,8 @@ final class BerserkDetector {
     /** 癫狂专属 Boss 栏标题里的翻译键（p1..p10 共用这一个）。 */
     static final String KEY = "Misc_Bossbars_P10_Bossbar_11";
 
-    /** 癫狂状态的探测器实例（等值匹配、释放 0.5 s）。 */
-    static final BossBarKeyDetector STATE = new BossBarKeyDetector(KEY, false, 500L);
+    /** 癫狂状态的探测器实例（等值匹配、释放 0.25 s；1.4.0 由 0.5 s 缩短，恢复更快）。 */
+    static final BossBarKeyDetector STATE = new BossBarKeyDetector(KEY, false, 250L);
 
     private BerserkDetector() {}
 

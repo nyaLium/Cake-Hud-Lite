@@ -414,6 +414,14 @@ public final class SelfCheck {
         check(defaults.barWidth == 75.0, "默认血条长度应为 75");
         check(defaults.teamBarWidth == 75.0, "队友血条默认长度也应为 75");
         check(defaults.scale == 0.9, "默认缩放应为 0.9: " + defaults.scale);
+        // 1.4.0：自己的血条默认关；withRatio 只换比例、不动心/护甲。
+        check(!new HudConfig.Cfg().showSelf, "自己的血条默认应关闭");
+        EnemyData.Snapshot baseSnap = EnemyData.exact(120, 200, 0.6f, 3,
+                new int[EnemyData.ARMOR_OBJECTIVES.length], HeartCounts.unknown());
+        EnemyData.Snapshot ratioSnap = EnemyData.withRatio(baseSnap, 0.25f);
+        check(ratioSnap.ratio == 0.25f && ratioSnap.hp == 120 && ratioSnap.maxHp == 200
+                        && ratioSnap.defence == 3,
+                "withRatio 只替换比例: " + ratioSnap.ratio + "/" + ratioSnap.hp + "/" + ratioSnap.defence);
         check(defaults.teamScale == 0.9, "队友默认缩放也应为 0.9: " + defaults.teamScale);
         check(defaults.opacity == 0.5, "默认透明度应为 0.50");
         check(defaults.showBar, "默认应画血条");

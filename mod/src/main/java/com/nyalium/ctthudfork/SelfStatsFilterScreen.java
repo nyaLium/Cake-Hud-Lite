@@ -265,7 +265,7 @@ public final class SelfStatsFilterScreen extends Screen {
             if (index >= this.rows.size()) break;
             Row line = this.rows.get(index);
             if (!line.isHeader()) continue;
-            graphics.centeredText(this.font, Component.translatable(line.header().headerKey),
+            graphics.centeredText(this.font, Component.translatable(line.headerKey()),
                     this.width / 2, TOP + row * STEP + HEADER_TEXT_DY, HEADER_COLOR);
         }
 
