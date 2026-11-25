@@ -19,7 +19,7 @@ import java.util.List;
  *
  * <h2>1.20.4 新增</h2>
  * <ul>
- *   <li>{@code selfStatsOpacity}：整块文字透明度；</li>
+ *   <li>{@code selfStatsOpacity}：整块文字不透明度；</li>
  *   <li>显示内容过滤：{@link SelfStats#lines()} 已经把「隐藏类」剔掉了；</li>
  *   <li>同样的绘制代码给「调整位置…」界面做预览用（{@link #draw}）。</li>
  * </ul>

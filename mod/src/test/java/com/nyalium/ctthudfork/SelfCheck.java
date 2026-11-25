@@ -280,7 +280,7 @@ public final class SelfCheck {
 
     // ── 1f. 属性面板显示方式：四套配置 ──
 
-    /** 1.20.14：HUD / 容器界面各一套位置·列数·透明度；模式 0/1/2（v1.0.0 起没有「文字大小」）。 */
+    /** 1.20.14：HUD / 容器界面各一套位置·列数·不透明度；模式 0/1/2（v1.0.0 起没有「文字大小」）。 */
     private static void panelModes() {
         HudConfig.Cfg c = HudConfig.get();
         int oldMode = c.selfStatsMode;
@@ -306,7 +306,7 @@ public final class SelfCheck {
             HudConfig.Panel box = HudConfig.panel(1, false, 320, 240);
             check(box.x == 22 && box.columns == c.selfStatsColumns
                             && box.opacity == c.selfStatsOpacity,
-                    "容器模式位置取 container*，列数/透明度用全局值");
+                    "容器模式位置取 container*，列数/不透明度用全局值");
 
             // 移动只改当前模式那一套
             HudConfig.movePanel(1, false, 33, 44, 320, 240);
@@ -323,7 +323,7 @@ public final class SelfCheck {
             HudConfig.Panel both = HudConfig.panel(2, false, 320, 240);
             check(both.x == 55 && both.columns == c.selfStatsColumns
                             && both.opacity == c.selfStatsOpacity,
-                    "模式 2 位置取 both*，列数/透明度用全局值");
+                    "模式 2 位置取 both*，列数/不透明度用全局值");
             HudConfig.movePanel(2, false, 66, 77, 320, 240);
             check(c.bothX == 66 && c.bothY == 77, "模式 2（HUD）移动应写 both*");
             check(c.selfStatsX == 11 && c.containerX == 33, "模式 2 移动不该改另外两套");
@@ -349,7 +349,7 @@ public final class SelfCheck {
         HudConfig.migrate("{\"configVersion\":6}", old);
         check(old.containerX == 123 && old.containerY == 45 && old.containerColumns == 3,
                 "v6 → v7 应把 HUD 配置复制给容器那套");
-        check(Math.abs(old.containerOpacity - 0.7) < 1e-9, "v6 → v7 透明度也应复制");
+        check(Math.abs(old.containerOpacity - 0.7) < 1e-9, "v6 → v7 不透明度也应复制");
 
         // 夹取：模式 0~2、列数 1~3
         HudConfig.Cfg wild = new HudConfig.Cfg();
@@ -387,30 +387,36 @@ public final class SelfCheck {
 
     private static void configNormalization() {
         HudConfig.Cfg c = new HudConfig.Cfg();
-        c.opacity = 0.1;
+        c.barOpacity = 0.1;
+        c.textOpacity = 0.1;
         c.scale = 0.01;
         c.maxDistance = 0;
         c.barWidth = -100;
         HudConfig.normalize(c);
-        check(c.opacity == 0.1, "opacity 0.1 应保持 0.1（下限 0.10）");
+        check(c.barOpacity == 0.1, "barOpacity 0.1 应保持 0.1（下限 0.10）");
+        check(c.textOpacity == 0.1, "textOpacity 0.1 应保持 0.1（下限 0.10）");
         check(c.scale == 0.75, "scale 0.01 应夹到 0.75");
         check(c.maxDistance == 4.0, "maxDistance 0 应夹到 4");
         check(c.barWidth == HudLayout.BAR_WIDTH_MIN, "barWidth -100 应夹到 50");
 
-        c.opacity = 3.0;
+        c.barOpacity = 3.0;
+        c.textOpacity = 3.0;
         c.scale = 99;
         c.maxDistance = 9999;
         c.barWidth = 9999;
         HudConfig.normalize(c);
-        check(c.opacity == 1.0, "opacity 3 应夹到 1.0");
+        check(c.barOpacity == 1.0, "barOpacity 3 应夹到 1.0");
+        check(c.textOpacity == 1.0, "textOpacity 3 应夹到 1.0");
         check(c.scale == 1.5, "scale 99 应夹到 1.5");
         check(c.maxDistance == 256.0, "maxDistance 9999 应夹到 256");
         check(c.barWidth == HudLayout.BAR_WIDTH_MAX, "barWidth 9999 应夹到 150");
 
-        c.opacity = Double.NaN;
+        c.barOpacity = Double.NaN;
+        c.textOpacity = Double.NaN;
         c.barWidth = Double.NaN;
         HudConfig.normalize(c);
-        check(c.opacity == 1.0, "opacity NaN 应回落 1.0");
+        check(c.barOpacity == 1.0, "barOpacity NaN 应回落 1.0");
+        check(c.textOpacity == 1.0, "textOpacity NaN 应回落 1.0");
         check(c.barWidth == HudLayout.BAR_WIDTH_DEFAULT, "barWidth NaN 应回落 100");
 
         HudConfig.Cfg defaults = HudConfig.normalize(new HudConfig.Cfg());
@@ -431,7 +437,9 @@ public final class SelfCheck {
         check(HudConfig.normalize(highLimit).payloadLimit == MobHealthPayload.MAX_ENTRIES,
                 "筛选数量上限应夹到 " + MobHealthPayload.MAX_ENTRIES);
         check(defaults.teamScale == 0.9, "队友默认缩放也应为 0.9: " + defaults.teamScale);
-        check(defaults.opacity == 0.5, "默认透明度应为 0.50");
+        // 1.4.6：血条 / 文字的不透明度分开，默认 65% / 100%
+        check(defaults.barOpacity == 0.65, "默认血条不透明度应为 0.65: " + defaults.barOpacity);
+        check(defaults.textOpacity == 1.0, "默认文字不透明度应为 1.00: " + defaults.textOpacity);
         check(defaults.showBar, "默认应画血条");
         check(defaults.hideBelowNameScore, "默认应隐藏 below_name 分数");
         check(defaults.hideEnemyBossBar, "默认应隐藏上方 Boss 栏里的最近敌人信息");
@@ -454,7 +462,7 @@ public final class SelfCheck {
                 net.minecraft.network.chat.Component.literal("Misc_Bossbars_P10_Bossbar_11")),
                 "普通文本不该被识别");
 
-        // v23：通用透明度默认 0.75 → 0.50（下限 0.10）；v22：显示方式默认值改成「HUD + 容器界面」
+        // v23：通用不透明度默认 0.75 → 0.50（下限 0.10）；v22：显示方式默认值改成「HUD + 容器界面」
         HudConfig.Cfg modeOld = new HudConfig.Cfg();
         modeOld.configVersion = 21;
         modeOld.selfStatsMode = 0;
@@ -521,13 +529,16 @@ public final class SelfCheck {
         HudConfig.migrate("{\"configVersion\":3,\"scale\":1.0}", v3);
         check(v3.scale == 1.0, "已经是 v3 的配置不该再迁移: " + v3.scale);
 
-        // 1.2.2：下限放宽到 0.10（原来 0.50），alpha 的合法区间随之变成 26~255。
+        // 1.2.2：下限 0.10（原来 0.50）；1.4.6 起血条 / 文字各自映射，alpha 合法区间仍是 26~255。
         for (double op = 0.05; op <= 1.2; op += 0.05) {
             HudConfig.Cfg t = new HudConfig.Cfg();
-            t.opacity = op;
+            t.barOpacity = op;
+            t.textOpacity = op;
             HudConfig.normalize(t);
-            int alpha = (int) Math.round(255.0 * t.opacity);
-            check(alpha >= 26 && alpha <= 255, "opacity=" + op + " 映射出 alpha=" + alpha);
+            int barAlpha = (int) Math.round(255.0 * t.barOpacity);
+            int textAlpha = (int) Math.round(255.0 * t.textOpacity);
+            check(barAlpha >= 26 && barAlpha <= 255, "barOpacity=" + op + " 映射出 alpha=" + barAlpha);
+            check(textAlpha >= 26 && textAlpha <= 255, "textOpacity=" + op + " 映射出 alpha=" + textAlpha);
         }
     }
 
@@ -922,30 +933,19 @@ public final class SelfCheck {
             check(HeartCounts.ICONS[i].equals("\u2764"), "第 " + i + " 类心应使用 ❤");
         }
 
-        // 1.2.2：通用透明度 0.10 ~ 1.00，默认 0.50；旧配置的 0.75 迁移成 0.50
+        // 1.4.6：不透明度拆成「血条」与「文字」两条，各自 0.10 ~ 1.00，越界夹回。
         HudConfig.Cfg low = new HudConfig.Cfg();
-        low.opacity = 0.05;
+        low.barOpacity = 0.05;
+        low.textOpacity = 0.02;
         HudConfig.normalize(low);
-        check(low.opacity == 0.1, "opacity 0.05 应夹到 0.10: " + low.opacity);
+        check(low.barOpacity == 0.1 && low.textOpacity == 0.1,
+                "0.05 / 0.02 都应夹到 0.10: " + low.barOpacity + "/" + low.textOpacity);
         HudConfig.Cfg kept = new HudConfig.Cfg();
-        kept.opacity = 0.4;
+        kept.barOpacity = 0.4;
+        kept.textOpacity = 0.9;
         HudConfig.normalize(kept);
-        check(kept.opacity == 0.4, "opacity 0.40 应原样保留: " + kept.opacity);
-        HudConfig.Cfg mig = new HudConfig.Cfg();
-        mig.configVersion = 22;
-        mig.opacity = 0.75;
-        HudConfig.migrate("{\"configVersion\":22,\"opacity\":0.75}", mig);
-        check(mig.opacity == 0.5, "v22 的 0.75 应迁移成 0.50: " + mig.opacity);
-        HudConfig.Cfg v23 = new HudConfig.Cfg();
-        v23.configVersion = 22;
-        v23.opacity = 0.75;
-        HudConfig.migrate("{\"configVersion\":22,\"opacity\":0.75}", v23);
-        check(v23.opacity == 0.50, "v22 的 0.75 应迁移成 0.50: " + v23.opacity);
-        HudConfig.Cfg keepOpacity = new HudConfig.Cfg();
-        keepOpacity.configVersion = 22;
-        keepOpacity.opacity = 0.85;
-        HudConfig.migrate("{\"configVersion\":22,\"opacity\":0.85}", keepOpacity);
-        check(keepOpacity.opacity == 0.85, "自己调过的透明度不该被覆盖: " + keepOpacity.opacity);
+        check(kept.barOpacity == 0.4 && kept.textOpacity == 0.9,
+                "夹取范围内的值应原样保留: " + kept.barOpacity + "/" + kept.textOpacity);
 
         // 1.2.2：真盔甲不参与翻页，常驻在 🛡 防御后面
         int[] onlyTrue = new int[EnemyData.ARMOR_OBJECTIVES.length];
@@ -1417,6 +1417,22 @@ public final class SelfCheck {
                         .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.YELLOW))));
         int[] h2 = SelfStats.heartsOf(multi);
         check(h2[2] == 40, "端到端：魂心应解析为 40，实际 " + h2[2]);
+        // 1.4.6：地图的「❤%」是治疗百分比（HealPercent / ExtraHealing），不能当成红心数 ——
+        // 以前红 ❤% 会把红心数覆盖成治疗百分比（实测 164 → 10）。
+        var healPct = net.minecraft.network.chat.Component.empty()
+                .append(net.minecraft.network.chat.Component.literal("10")
+                        .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED))))
+                .append(net.minecraft.network.chat.Component.literal("\u2764%")
+                        .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED))));
+        int[] hpPct = SelfStats.heartsOf(healPct);
+        check(hpPct[1] == 0, "❤% 不该被当成红心数，实际 " + hpPct[1]);
+        // 行尾带空格的正常心数行仍要认
+        int[] hSpaced = SelfStats.heartsOf(net.minecraft.network.chat.Component.empty()
+                .append(net.minecraft.network.chat.Component.literal("164")
+                        .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED))))
+                .append(net.minecraft.network.chat.Component.literal("\u2764 ")
+                        .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.RED)))));
+        check(hSpaced[1] == 164, "行尾带空格的 164❤ 应解析为 164，实际 " + hSpaced[1]);
         check(h2[1] == 0 && h2[3] == 0 && h2[4] == 0 && h2[5] == 0 && h2[6] == 0,
                 "没出现的颜色应保持 0");
         SelfStats.reset();
@@ -1468,7 +1484,7 @@ public final class SelfCheck {
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
-    /** 1.20.5：按单个属性分类 / 提示行过滤 / 可滚动过滤列表 / 缩放透明度。 */
+    /** 1.20.5：按单个属性分类 / 提示行过滤 / 可滚动过滤列表 / 缩放不透明度。 */
     private static void selfStatsFineKinds() {
         var hint = net.minecraft.network.chat.Component.translatable("Misc_View_Stats_1");
         check(SelfStats.classify(SelfStats.analyze(hint)) == SelfStatsKind.HINT,
@@ -1666,7 +1682,7 @@ public final class SelfCheck {
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
         check(defaults.selfStatsColumns == 2, "自身属性面板默认两列");
-        check(defaults.selfStatsOpacity == 1.0, "默认透明度应为 1.0");
+        check(defaults.selfStatsOpacity == 1.0, "默认不透明度应为 1.0");
         check(defaults.selfStatsMode == 2, "默认显示方式应为 HUD + 容器界面（v1.0.0 起）");
         check(defaults.selfStatsHidden.isEmpty(), "默认不隐藏任何属性");
 

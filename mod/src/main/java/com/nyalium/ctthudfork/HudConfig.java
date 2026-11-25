@@ -17,11 +17,10 @@ import java.nio.file.Path;
  *
  * <p>字段分四组：</p>
  * <ul>
- *   <li>头顶条通用 / 敌人 / 队友（`opacity`、`barWidth`、`scale`、`team*`、`show*`…）；</li>
+ *   <li>头顶条通用 / 敌人 / 队友（`barOpacity`、`textOpacity`、`barWidth`、`scale`、`team*`、`show*`…）；</li>
  *   <li>自身属性面板的 4 套参数：模式 0 用 `selfStats*`、模式 1 用 `container*`、
  *       模式 2 分 `both*`（HUD）/ `bothContainer*`（容器界面）；</li>
- *   <li>盾牌指示器：`shield*`（`shieldX/Y = -1` = 跟随副手槽）；</li>
- *       「优先使用服务端数据」1.20.35 起也写死开启，字段已删除。</li>
+ *   <li>盾牌指示器：`shield*`（`shieldX/Y = -1` = 跟随副手槽）。</li>
  * </ul>
  */
 public final class HudConfig {
@@ -36,11 +35,18 @@ public final class HudConfig {
         /** 总开关：false 时完全不绘制。 */
         public boolean enabled = true;
         /**
-         * 血条 + 文字的透明度，0.10 ~ 1.00（低于 0.10 会被夹到 0.10）。界面上叫「透明度」（1.0.0 起统一）。
+         * 血条（进度条那一条）的**不透明度**，0.10 ~ 1.00。
          *
-         * <p>1.2.2：默认从 0.75 改成 <b>0.50</b>，下限从 0.50 放宽到 0.10；旧配置里仍停在 0.75 的会在迁移时改成 0.50。</p>
+         * <p>1.4.6 从原来单一的 {@code opacity} 拆出来：血条与上方文字各自独立。
+         * 默认 <b>0.65</b>（与盾牌指示器的默认一致）。</p>
          */
-        public double opacity = 0.50;
+        public double barOpacity = 0.65;
+        /**
+         * 血条上方**文字**（心数 / 护甲行）的不透明度，0.10 ~ 1.00（文字背景框按它的 25% 黑一起变）。
+         *
+         * <p>1.4.6 从 {@code opacity} 拆出来，默认 <b>1.00</b>（文字保持清晰）。</p>
+         */
+        public double textOpacity = 1.00;
         /**
          * 实体血条（名字 / 心数 / 护甲）是否带文字阴影。
          *
@@ -119,7 +125,7 @@ public final class HudConfig {
         public int selfStatsY = DEFAULT_Y_SENTINEL;
         /**
          * 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，2 = HUD + 容器都显示（1.20.16）。
-         * 每种上下文（HUD / 容器）各有一套位置·列数·透明度。v1.0.0 起默认 2（HUD + 容器界面）。
+         * 每种上下文（HUD / 容器）各有一套位置·列数·不透明度。v1.0.0 起默认 2（HUD + 容器界面）。
          */
         public int selfStatsMode = 2;
         /** 容器界面那一套配置（模式 1 专用）。 */
@@ -128,7 +134,7 @@ public final class HudConfig {
         public int containerY = DEFAULT_Y_SENTINEL;
         /** 容器那套的列数（1~3）。 */
         public int containerColumns = 2;
-        /** 容器那套的透明度（0.20~1.00）。 */
+        /** 容器那套的不透明度（0.20~1.00）。 */
         public double containerOpacity = 1.0;
         /** 模式 2 在 HUD 上的那一套配置。 */
         public int bothX = 4;
@@ -136,7 +142,7 @@ public final class HudConfig {
         public int bothY = DEFAULT_Y_SENTINEL;
         /** 模式 2 HUD 那套的列数（1~3）。 */
         public int bothColumns = 2;
-        /** 模式 2 HUD 那套的透明度（0.20~1.00）。 */
+        /** 模式 2 HUD 那套的不透明度（0.20~1.00）。 */
         public double bothOpacity = 1.0;
         /** 模式 2 在容器界面上的那一套配置（1.20.18 起独立）。 */
         public int bothContainerX = 4;
@@ -144,9 +150,9 @@ public final class HudConfig {
         public int bothContainerY = DEFAULT_Y_SENTINEL;
         /** 模式 2 容器那套的列数（1~3）。 */
         public int bothContainerColumns = 2;
-        /** 模式 2 容器那套的透明度（0.20~1.00）。 */
+        /** 模式 2 容器那套的不透明度（0.20~1.00）。 */
         public double bothContainerOpacity = 1.0;
-        /** 属性面板透明度，0.20 ~ 1.00（1.20.4 起可调；1.0.0 起界面文案叫「透明度」）。 */
+        /** 属性面板不透明度，0.20 ~ 1.00（1.20.4 起可调；1.0.0 起界面文案叫「不透明度」）。 */
         public double selfStatsOpacity = 1.0;
         /**
          * 属性面板文字阴影（1.20.32 起独立）。
@@ -177,7 +183,7 @@ public final class HudConfig {
         public int shieldY = -1;
         /** 缩放倍率（1.0 = 纹理原尺寸 34×86；1.20.22 起允许 0.5~1.5 的小数倍；1.20.26 起默认 0.7）。 */
         public double shieldScale = 0.7;
-        /** 透明度 0.1~1.0（1.20.26 起默认 0.75；1.20.32 起默认 0.65；界面文案「透明度」）。 */
+        /** 不透明度 0.1~1.0（1.20.26 起默认 0.75；1.20.32 起默认 0.65；界面文案「不透明度」）。 */
         public double shieldOpacity = 0.65;
         /**
          * 默认位置是否**跟着主手镜像**（1.2.0 新增，默认开）。
@@ -207,7 +213,7 @@ public final class HudConfig {
     }
 
     /**
-     * 属性面板的布局快照（绘制用）。位置 / 列数 / 缩放 / 透明度对所有职业统一 ——
+     * 属性面板的布局快照（绘制用）。位置 / 列数 / 缩放 / 不透明度对所有职业统一 ——
      * 这属于「屏幕布局」，跟职业无关；按职业分开的只有「看什么」，见
      * {@link Cfg#selfStatsHidden}。
      */
@@ -218,14 +224,14 @@ public final class HudConfig {
         public final int y;
         /** 列数（1~3，列优先排版）。 */
         public final int columns;
-        /** 整块文字的透明度（0.20~1.00）。 */
+        /** 整块文字的不透明度（0.20~1.00）。 */
         public final double opacity;
 
         /**
          * @param x       当前 GUI 下的左上角 x（已换算）
          * @param y       当前 GUI 下的左上角 y（已换算，不会为 -1）
          * @param columns 列数 1~3
-         * @param opacity 透明度 0.20~1.00
+         * @param opacity 不透明度 0.20~1.00
          */
         public Panel(int x, int y, int columns, double opacity) {
             this.x = x;
@@ -341,14 +347,14 @@ public final class HudConfig {
     /**
      * 当前显示方式 + 上下文对应的布局，位置按当前 GUI 尺寸换算（1.20.40）。
      *
-     * @param guiW 当前 GUI 宽；{@code <=0} = 不换算（只取列数 / 透明度这类与位置无关的字段时可用）
+     * @param guiW 当前 GUI 宽；{@code <=0} = 不换算（只取列数 / 不透明度这类与位置无关的字段时可用）
      * @param guiH 当前 GUI 高
      */
     public static Panel panel(int mode, boolean container, int guiW, int guiH) {
         Cfg c = withLayoutRef(get(), guiW, guiH);
         int x = resolveX(rawX(c, mode, container), c.layoutGuiW, guiW);
         int y = resolveY(rawY(c, mode, container), c.layoutGuiH, guiH);
-        // 1.4.1：列数 / 透明度是**全局**设置（selfStatsColumns / selfStatsOpacity），
+        // 1.4.1：列数 / 不透明度是**全局**设置（selfStatsColumns / selfStatsOpacity），
         // 只有位置（x/y）按显示方式区分。
         return new Panel(x, y, c.selfStatsColumns, c.selfStatsOpacity);
     }
@@ -519,7 +525,7 @@ public final class HudConfig {
         }
     }
 
-    /** 写当前显示方式 + 上下文那一套的透明度（0.20~1.00）。 */
+    /** 写当前显示方式 + 上下文那一套的不透明度（0.20~1.00）。 */
     public static void setPanelOpacity(int mode, boolean container, double opacity) {
         Cfg c = get();
         switch (mode) {
@@ -690,9 +696,9 @@ public final class HudConfig {
             new Rule(21, c -> c.containerY, (c, v) -> c.containerY = (int) v, 20, DEFAULT_Y_SENTINEL),
             new Rule(21, c -> c.bothContainerY, (c, v) -> c.bothContainerY = (int) v, 20, DEFAULT_Y_SENTINEL),
             // v22：面板显示方式默认 0（仅 HUD）→ 2（HUD + 容器）
-            new Rule(22, c -> c.selfStatsMode, (c, v) -> c.selfStatsMode = (int) v, 0, 2),
-            // v23：血条通用透明度默认 0.75 → 0.50
-            new Rule(23, c -> c.opacity, (c, v) -> c.opacity = v, 0.75, 0.50)
+            new Rule(22, c -> c.selfStatsMode, (c, v) -> c.selfStatsMode = (int) v, 0, 2)
+            // 1.4.6：原来的单一 opacity 拆成 barOpacity / textOpacity，不再迁移旧值
+            // （新字段默认 条 0.65 / 文字 1.00，旧文件里的 "opacity" 键读到也不认）。
     );
 
     /** 布尔规则：v15 实体血条「文字阴影」新默认关。 */
@@ -709,7 +715,8 @@ public final class HudConfig {
         c.hideBelowNameScore = d.hideBelowNameScore;
         c.barWidth = d.barWidth;
         c.scale = d.scale;
-        c.opacity = d.opacity;
+        c.barOpacity = d.barOpacity;
+        c.textOpacity = d.textOpacity;
         c.textShadow = d.textShadow;
         c.maxDistance = d.maxDistance;
         c.showTeammates = d.showTeammates;
@@ -768,7 +775,9 @@ public final class HudConfig {
      */
     static Cfg normalize(Cfg read) {
         if (read == null) read = new Cfg();
-        read.opacity = clamp(read.opacity, 0.1, 1.0);
+        // 1.4.6：血条与文字的不透明度分开（各自 0.10 ~ 1.00）
+        read.barOpacity = clamp(read.barOpacity, 0.1, 1.0);
+        read.textOpacity = clamp(read.textOpacity, 0.1, 1.0);
         read.scale = clamp(read.scale, 0.75, 1.5);
         read.maxDistance = clamp(read.maxDistance, 4.0, 256.0);
         // 血条长度：非法值回落默认 75，其余夹在 50~150。
@@ -784,7 +793,7 @@ public final class HudConfig {
         read.selfStatsX = (int) clamp(read.selfStatsX, 0.0, 4000.0);
         // 1.20.41：y = -1 是「动态默认位置」的哨兵，允许保留。
         read.selfStatsY = (int) clamp(read.selfStatsY, -1.0, 4000.0);
-        // 1.20.4：透明度、内容过滤（「文字大小」在 1.0.0 删掉，面板固定 1.0 倍）
+        // 1.20.4：不透明度、内容过滤（「文字大小」在 1.0.0 删掉，面板固定 1.0 倍）
         read.selfStatsOpacity = clamp(read.selfStatsOpacity, 0.2, 1.0);
         // 1.20.14：显示方式（0=始终显示 HUD，1=在容器界面显示）+ 容器那一套配置
         read.selfStatsMode = (int) clamp(read.selfStatsMode, 0.0, 2.0);
@@ -801,7 +810,7 @@ public final class HudConfig {
         read.bothContainerY = (int) clamp(read.bothContainerY, -1.0, 4000.0);
         read.bothContainerOpacity = clamp(read.bothContainerOpacity, 0.2, 1.0);
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
-        // 盾牌指示器（1.20.20：可拖动定位 + 透明度；1.20.22：缩放 0.5~1.5 小数倍）
+        // 盾牌指示器（1.20.20：可拖动定位 + 不透明度；1.20.22：缩放 0.5~1.5 小数倍）
         read.shieldX = (int) clamp(read.shieldX, -1.0, 4000.0);
         read.shieldY = (int) clamp(read.shieldY, -1.0, 4000.0);
         // 1.20.40：位置换算的基准尺寸；0 = 还不知道（第一次绘制时补），非法值（负数/超大）同样按未知处理。

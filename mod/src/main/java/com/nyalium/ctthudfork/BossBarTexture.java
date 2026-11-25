@@ -11,7 +11,7 @@ import net.minecraft.resources.Identifier;
  *
  * <p>走 {@code blitSprite(pipeline, id, x, y, w, h, color)}：sprite 由
  * {@code GuiGraphicsExtractor} 自己从 GUI 图集里取（并处理 {@code GuiSpriteScaling}），
- * 颜色参数带 alpha，所以纹理正确 <b>且</b> 跟随透明度。早期版本手工拼 UV
+ * 颜色参数带 alpha，所以纹理正确 <b>且</b> 跟随不透明度。早期版本手工拼 UV
  * （{@code getX()/getY()} + 自算图集尺寸）一旦推导有偏差就会采样到图集别处，
  * 表现为「血条不是原版纹理」。</p>
  *
@@ -28,7 +28,7 @@ final class BossBarTexture {
      * 两端「端盖」的宽度（纹素）。
      *
      * <p>实测 {@code boss_bar/*_progress.png}（182×5）：左端 0~3 列、右端 178~181 列
-     * 与中间平直段不同 —— 第 0 / 181 列把上下两个角的像素<b>透明度挖成 0</b>，
+     * 与中间平直段不同 —— 第 0 / 181 列把上下两个角的像素<b>不透明度挖成 0</b>，
      * 第 1 / 180 列整列压暗，第 2、3 / 178、179 列上下两行略暗。原版在 GUI 里
      * 1 纹素 = 1 像素地画，这几列就是那条「圆头」。横着压缩就没了，所以要按原尺寸画。</p>
      */

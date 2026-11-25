@@ -720,12 +720,25 @@ public final class SelfStats {
         for (int i = 0; i < flat.length(); i++) {
             char ch = flat.charAt(i);
             if (!SelfStatsCatalog.isHeartGlyph(ch)) continue;
+            // 1.4.6：地图里除了六类心，还有「❤%」这种**治疗百分比**行
+            // （view_stats.mcfunction 的 HealPercent / ExtraHealing，红 ❤% 也是红心色）。
+            // 只认「心形是本行最后一个非空白字符」的行，否则治疗百分比会把红心数覆盖掉
+            // （实测 164 → 10）。
+            if (!endsLine(flat, i + 1)) continue;
             int rgb = i < a.colors.size() ? a.colors.get(i) : 0xFFFFFF;
             int kind = SelfStatsCatalog.heartKindOf(String.valueOf(ch), rgb);
             if (kind <= 0) continue;
             int amount = SelfStatsCatalog.amountBefore(flat, i);
             if (amount >= 0) into[kind] = amount;
         }
+    }
+
+    /** 从 {@code from} 起只剩空白 → 这颗心确实在行尾（不是「❤%」那种复合图标）。 */
+    private static boolean endsLine(String flat, int from) {
+        for (int i = from; i < flat.length(); i++) {
+            if (!Character.isWhitespace(flat.charAt(i))) return false;
+        }
+        return true;
     }
 
     /** 一行里能解析出的心数（纯函数，<b>仅 selfCheck 使用</b>）。 */

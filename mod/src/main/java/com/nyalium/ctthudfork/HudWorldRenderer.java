@@ -126,10 +126,11 @@ public final class HudWorldRenderer {
         }
 
         // ② 文字行：自己用 submitText 提交。
-        //    原版 submitNameTag 把颜色写死成不透明白、缩放写死 0.025，导致「透明度」和
+        //    原版 submitNameTag 把颜色写死成不透明白、缩放写死 0.025，导致「不透明度」和
         //    「缩放」对文字完全无效；自己提交后两者都生效（背景框仍按原版 y-1 ~ y+9 画）。
-        int alpha = (int) Math.round(255.0 * cfg.opacity);
-        int bgAlpha = (int) Math.round(0x40 * cfg.opacity);   // 原版名牌底色 ≈ 25% 黑
+        // 1.4.6：文字与血条的不透明度分开（文字默认 1.00，血条默认 0.65）。
+        int alpha = (int) Math.round(255.0 * cfg.textOpacity);
+        int bgAlpha = (int) Math.round(0x40 * cfg.textOpacity);   // 原版名牌底色 ≈ 25% 黑
         submitRows(collector, pose, camera, attachment, layout, options.scale,
                 cfg, light, alpha, bgAlpha);
 
@@ -151,8 +152,8 @@ public final class HudWorldRenderer {
      *       这就是原版名牌那层「透视副本」：隔墙也能隐约看到，挡住时也不会整块消失。</li>
      * </ol>
      *
-     * <p>与原版 {@code submitNameTag} 的差别只有：颜色带 {@code opacity} 的 alpha（透明度生效）、
-     * 缩放可调。字形阴影（{@code textShadow}）两遍都跟着走。</p>
+     * <p>与原版 {@code submitNameTag} 的差别只有：颜色带 {@code textOpacity} 的 alpha
+     * （不透明度生效）、缩放可调。字形阴影（{@code textShadow}）两遍都跟着走。</p>
      */
     private static void submitRows(SubmitNodeCollector collector, PoseStack pose,
                                    CameraRenderState camera, Vec3 attachment,
@@ -369,7 +370,8 @@ public final class HudWorldRenderer {
         BossBarTexture.Tint tint = teammate
                 ? BossBarTexture.Tint.GREEN
                 : BossBarTexture.tintFor(data.kind);
-        int alpha = (int) Math.round(255.0 * cfg.opacity);
+        // 1.4.6：血条用自己的不透明度（默认 0.65），不再跟文字共用一个值。
+        int alpha = (int) Math.round(255.0 * cfg.barOpacity);
         int color = BossBarTexture.argb(0xFFFFFF, alpha);
 
         float x0 = -layout.barWidth / 2.0f;

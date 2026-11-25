@@ -21,7 +21,7 @@ import java.util.function.DoubleFunction;
  *   <tr><td>开关</td><td>{@code showSelfStats}</td><td>默认开</td></tr>
  *   <tr><td>刷新间隔</td><td>{@code selfStatsSeconds}</td><td>1~5 秒，默认 3；他人服务器强制 3 s 且滑条禁用</td></tr>
  *   <tr><td>列数</td><td>{@code *Columns}</td><td>1~3，默认 2</td></tr>
- *   <tr><td>透明度</td><td>{@code *Opacity}</td><td>0.20~1.00，默认 1.0</td></tr>
+ *   <tr><td>不透明度</td><td>{@code *Opacity}</td><td>0.20~1.00，默认 1.0</td></tr>
  *   <tr><td>文字阴影</td><td>{@code selfStatsTextShadow}</td><td>默认开（与实体血条 {@code textShadow} 分开）</td></tr>
  *   <tr><td>显示方式</td><td>{@code selfStatsMode}</td><td>0 HUD / 1 容器 / 2 两者，默认 2</td></tr>
  *   <tr><td>编辑对象</td><td>（仅模式 2）</td><td>HUD 那套 ↔ 容器那套</td></tr>
@@ -72,7 +72,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         y = toggle("showSelfStats", y);
         // 刷新间隔：selfStatsSeconds（1~5 秒，默认 3；1.0.0 起没有「立即」档）
         y = slider("selfStatsSeconds", y, 1, 5, 1, cfg.selfStatsSeconds, mode);
-        // 列数 / 透明度（1.4.1 起**全局**，只看 selfStatsColumns / selfStatsOpacity）
+        // 列数 / 不透明度（1.4.1 起**全局**，只看 selfStatsColumns / selfStatsOpacity）
         y = slider("selfStatsColumns", y, 1, 3, 1, cfg.selfStatsColumns, mode);
         y = slider("selfStatsOpacity", y, 0.2, 1.0, 0.05, cfg.selfStatsOpacity, mode);
         // 文字阴影：selfStatsTextShadow（只管面板，与实体血条 textShadow 分开）
@@ -153,7 +153,7 @@ public final class SelfStatsSettingsScreen extends Screen {
 
         HudConfig.Cfg cfg = HudConfig.get();
         int mode = cfg.selfStatsMode;
-        // 1.4.1：列数/透明度全局；这里只在「容器显示」时把位置编辑指向容器那套。
+        // 1.4.1：列数/不透明度全局；这里只在「容器显示」时把位置编辑指向容器那套。
         boolean editContainer = mode == 1;
         boolean enabled = cfg.showSelfStats;
         boolean forced = SelfStats.forcedByServer(this.minecraft);

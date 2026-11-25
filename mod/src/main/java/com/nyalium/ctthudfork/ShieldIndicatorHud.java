@@ -13,7 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
 /**
- * 盾牌计量条（1.20.19 合并自 CTT Shield Indicator；1.20.20 改为可拖动定位 + 透明度）。
+ * 盾牌计量条（1.20.19 合并自 CTT Shield Indicator；1.20.20 改为可拖动定位 + 不透明度）。
  *
  * <p>判定：副手物品非空、{@code custom_data} 里 {@code shield:1b}/{@code shieldAbility:1b} 为真、
  * 可损坏且耐久未满；耐久满（damage=0）不画。</p>

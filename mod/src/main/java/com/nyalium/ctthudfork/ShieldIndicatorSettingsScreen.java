@@ -12,14 +12,14 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 
 /**
- * 盾牌指示器设置（1.20.20：位置改为拖动定位 + 透明度）。
+ * 盾牌指示器设置（1.20.20：位置改为拖动定位 + 不透明度）。
  *
  * <h2>行 ↔ 配置字段</h2>
  * <table>
  *   <tr><th>行</th><th>字段</th><th>范围 / 默认</th></tr>
  *   <tr><td>显示盾牌指示器</td><td>{@code shieldEnabled}</td><td>默认开；关掉后下面几项灰掉</td></tr>
  *   <tr><td>缩放比例</td><td>{@code shieldScale}</td><td>0.50~1.50，步进 0.05，默认 0.70（不写「倍」）</td></tr>
- *   <tr><td>透明度</td><td>{@code shieldOpacity}</td><td>0.10~1.00，默认 0.65</td></tr>
+ *   <tr><td>不透明度</td><td>{@code shieldOpacity}</td><td>0.10~1.00，默认 0.65</td></tr>
  *   <tr><td>调整位置…</td><td>{@code shieldX/Y} + {@code layoutGuiW/H}</td><td>拖动；{@code -1} = 跟随副手槽</td></tr>
  * </table>
  */
@@ -45,7 +45,7 @@ public final class ShieldIndicatorSettingsScreen extends Screen {
         HudConfig.Cfg cfg = HudConfig.get();
         boolean on = cfg.shieldEnabled;
 
-        // 显示盾牌指示器：shieldEnabled（关掉后下面的缩放 / 透明度 / 调整位置灰掉）
+        // 显示盾牌指示器：shieldEnabled（关掉后下面的缩放 / 不透明度 / 调整位置灰掉）
         addRenderableWidget(CycleButton.onOffBuilder(cfg.shieldEnabled)
                 .create(x, y, width, ROW_HEIGHT, Component.translatable("ctt_hud_fork.config.shieldEnabled"),
                         (b, v) -> {
@@ -65,7 +65,7 @@ public final class ShieldIndicatorSettingsScreen extends Screen {
         addRenderableWidget(scale);
         y += ROW_GAP;
 
-        // 透明度：shieldOpacity（0.10~1.00，默认 0.65）
+        // 不透明度：shieldOpacity（0.10~1.00，默认 0.65）
         AbstractSliderButton opacity = new ValueSlider(x, y, width, ROW_HEIGHT,
                 0.1, 1.0, 0.05, cfg.shieldOpacity,
                 v -> Component.translatable("ctt_hud_fork.config.shieldOpacity",
