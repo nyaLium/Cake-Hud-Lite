@@ -36,13 +36,14 @@ import java.util.UUID;
  *
  * <h2>循环</h2>
  * <p>{@code END_SERVER_TICK} 钩子，每 {@value #INTERVAL_TICKS} tick（默认 4 = 5 Hz）扫一次
- * 每名玩家周围 {@value #RADIUS} 格内的怪，按距离取最近 {@link MobHealthPayload#MAX_ENTRIES} 只，
- * 拼一包发给该玩家。差量：与上次内容完全一致就跳过（静态场景 0 流量），
- * 但每 {@value #KEEPALIVE_MS} ms 至少重发一次，保证客户端的 5 s 失鲜窗口不会误判。</p>
+ * 每名玩家周围 {@value #RADIUS} 格内的 CTT 实体，**玩家（含自己）优先、其余按距离**，
+ * 合计取最近 {@link MobHealthPayload#MAX_ENTRIES} 条，拼一包发给该玩家。差量：与上次内容
+ * 完全一致就跳过（静态场景 0 流量），但每 {@value #KEEPALIVE_MS} ms 至少重发一次，
+ * 保证客户端的 5 s 失鲜窗口不会误判。</p>
  *
  * <h2>开销</h2>
- * <p>4 人队、每人视野 32 只怪：每 tick 4×32×13 次计分板读取（约 1.7k 次哈希查表）≈ 可忽略；
- * 稳态差量命中时 0 发包，战斗中有变化时每包约 1.3 KB。</p>
+ * <p>4 人队、每人视野 64 条实体：每 tick 4×64×13 次计分板读取（约 3.3k 次哈希查表）≈ 可忽略；
+ * 稳态差量命中时 0 发包，战斗全变时每包约 2.6 KB（5 Hz → 约 13 KB/s）。</p>
  */
 public final class CttHudForkServer implements ModInitializer {
 
@@ -117,7 +118,7 @@ public final class CttHudForkServer implements ModInitializer {
         LAST_SENT_MS.keySet().removeIf(uuid -> server.getPlayerList().getPlayer(uuid) == null);
     }
 
-    /** 取这名玩家周围最近的 CTT 怪，外加附近的其他玩家（队友）。 */
+    /** 取这名玩家周围的 CTT 实体：**玩家（含自己）优先，其余按距离**，最多 MAX_ENTRIES 条。 */
     private static List<MobHealthPayload.Entry> collect(Scoreboard scoreboard, ServerPlayer player) {
         AABB box = player.getBoundingBox().inflate(RADIUS);
         // 1.4.2：getEntities(player, box) **排除**了 source 实体本身，
@@ -144,7 +145,11 @@ public final class CttHudForkServer implements ModInitializer {
         }
         if (mobs.isEmpty()) return List.of();
 
-        mobs.sort(Comparator.comparingDouble(e -> e.distanceToSqr(px, py, pz)));
+        // 1.4.4：玩家优先 —— 先排玩家（含自己，距离 0），再排怪；同组内按距离。
+        // 以前纯按距离，怪多的时候远处的队友会被挤掉 → 那一格退回「当前/上限」。
+        mobs.sort(Comparator
+                .comparingInt((Entity e) -> e instanceof Player ? 0 : 1)
+                .thenComparingDouble(e -> e.distanceToSqr(px, py, pz)));
         int limit = Math.min(mobs.size(), MobHealthPayload.MAX_ENTRIES);
         List<MobHealthPayload.Entry> out = new ArrayList<>(limit);
         for (int i = 0; i < limit; i++) {

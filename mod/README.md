@@ -38,7 +38,7 @@
 | --- | --- |
 | `CttHudForkClient` | 客户端入口：读配置、注册两个 HUD 元素（属性面板 / 盾牌）、每 tick 触发刷新、`F8` 快捷键、聊天过滤挂载、JOIN / DISCONNECT 生命周期 |
 | `CttHudForkServer` | 服务端入口（**选装**）：每 4 tick 扫描半径 64 格内的怪，按 UUID 推权威数据，无变化时 3 s 发一次 keepalive |
-| `MobHealthPayload` | 上面那个数据包的 schema（`CustomPacketPayload` + `CODEC`），一包最多 32 只怪 |
+| `MobHealthPayload` | 上面那个数据包的 schema（`CustomPacketPayload` + `CODEC`），一包最多 64 条（玩家优先） |
 | `ClientMobHealthCache` | 客户端侧按 UUID 缓存服务端推来的权威数据，5 s 不刷新就失鲜、自动回落客户端数据 |
 | `ModMenuIntegration` | Mod Menu 的入口，点开就是 `HudConfigScreen` |
 
@@ -183,7 +183,7 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 
 | 数据源 | 能拿到什么 | 覆盖 | 需要服务端吗 |
 | --- | --- | --- | --- |
-| **服务端组件 `ctt-hud-fork:mob_health`** | 按 **UUID** 的 `AllHearts / MaxHP / 护甲 / 红魂黑蓝碎` | 视野内最近 32 只怪 | 选装 |
+| **服务端组件 `ctt-hud-fork:mob_health`** | 按 **UUID** 的 `AllHearts / MaxHP / 护甲 / 红魂黑蓝碎` | 视野内最近 64 条（玩家与队友优先） | 选装 |
 | 客户端 Boss 栏 `targetting*` 标题 | 精确 `AllHearts / MaxHP` + `🛡防御` + 元素护甲 | 被地图锁定的那一只 | 否 |
 | 同一条 bar 的 progress / color | 当前心类的剩余比例 + 是哪一类心 | 同上 | 否 |
 | `below_name` 展示槽的 `HealthPercent` | 0~100 百分比（红心口径） | 视野内全部敌人 | 否 |
@@ -208,7 +208,7 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 | 字段 | 说明 |
 | --- | --- |
 | `version` | 协议版本，客户端遇到更高版本整包忽略 |
-| `entries[]` | 最近 32 只怪，按距离 |
+| `entries[]` | 最多 64 条：玩家（含自己）优先，其余按距离 |
 
 单条：`uuid / hp(AllHearts) / maxHp / soul / black / blue / cracked / maxSoul / maxBlack / maxBlue / defence / armour[7] / targetted`。
 可负字段用 zigzag varint，一只怪约 40 字节。红心由 `AllHearts - 魂 - 黑 - 蓝` 反算。
@@ -649,7 +649,7 @@ A/B 对照图：`v1.20.2` 归档里的 `bar-caps.png`（旧=方头 / 新=圆头 
 | 常量 | 位置 | 值 | 作用 |
 | --- | --- | --- | --- |
 | `INTERVAL_TICKS` / `RADIUS` / `KEEPALIVE_MS` | `CttHudForkServer` | 4 tick（5 Hz）/ 64 格 / 3 s | 推送间隔 / 扫描半径 / 无变化时的 keepalive |
-| `MAX_ENTRIES` | `MobHealthPayload` | 32 | 一包最多几只怪 |
+| `MAX_ENTRIES` | `MobHealthPayload` | 64 | 一包最多几条（玩家优先） |
 | `FRESH_WINDOW_MS` | `ClientMobHealthCache` | 5 s | 服务端数据失鲜窗口 |
 | `ECHO_WINDOW_MS` / `MUTED_TRIGGERS` | `ChatTriggerFilter` | 3 s / {`TogglePartyBossbar`,`ViewStats`} | 自己发的 trigger 回显多久内吞掉 |
 | `COOLDOWN_MS` / `MAX_ATTEMPTS` / `FAILSAFE_MS` / `REOPEN_DELAY_MS` / `MAX_SENDS` | `PartyBossbarAutoToggle` | 3 s / 5 / 10 min / 10 s / 20 | 自动开队伍条的全部阈值 |

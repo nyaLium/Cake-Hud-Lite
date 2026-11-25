@@ -39,11 +39,14 @@ import java.util.UUID;
  */
 public record MobHealthPayload(byte version, List<Entry> entries) implements CustomPacketPayload {
 
-    /** 协议版本；客户端遇到更高版本会整包忽略，避免半懂不懂地解析。 */
-    public static final byte CURRENT_VERSION = 1;
+    /** 协议版本；客户端遇到更高版本会整包忽略，避免半懂不懂地解析。
+     *
+     * <p>v2（1.4.4）：单包上限 32 → 64 条。旧客户端（v1）会整包忽略、退回
+     * 「Boss 栏 + HealthPercent」，不会按 32 条硬读剩下的字节。</p> */
+    public static final byte CURRENT_VERSION = 2;
 
-    /** 一次最多推多少只怪（按距离取最近的）。 */
-    public static final int MAX_ENTRIES = 32;
+    /** 一次最多推多少条：玩家（含自己）优先，其余按距离取最近的，合计不超过这个数。 */
+    public static final int MAX_ENTRIES = 64;
 
     /**
      * 通道 id：{@code ctt-hud-fork:mob_health}。

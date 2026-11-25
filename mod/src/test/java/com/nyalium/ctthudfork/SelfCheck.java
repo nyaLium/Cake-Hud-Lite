@@ -1084,6 +1084,11 @@ public final class SelfCheck {
         check(HeartCounts.of(0, 0, 0, 0, Integer.MIN_VALUE).get(HeartCounts.PINK) == Integer.MAX_VALUE,
                 "MIN_VALUE 粉心不该溢出为负");
         check(HeartCounts.unknown().get(HeartCounts.PINK) == HeartCounts.UNKNOWN, "未知粉心哨兵值");
+
+        // 1.4.4：单包上限 32 → 64 条（玩家优先），协议版本跟着升到 2；
+        // 旧客户端（v1）收到 v2 会整包忽略（ClientMobHealthCache.accept），安全降级。
+        check(MobHealthPayload.MAX_ENTRIES == 64, "单包上限应为 64 条: " + MobHealthPayload.MAX_ENTRIES);
+        check(MobHealthPayload.CURRENT_VERSION == 2, "协议版本应为 2: " + MobHealthPayload.CURRENT_VERSION);
     }
 
     // ── 6. Boss 栏标题解析 ──
