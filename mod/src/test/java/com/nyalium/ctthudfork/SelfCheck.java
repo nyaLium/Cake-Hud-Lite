@@ -417,14 +417,19 @@ public final class SelfCheck {
         check(defaults.barWidth == 75.0, "默认血条长度应为 75");
         check(defaults.teamBarWidth == 75.0, "队友血条默认长度也应为 75");
         check(defaults.scale == 0.9, "默认缩放应为 0.9: " + defaults.scale);
-        // 1.4.0：自己的血条默认关；withRatio 只换比例、不动心/护甲。
+        // 1.4.0：自己的血条默认关
         check(!new HudConfig.Cfg().showSelf, "自己的血条默认应关闭");
-        EnemyData.Snapshot baseSnap = EnemyData.exact(120, 200, 0.6f, 3,
-                new int[EnemyData.ARMOR_OBJECTIVES.length], HeartCounts.unknown());
-        EnemyData.Snapshot ratioSnap = EnemyData.withRatio(baseSnap, 0.25f);
-        check(ratioSnap.ratio == 0.25f && ratioSnap.hp == 120 && ratioSnap.maxHp == 200
-                        && ratioSnap.defence == 3,
-                "withRatio 只替换比例: " + ratioSnap.ratio + "/" + ratioSnap.hp + "/" + ratioSnap.defence);
+        // 1.4.5：调试功能默认值 —— 优先服务端数据、筛选数量 = 单包上限
+        check(new HudConfig.Cfg().preferServerData, "默认应优先使用服务端数据");
+        check(defaults.payloadLimit == MobHealthPayload.MAX_ENTRIES,
+                "默认筛选数量应等于单包上限: " + defaults.payloadLimit);
+        HudConfig.Cfg lowLimit = new HudConfig.Cfg();
+        lowLimit.payloadLimit = 0;
+        check(HudConfig.normalize(lowLimit).payloadLimit == 1, "筛选数量下限应夹到 1");
+        HudConfig.Cfg highLimit = new HudConfig.Cfg();
+        highLimit.payloadLimit = 999;
+        check(HudConfig.normalize(highLimit).payloadLimit == MobHealthPayload.MAX_ENTRIES,
+                "筛选数量上限应夹到 " + MobHealthPayload.MAX_ENTRIES);
         check(defaults.teamScale == 0.9, "队友默认缩放也应为 0.9: " + defaults.teamScale);
         check(defaults.opacity == 0.5, "默认透明度应为 0.50");
         check(defaults.showBar, "默认应画血条");
@@ -1089,6 +1094,21 @@ public final class SelfCheck {
         // 旧客户端（v1）收到 v2 会整包忽略（ClientMobHealthCache.accept），安全降级。
         check(MobHealthPayload.MAX_ENTRIES == 64, "单包上限应为 64 条: " + MobHealthPayload.MAX_ENTRIES);
         check(MobHealthPayload.CURRENT_VERSION == 2, "协议版本应为 2: " + MobHealthPayload.CURRENT_VERSION);
+
+        // 1.4.5 调试功能「筛选实体数量」：客户端只保留前 N 条，保持服务端顺序（玩家优先）。
+        MobHealthPayload.Entry e1 = new MobHealthPayload.Entry(java.util.UUID.randomUUID(),
+                10, 10, 0, 0, 0, 0, 0, 0, 0, 0, new int[7], false);
+        MobHealthPayload.Entry e2 = new MobHealthPayload.Entry(java.util.UUID.randomUUID(),
+                20, 20, 0, 0, 0, 0, 0, 0, 0, 0, new int[7], false);
+        MobHealthPayload.Entry e3 = new MobHealthPayload.Entry(java.util.UUID.randomUUID(),
+                30, 30, 0, 0, 0, 0, 0, 0, 0, 0, new int[7], false);
+        java.util.List<MobHealthPayload.Entry> three = java.util.List.of(e1, e2, e3);
+        java.util.List<MobHealthPayload.Entry> capped = ClientMobHealthCache.cap(three, 2);
+        check(capped.size() == 2 && capped.get(0) == e1 && capped.get(1) == e2,
+                "筛选数量应只留前 N 条且保持顺序");
+        check(ClientMobHealthCache.cap(three, 0).size() == 1, "筛选数量 0 应夹到 1");
+        check(ClientMobHealthCache.cap(three, 999).size() == 3, "筛选数量超大时应全保留（服务端只推了 3 条）");
+        check(ClientMobHealthCache.cap(java.util.List.of(), 5).isEmpty(), "空包截断后仍为空");
     }
 
     // ── 6. Boss 栏标题解析 ──

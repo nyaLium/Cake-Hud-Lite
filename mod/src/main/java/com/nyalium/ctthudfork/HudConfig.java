@@ -87,6 +87,21 @@ public final class HudConfig {
         /** 左上角打印面板调试行（排查用，见 {@code SelfStatsPanel} 里 {@code debug} 分支）。 */
         public boolean debug = false;
         /**
+         * 1.4.5 调试功能：**优先使用服务端数据**（服务端组件推来的 payload）。
+         *
+         * <p>关掉后完全忽略 payload，强制走「Boss 栏 + {@code HealthPercent}」的纯客户端路径。
+         * 双端环境下也能测到纯客户端的观感（不用卸服务端组件）。默认<b>开</b> = 正常行为。</p>
+         */
+        public boolean preferServerData = true;
+        /**
+         * 1.4.5 调试功能：**筛选实体数量** —— 客户端最多保留 payload 的前 N 条。
+         *
+         * <p>服务端已经按「玩家（含自己）优先、其余按距离」排好序，所以截断前 N 条
+         * 等价于「服务端只推了 N 条」，用它模拟上限较低/较高的服务端做对比。
+         * 范围 1 ~ {@link MobHealthPayload#MAX_ENTRIES}（调大也不会超过服务端实际推的条数）。</p>
+         */
+        public int payloadLimit = MobHealthPayload.MAX_ENTRIES;
+        /**
          * 自身属性面板（1.20.3）。纯客户端：定时 {@code /trigger ViewStats}，
          * 抓地图回的那些属性行画成面板，不依赖服务端组件。
          */
@@ -725,6 +740,15 @@ public final class HudConfig {
         c.bothContainerY = d.bothContainerY;
     }
 
+    /** 重置「调试功能」这一页的设置（1.4.5）。 */
+    static void resetDebug() {
+        Cfg d = new Cfg();
+        Cfg c = get();
+        c.debug = d.debug;
+        c.preferServerData = d.preferServerData;
+        c.payloadLimit = d.payloadLimit;
+    }
+
     /** 重置「盾牌指示器」这一页的设置。 */
     static void resetShield() {
         Cfg d = new Cfg();
@@ -789,6 +813,8 @@ public final class HudConfig {
         }
         read.shieldScale = clamp(read.shieldScale, SHIELD_SCALE_MIN, SHIELD_SCALE_MAX);
         read.shieldOpacity = clamp(read.shieldOpacity, 0.1, 1.0);
+        // 1.4.5 调试功能：筛选实体数量 1 ~ 单包上限
+        read.payloadLimit = (int) clamp(read.payloadLimit, 1.0, MobHealthPayload.MAX_ENTRIES);
         return read;
     }
 

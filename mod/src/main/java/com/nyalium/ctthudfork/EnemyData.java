@@ -134,12 +134,6 @@ public final class EnemyData {
                 defence, armour, false);
     }
 
-    /** 拷贝一份、只替换血条比例（1.4.0：自己的读数仍用 payload 的心/护甲，进度用百分比）。 */
-    public static Snapshot withRatio(Snapshot s, float ratio) {
-        return new Snapshot(s.hp, s.maxHp, s.percentOnly, s.percent, s.defence, s.armor,
-                s.hearts, ratio);
-    }
-
     /**
      * 玩家（队友）读数：<b>进度固定为 红心 ÷ MaxHP</b>，不随当前心类分层。
      *

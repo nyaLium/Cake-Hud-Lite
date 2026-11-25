@@ -16,7 +16,8 @@ import net.minecraft.network.chat.Component;
  *   │  实体血条设置…           │  ← 可滚动列表
  *   │  属性面板设置…           │  ← 可滚动列表
  *   │  盾牌指示器设置…         │
- *   │  恢复默认                │
+ *   │  重置设置                │
+ *   │  调试功能…               │  ← 1.4.5：调试模式 / 优先服务端数据 / 筛选实体数量
  *   └────────────────────────┘
  *          [ 完成 ]            ← 贴屏幕最底部
  * </pre>
@@ -84,13 +85,12 @@ public final class HudConfigScreen extends Screen {
         }).bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build());
         y += ROW_GAP;
 
-        // 1.3.0：调试模式（写 cfg.debug）。开着时：
-        //   ① 头顶 HUD 也画**自己**（正常跳过本地玩家）；
-        //   ② 属性面板左下角打印一行调试信息。
-        CycleButton<Boolean> debug = CycleButton.onOffBuilder(cfg.debug)
-                .create(x, y, BUTTON_WIDTH, ROW_HEIGHT,
-                        Component.translatable("ctt_hud_fork.config.debug"),
-                        (b, v) -> HudConfig.get().debug = v);
+        // 1.4.5：原来是「调试模式」一行开关，现在改成入口按钮 → 调试功能页
+        // （里面是 调试模式 / 优先使用服务端数据 / 筛选实体数量）。
+        Button debug = Button.builder(Component.translatable("ctt_hud_fork.config.section.debug"),
+                        b -> this.minecraft.gui.setScreen(new DebugSettingsScreen(this)))
+                .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build();
+        if (!cfg.enabled) debug.active = false;
         addRenderableWidget(debug);
 
         // 完成：永远贴屏幕最底部。

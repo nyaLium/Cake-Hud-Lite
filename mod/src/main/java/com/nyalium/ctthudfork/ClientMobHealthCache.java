@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -35,14 +36,32 @@ final class ClientMobHealthCache {
         if (payload == null) return;
         // 协议版本比本端新：整包忽略，宁可不用这包也不猜字段。
         if (payload.version() > MobHealthPayload.CURRENT_VERSION) return;
-        Map<UUID, MobHealthPayload.Entry> map = new HashMap<>(
-                Math.max(8, payload.entries().size() * 2));
-        for (MobHealthPayload.Entry entry : payload.entries()) {
+        // 1.4.5 调试功能：只保留前 N 条（服务端已按「玩家优先、其余按距离」排序）。
+        List<MobHealthPayload.Entry> entries = cap(payload.entries(), HudConfig.get().payloadLimit);
+        Map<UUID, MobHealthPayload.Entry> map = new HashMap<>(Math.max(8, entries.size() * 2));
+        for (MobHealthPayload.Entry entry : entries) {
             if (entry == null || entry.uuid() == null) continue;
             map.put(entry.uuid(), entry);
         }
         snapshot = Collections.unmodifiableMap(map);
         lastPushMs = System.currentTimeMillis();
+    }
+
+    /**
+     * 截取前 {@code limit} 条（保持服务端给的顺序）。
+     *
+     * <p>服务端排序是「玩家（含自己）优先，其余按距离」，所以截断等价于
+     * 「服务端只推了这些」—— 调试功能「筛选实体数量」就是靠它复现更小的上限。</p>
+     */
+    static List<MobHealthPayload.Entry> cap(List<MobHealthPayload.Entry> entries, int limit) {
+        if (entries == null || entries.isEmpty()) return List.of();
+        int n = Math.min(entries.size(), clampLimit(limit));
+        return n >= entries.size() ? entries : entries.subList(0, n);
+    }
+
+    /** 条数上限夹到 {@code [1, MAX_ENTRIES]}（0 / 负数 / 超大值都安全）。 */
+    static int clampLimit(int limit) {
+        return Math.max(1, Math.min(MobHealthPayload.MAX_ENTRIES, limit));
     }
 
     /** 服务端数据是否还在新鲜窗口内。 */

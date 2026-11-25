@@ -208,10 +208,13 @@ public final class HudWorldRenderer {
                                                  boolean self) {
         UUID id = entity.getUUID();
 
-        // 服务端选装组件写死优先（1.20.35 起没有开关）：玩家和怪一样有 uuid/hp/四色心/碎心/粉心，
-        // 队友那一行因此也能画心数（没有 payload 时下面的回退只有 AllHearts/MaxHP）。
+        // 服务端选装组件优先（1.20.35 起正常没有开关；1.4.5 的调试功能「优先使用服务端数据」
+        // 可以临时关掉它，强制走下面的纯客户端回退，方便在双端环境里对比两条链路）。
+        // 玩家和怪一样有 uuid/hp/四色心/碎心/粉心，队友那一行因此也能画心数。
         // 服务端没装本 Mod 时 ClientMobHealthCache 里没有条目（或 5 s 后失鲜），自然回落到客户端通道。
-        MobHealthPayload.Entry pushed = ClientMobHealthCache.lookup(id);
+        MobHealthPayload.Entry pushed = HudConfig.get().preferServerData
+                ? ClientMobHealthCache.lookup(id)
+                : null;
         if (pushed != null) {
             // 玩家头顶是那条**绿条**：进度按 红心 ÷ MaxHP 填，不跟当前心类分层
             // （分层进度换色换满格，放在单色绿条上读不出来）。敌人仍按数据包口径。
@@ -231,20 +234,11 @@ public final class HudWorldRenderer {
         }
 
         if (self) {
-            // 1.4.0：自己 —— payload（双端：四色心 / 碎心 / 护甲）优先，其次个人条，最后百分比。
+            // 1.4.0：自己 —— 个人状态条优先，最后百分比。
+            // 双端且没关「优先使用服务端数据」时，上面的 payload 分支已经带着自己返回了
+            // （1.4.2 起服务端会把自己也推一份），这里只是纯客户端 / 调试关掉服务端数据时的回退。
             // 血条进度统一用 below_name 的 HealthPercent（魂心/黑心/蓝心不该把条撑满）。
             int percent = percentWithSticky(mc, entity);
-            MobHealthPayload.Entry selfPayload = ClientMobHealthCache.lookup(id);
-            if (selfPayload != null) {
-                EnemyData.Snapshot snapshot = EnemyData.fromPayloadPlayer(
-                        selfPayload.hp(), selfPayload.maxHp(), selfPayload.soul(), selfPayload.black(),
-                        selfPayload.blue(), selfPayload.cracked(), selfPayload.maxSoul(),
-                        selfPayload.maxBlack(), selfPayload.maxBlue(), selfPayload.defence(),
-                        selfPayload.armour());
-                return percent >= 0
-                        ? EnemyData.withRatio(snapshot, percent / 100.0f)
-                        : snapshot;
-            }
             BossBarTracker.Bar selfBar = BossBarTracker.selfBar(mc);
             if (selfBar != null) {
                 // 1.4.1：纯客户端没有 payload 时，心数用属性面板解析出来的那一份
