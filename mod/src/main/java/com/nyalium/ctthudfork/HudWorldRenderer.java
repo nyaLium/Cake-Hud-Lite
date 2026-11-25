@@ -246,11 +246,15 @@ public final class HudWorldRenderer {
             }
             BossBarTracker.Bar selfBar = BossBarTracker.selfBar(mc);
             if (selfBar != null) {
+                // 1.4.1：纯客户端没有 payload 时，心数用属性面板解析出来的那一份
+                // （/trigger ViewStats 的心数行），这样自己的条和面板口径一致。
+                HeartCounts hearts = panelHearts();
                 float ratio = percent >= 0
                         ? Math.max(0.0f, Math.min(1.0f, percent / 100.0f))
-                        : selfBar.progress;
-                return EnemyData.exact(selfBar.hp, selfBar.maxHp, ratio, 0, NO_ARMOUR,
-                        HeartCounts.unknown());
+                        : (hearts.any()
+                        ? Math.max(0.0f, Math.min(1.0f, hearts.get(HeartCounts.RED) / (float) selfBar.maxHp))
+                        : selfBar.progress);
+                return EnemyData.exact(selfBar.hp, selfBar.maxHp, ratio, 0, NO_ARMOUR, hearts);
             }
             return EnemyData.read(mc.level.getScoreboard(), entity);
         }
@@ -305,6 +309,15 @@ public final class HudWorldRenderer {
     private static final java.util.Map<UUID, Long> LAST_PERCENT_AT = new java.util.HashMap<>();
     /** 粘性时长：5 s（比分同步的抖动窗口大得多，又不会把旧值留太久）。 */
     private static final long PERCENT_STICKY_MS = 5_000L;
+
+    /** 属性面板里解析到的四色心；没解析到返回 unknown。 */
+    private static HeartCounts panelHearts() {
+        int[] hc = SelfStats.heartCounts();
+        int total = hc[1] + hc[2] + hc[3] + hc[4] + hc[5] + hc[6];
+        return total > 0
+                ? HeartCounts.of(hc[1], hc[2], hc[3], hc[4], hc[5])
+                : HeartCounts.unknown();
+    }
 
     /** 读 below_name 的 HealthPercent；读不到时用最近的已知值（5 s 粘性）。 */
     private static int percentWithSticky(Minecraft mc, Entity entity) {

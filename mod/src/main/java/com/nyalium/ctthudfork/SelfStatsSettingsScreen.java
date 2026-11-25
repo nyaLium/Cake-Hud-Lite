@@ -67,23 +67,19 @@ public final class SelfStatsSettingsScreen extends Screen {
         if (!rows.isEmpty()) return;
         HudConfig.Cfg cfg = HudConfig.get();
         int mode = cfg.selfStatsMode;
-        HudConfig.Panel panel = HudConfig.panel(mode, mode == 1 || (mode == 2 && editContainer),
-                this.width, this.height);
         int y = 0;
         // 总开关：showSelfStats（整个模组的总开关是 enabled，不在这页）
         y = toggle("showSelfStats", y);
         // 刷新间隔：selfStatsSeconds（1~5 秒，默认 3；1.0.0 起没有「立即」档）
         y = slider("selfStatsSeconds", y, 1, 5, 1, cfg.selfStatsSeconds, mode);
-        // 列数：*Columns（当前编辑的那一套：selfStats* / container* / both* / bothContainer*）
-        y = slider("selfStatsColumns", y, 1, 3, 1, panel.columns, mode);
-        // 透明度：*Opacity（0.20~1.00；界面文案 1.0.0 起叫「透明度」）
-        y = slider("selfStatsOpacity", y, 0.2, 1.0, 0.05, panel.opacity, mode);
+        // 列数 / 透明度（1.4.1 起**全局**，只看 selfStatsColumns / selfStatsOpacity）
+        y = slider("selfStatsColumns", y, 1, 3, 1, cfg.selfStatsColumns, mode);
+        y = slider("selfStatsOpacity", y, 0.2, 1.0, 0.05, cfg.selfStatsOpacity, mode);
         // 文字阴影：selfStatsTextShadow（只管面板，与实体血条 textShadow 分开）
         y = toggle("selfStatsTextShadow", y);
         // 显示方式：selfStatsMode（0 HUD / 1 容器 / 2 两者；循环顺序见 nextMode）
         y = button("selfStatsMode", y, "mode");
-        // 编辑对象：仅模式 2，切换 HUD 那套 / 容器那套
-        if (mode == 2) y = button("selfStatsTarget", y, "target");
+        // 1.4.1：不再有「编辑对象」—— 模式 2 的两套位置在「调整位置…」里各自摆。
         // 调整位置…：进 SelfStatsLayoutScreen（拖动 / 方向键，写 *X/*Y + layoutGuiW/H）
         y = button("selfStatsMove", y, "move");
         // 显示内容过滤…：进 SelfStatsFilterScreen（88 项，三节；写 selfStatsHidden）
@@ -157,7 +153,8 @@ public final class SelfStatsSettingsScreen extends Screen {
 
         HudConfig.Cfg cfg = HudConfig.get();
         int mode = cfg.selfStatsMode;
-        boolean editContainer = mode == 1 || (mode == 2 && this.editContainer);
+        // 1.4.1：列数/透明度全局；这里只在「容器显示」时把位置编辑指向容器那套。
+        boolean editContainer = mode == 1;
         boolean enabled = cfg.showSelfStats;
         boolean forced = SelfStats.forcedByServer(this.minecraft);
         HudConfig.Panel panel = HudConfig.panel(mode, editContainer, this.width, this.height);
@@ -192,15 +189,15 @@ public final class SelfStatsSettingsScreen extends Screen {
                                 v -> HudConfig.get().selfStatsSeconds = (int) Math.round(v));
                         widget.active = enabled && !forced;
                     } else if (id.equals("selfStatsColumns")) {
-                        widget = new ValueSlider(x, y, width, ROW_HEIGHT, 1, 3, 1, panel.columns,
+                        widget = new ValueSlider(x, y, width, ROW_HEIGHT, 1, 3, 1, cfg.selfStatsColumns,
                                 v -> Component.translatable("ctt_hud_fork.config.selfStatsColumns",
                                         (int) Math.round(v)),
-                                v -> HudConfig.setPanelColumns(mode, editContainer, (int) Math.round(v)));
+                                v -> HudConfig.get().selfStatsColumns = (int) Math.round(v));
                     } else {
-                        widget = new ValueSlider(x, y, width, ROW_HEIGHT, 0.2, 1.0, 0.05, panel.opacity,
+                        widget = new ValueSlider(x, y, width, ROW_HEIGHT, 0.2, 1.0, 0.05, cfg.selfStatsOpacity,
                                 v -> Component.translatable("ctt_hud_fork.config.selfStatsOpacity",
                                         Math.round(v * 100.0) + "%"),
-                                v -> HudConfig.setPanelOpacity(mode, editContainer, v));
+                                v -> HudConfig.get().selfStatsOpacity = v);
                     }
                 }
                 case BUTTON -> {
@@ -208,10 +205,6 @@ public final class SelfStatsSettingsScreen extends Screen {
                     Component label = switch (action) {
                         case "mode" -> Component.translatable("ctt_hud_fork.config.selfStatsMode",
                                 Component.translatable(modeLabelKey(mode)));
-                        case "target" -> Component.translatable("ctt_hud_fork.config.selfStatsTarget",
-                                Component.translatable(editContainer
-                                        ? "ctt_hud_fork.config.selfStatsTarget.container"
-                                        : "ctt_hud_fork.config.selfStatsTarget.hud"));
                         default -> row.label;
                     };
                     widget = Button.builder(label, b -> {
@@ -222,10 +215,6 @@ public final class SelfStatsSettingsScreen extends Screen {
                                 this.editContainer = false;
                                 rows.clear();      // 模式 2 多一行「编辑对象」，行表要重建
                                 buildRows();
-                                this.rebuildWidgets();
-                            }
-                            case "target" -> {
-                                this.editContainer = !this.editContainer;
                                 this.rebuildWidgets();
                             }
                             case "move" -> this.minecraft.gui.setScreen(
@@ -245,6 +234,10 @@ public final class SelfStatsSettingsScreen extends Screen {
         }
         if (!enabled) for (AbstractWidget w : dependent) w.active = false;
 
+        addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.resetSection"), b -> {
+            HudConfig.resetPanel();
+            this.rebuildWidgets();
+        }).bounds(this.width / 2 - 60 - 128, this.height - ROW_HEIGHT - 8, 120, ROW_HEIGHT).build());
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.back"), b -> back())
                 .bounds(this.width / 2 - 60, this.height - ROW_HEIGHT - 8, 120, ROW_HEIGHT).build());
     }

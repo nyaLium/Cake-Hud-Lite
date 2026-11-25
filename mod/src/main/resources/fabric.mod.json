@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "ctt-hud-fork",
   "version": "${version}",
-  "name": "CTT HUD - Fork",
-  "description": "为地图“蛋糕塔”（Cake Team Towers）制作！能在敌人、玩家的头顶显示血量条及相关信息；盾牌进入冷却时，会显示冷却指示器；能够随时查看属性的属性面板。",
+  "name": "Cake Team Towers HUD - Fork",
+  "description": "蛋糕塔 HUD - 分支版。为地图“蛋糕塔”（Cake Team Towers）制作：在敌人、玩家头顶显示血量条与相关信息，盾牌冷却指示器，以及可随时查看的属性面板；纯客户端可用，服务端选装。",
   "authors": [
     "nyaLium",
     "Fork of Cake-Hud (TheHolyLord/Cake-Hud, MIT, (c) Kirin0321)"

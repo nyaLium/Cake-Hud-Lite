@@ -82,6 +82,10 @@ public final class ShieldIndicatorSettingsScreen extends Screen {
         move.active = on;
         addRenderableWidget(move);
 
+        addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.resetSection"), b -> {
+            HudConfig.resetShield();
+            this.init();
+        }).bounds(this.width / 2 - 60 - 128, this.height - ROW_HEIGHT - 8, 120, ROW_HEIGHT).build());
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.back"), b -> back())
                 .bounds(this.width / 2 - 60, this.height - ROW_HEIGHT - 8, 120, ROW_HEIGHT).build());
     }

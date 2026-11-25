@@ -7,7 +7,7 @@
   "ctt_hud_fork.config.section.player": "Player settings",
   "ctt_hud_fork.config.section.self_stats": "Stats panel settings…",
   "ctt_hud_fork.config.back": "Back",
-  "ctt_hud_fork.config.reset": "Reset to defaults",
+  "ctt_hud_fork.config.reset": "Reset settings",
   "ctt_hud_fork.config.enabled": "Enabled",
   "ctt_hud_fork.config.textShadow": "Text shadow",
   "ctt_hud_fork.config.opacity": "Opacity: %s",
@@ -156,10 +156,11 @@
   "ctt_hud_fork.config.kind.speed_raw": "Speed (before multipliers)",
   "ctt_hud_fork.config.kind.mana_power_raw": "Mana power (before multipliers)",
   "ctt_hud_fork.config.debug": "Debug mode",
-  "ctt_hud_fork.config.header.attributes.core": "Attributes",
-  "ctt_hud_fork.config.header.attributes.heart": "Attributes - Hearts",
-  "ctt_hud_fork.config.header.attributes.mult": "Attributes - Multipliers",
-  "ctt_hud_fork.config.header.attributes.armor": "Attributes - Armour",
-  "ctt_hud_fork.config.header.attributes.misc": "Attributes - Misc",
-  "ctt_hud_fork.config.entity.showSelf": "Show own bar"
+  "ctt_hud_fork.config.header.attributes.core": "—— Attributes ——",
+  "ctt_hud_fork.config.header.attributes.heart": "—— Attributes - Hearts ——",
+  "ctt_hud_fork.config.header.attributes.mult": "—— Attributes - Multipliers ——",
+  "ctt_hud_fork.config.header.attributes.armor": "—— Attributes - Armour ——",
+  "ctt_hud_fork.config.header.attributes.misc": "—— Attributes - Misc ——",
+  "ctt_hud_fork.config.showSelf": "Show own bar",
+  "ctt_hud_fork.config.resetSection": "Reset settings"
 }

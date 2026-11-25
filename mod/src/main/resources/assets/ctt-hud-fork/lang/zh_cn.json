@@ -7,7 +7,7 @@
   "ctt_hud_fork.config.section.player": "玩家设置",
   "ctt_hud_fork.config.section.self_stats": "属性面板设置…",
   "ctt_hud_fork.config.back": "返回",
-  "ctt_hud_fork.config.reset": "恢复默认",
+  "ctt_hud_fork.config.reset": "重置设置",
   "ctt_hud_fork.config.enabled": "总开关",
   "ctt_hud_fork.config.textShadow": "文字阴影",
   "ctt_hud_fork.config.opacity": "透明度：%s",
@@ -156,10 +156,11 @@
   "ctt_hud_fork.config.kind.speed_raw": "速度（乘算前）",
   "ctt_hud_fork.config.kind.mana_power_raw": "法力强度（乘算前）",
   "ctt_hud_fork.config.debug": "调试模式",
-  "ctt_hud_fork.config.header.attributes.core": "属性",
-  "ctt_hud_fork.config.header.attributes.heart": "属性 - 心型",
-  "ctt_hud_fork.config.header.attributes.mult": "属性 - 倍率",
-  "ctt_hud_fork.config.header.attributes.armor": "属性 - 护甲",
-  "ctt_hud_fork.config.header.attributes.misc": "属性 - 杂项",
-  "ctt_hud_fork.config.entity.showSelf": "显示自己的血条"
+  "ctt_hud_fork.config.header.attributes.core": "—— 属性 ——",
+  "ctt_hud_fork.config.header.attributes.heart": "—— 属性 - 心型 ——",
+  "ctt_hud_fork.config.header.attributes.mult": "—— 属性 - 倍率 ——",
+  "ctt_hud_fork.config.header.attributes.armor": "—— 属性 - 护甲 ——",
+  "ctt_hud_fork.config.header.attributes.misc": "—— 属性 - 杂项 ——",
+  "ctt_hud_fork.config.showSelf": "显示自己的血条",
+  "ctt_hud_fork.config.resetSection": "重置设置"
 }

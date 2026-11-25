@@ -304,8 +304,9 @@ public final class SelfCheck {
             c.containerColumns = 1;
             c.containerOpacity = 0.3;
             HudConfig.Panel box = HudConfig.panel(1, false, 320, 240);
-            check(box.x == 22 && box.columns == 1 && box.opacity == 0.3,
-                    "容器模式应取 container* 那一套");
+            check(box.x == 22 && box.columns == c.selfStatsColumns
+                            && box.opacity == c.selfStatsOpacity,
+                    "容器模式位置取 container*，列数/透明度用全局值");
 
             // 移动只改当前模式那一套
             HudConfig.movePanel(1, false, 33, 44, 320, 240);
@@ -320,8 +321,9 @@ public final class SelfCheck {
             c.bothColumns = 1;
             c.bothOpacity = 0.5;
             HudConfig.Panel both = HudConfig.panel(2, false, 320, 240);
-            check(both.x == 55 && both.columns == 1 && both.opacity == 0.5,
-                    "模式 2 应取 both* 那一套");
+            check(both.x == 55 && both.columns == c.selfStatsColumns
+                            && both.opacity == c.selfStatsOpacity,
+                    "模式 2 位置取 both*，列数/透明度用全局值");
             HudConfig.movePanel(2, false, 66, 77, 320, 240);
             check(c.bothX == 66 && c.bothY == 77, "模式 2（HUD）移动应写 both*");
             check(c.selfStatsX == 11 && c.containerX == 33, "模式 2 移动不该改另外两套");
@@ -329,7 +331,8 @@ public final class SelfCheck {
             c.bothContainerX = 88;
             c.bothContainerColumns = 3;
             HudConfig.Panel bothBox = HudConfig.panel(2, true, 320, 240);
-            check(bothBox.x == 88 && bothBox.columns == 3, "模式 2 容器应取 bothContainer*");
+            check(bothBox.x == 88 && bothBox.columns == c.selfStatsColumns,
+                "模式 2 容器位置取 bothContainer*，列数用全局值");
             HudConfig.movePanel(2, true, 99, 111, 320, 240);
             check(c.bothContainerX == 99 && c.bothX == 66, "模式 2 容器移动应只改 bothContainer*");
         } finally {

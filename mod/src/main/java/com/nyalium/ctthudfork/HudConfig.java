@@ -333,13 +333,9 @@ public final class HudConfig {
         Cfg c = withLayoutRef(get(), guiW, guiH);
         int x = resolveX(rawX(c, mode, container), c.layoutGuiW, guiW);
         int y = resolveY(rawY(c, mode, container), c.layoutGuiH, guiH);
-        return switch (mode) {
-            case 1 -> new Panel(x, y, c.containerColumns, c.containerOpacity);
-            case 2 -> container
-                    ? new Panel(x, y, c.bothContainerColumns, c.bothContainerOpacity)
-                    : new Panel(x, y, c.bothColumns, c.bothOpacity);
-            default -> new Panel(x, y, c.selfStatsColumns, c.selfStatsOpacity);
-        };
+        // 1.4.1：列数 / 透明度是**全局**设置（selfStatsColumns / selfStatsOpacity），
+        // 只有位置（x/y）按显示方式区分。
+        return new Panel(x, y, c.selfStatsColumns, c.selfStatsOpacity);
     }
 
     /** 某一套配置里存的（记录尺寸下的）左上角 x。 */
@@ -688,6 +684,58 @@ public final class HudConfig {
     private static final java.util.List<FlagRule> FLAG_RULES = java.util.List.of(
             new FlagRule(15, c -> c.textShadow, (c, v) -> c.textShadow = v, true, false)
     );
+
+    /** 重置「实体血条」这一页的设置（1.4.1 页内重置按钮）。 */
+    static void resetEntity() {
+        Cfg d = new Cfg();
+        Cfg c = get();
+        c.showBar = d.showBar;
+        c.hideEnemyBossBar = d.hideEnemyBossBar;
+        c.hideBelowNameScore = d.hideBelowNameScore;
+        c.barWidth = d.barWidth;
+        c.scale = d.scale;
+        c.opacity = d.opacity;
+        c.textShadow = d.textShadow;
+        c.maxDistance = d.maxDistance;
+        c.showTeammates = d.showTeammates;
+        c.showSelf = d.showSelf;
+        c.teamBarWidth = d.teamBarWidth;
+        c.teamScale = d.teamScale;
+        c.teamMaxDistance = d.teamMaxDistance;
+        c.hideTeamBossBar = d.hideTeamBossBar;
+    }
+
+    /** 重置「属性面板」这一页的设置。 */
+    static void resetPanel() {
+        Cfg d = new Cfg();
+        Cfg c = get();
+        c.showSelfStats = d.showSelfStats;
+        c.selfStatsSeconds = d.selfStatsSeconds;
+        c.selfStatsColumns = d.selfStatsColumns;
+        c.selfStatsOpacity = d.selfStatsOpacity;
+        c.selfStatsTextShadow = d.selfStatsTextShadow;
+        c.selfStatsMode = d.selfStatsMode;
+        c.selfStatsX = d.selfStatsX;
+        c.selfStatsY = d.selfStatsY;
+        c.containerX = d.containerX;
+        c.containerY = d.containerY;
+        c.bothX = d.bothX;
+        c.bothY = d.bothY;
+        c.bothContainerX = d.bothContainerX;
+        c.bothContainerY = d.bothContainerY;
+    }
+
+    /** 重置「盾牌指示器」这一页的设置。 */
+    static void resetShield() {
+        Cfg d = new Cfg();
+        Cfg c = get();
+        c.shieldEnabled = d.shieldEnabled;
+        c.shieldX = d.shieldX;
+        c.shieldY = d.shieldY;
+        c.shieldScale = d.shieldScale;
+        c.shieldOpacity = d.shieldOpacity;
+        c.shieldAutoMirror = d.shieldAutoMirror;
+    }
 
     /**
      * 把任意（含非法 / 缺省 / NaN）配置夹到安全范围。
