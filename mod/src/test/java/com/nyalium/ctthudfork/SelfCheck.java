@@ -1131,6 +1131,19 @@ public final class SelfCheck {
         check(ClientMobHealthCache.cap(three, 0).size() == 1, "筛选数量 0 应夹到 1");
         check(ClientMobHealthCache.cap(three, 999).size() == 3, "筛选数量超大时应全保留（服务端只推了 3 条）");
         check(ClientMobHealthCache.cap(java.util.List.of(), 5).isEmpty(), "空包截断后仍为空");
+
+        // 1.5.1：payload 的 AllHearts 缺失时（新刷的怪还没被 tag=CTTAll 补算），客户端用百分比兜底 ——
+        // 显示「❤ 73%」+ 百分比条，而不是「0/上限」+ 空条。
+        EnemyData.Snapshot pctOnly = EnemyData.percentOnly(73, 3,
+                new int[]{1, 0, 0, 0, 0, 0, 0});
+        check(pctOnly.percentOnly, "percentOnly 快照应标记 percentOnly");
+        check(pctOnly.hp == 73 && pctOnly.maxHp == 100, "percentOnly hp/maxHp="
+                + pctOnly.hp + "/" + pctOnly.maxHp);
+        check(Math.abs(pctOnly.ratio - 0.73f) < 1e-6, "percentOnly ratio=" + pctOnly.ratio);
+        check(pctOnly.defence == 3 && pctOnly.armor[0] == 1, "percentOnly 护甲应保留");
+        check(!pctOnly.hearts.any(), "percentOnly 心数应为未知");
+        check(EnemyData.percentOnly(-5, 0, new int[7]).percent == 0, "percentOnly 负值应夹到 0");
+        check(EnemyData.percentOnly(150, 0, new int[7]).percent == 100, "percentOnly 超 100 应夹到 100");
     }
 
     // ── 6. Boss 栏标题解析 ──

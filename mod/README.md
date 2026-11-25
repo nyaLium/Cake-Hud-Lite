@@ -184,7 +184,7 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 
 | 数据源 | 能拿到什么 | 覆盖 | 需要服务端吗 |
 | --- | --- | --- | --- |
-| **服务端组件 `ctt-hud-fork:mob_health`** | 按 **UUID** 的 `AllHearts / MaxHP / 护甲 / 红魂黑蓝碎` | 视野内最近 64 条（玩家与队友优先） | 选装 |
+| **服务端组件 `ctt-hud-fork:mob_health`** | 按 **UUID** 的 `AllHearts / MaxHP / 护甲 / 红魂黑蓝碎`（`AllHearts` 缺失时退回 `RedHearts`，1.5.1） | 视野内最近 64 条（玩家与队友优先） | 选装 |
 | 客户端 Boss 栏 `targetting*` 标题 | 精确 `AllHearts / MaxHP` + `🛡防御` + 元素护甲 | 被地图锁定的那一只 | 否 |
 | 同一条 bar 的 progress / color | 当前心类的剩余比例 + 是哪一类心 | 同上 | 否 |
 | `below_name` 展示槽的 `HealthPercent` | 0~100 百分比（红心口径） | 视野内全部敌人 | 否 |

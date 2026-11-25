@@ -238,6 +238,15 @@ public final class HudWorldRenderer {
                 ? ClientMobHealthCache.lookup(id)
                 : null;
         if (pushed != null) {
+            // 1.5.1：payload 里 AllHearts 缺失（新刷的怪还没被 tag=CTTAll 补算）时，
+            // 旧服务端会推 hp=0；这时用 below_name 的 HealthPercent 画百分比，
+            // 不要显示成「0/上限」+ 空条。新服务端已经退回 RedHearts，正常不会走到这里。
+            if (pushed.hp() <= 0) {
+                int fallbackPercent = percentWithSticky(mc, entity);
+                if (fallbackPercent >= 0) {
+                    return EnemyData.percentOnly(fallbackPercent, pushed.defence(), pushed.armour());
+                }
+            }
             // 玩家头顶是那条**绿条**：进度按 红心 ÷ MaxHP 填，不跟当前心类分层
             // （分层进度换色换满格，放在单色绿条上读不出来）。敌人仍按数据包口径。
             EnemyData.Snapshot data = teammate

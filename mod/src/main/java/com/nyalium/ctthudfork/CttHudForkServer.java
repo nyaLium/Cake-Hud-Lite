@@ -56,6 +56,8 @@ public final class CttHudForkServer implements ModInitializer {
 
     /** 数据包里的 objective 名（与数据包一致）。 */
     private static final String O_ALL = "AllHearts";
+    /** 1.5.1：AllHearts 缺失时退回 RedHearts（地图每 tick 先 reset AllHearts，只给 tag=CTTAll 重算）。 */
+    private static final String O_RED = "RedHearts";
     private static final String O_MAX_HP = "MaxHP";
     private static final String O_SOUL = "SoulHearts";
     private static final String O_BLACK = "BlackHearts";
@@ -165,9 +167,13 @@ public final class CttHudForkServer implements ModInitializer {
             armour[i] = score(scoreboard, EnemyData.ARMOR_OBJECTIVES[i], entity);
         }
         boolean targetted = entity.entityTags().contains("Targetting");
+        // 1.5.1：与客户端 EnemyData.read 同口径 —— AllHearts 读不到（地图先 reset、这一 tick 还没给
+        // CTTAll 补上）时退回 RedHearts；否则存活怪会显示成「0/上限」、条也是空的。
+        int all = score(scoreboard, O_ALL, entity);
+        if (all <= 0) all = score(scoreboard, O_RED, entity);
         return new MobHealthPayload.Entry(
                 entity.getUUID(),
-                score(scoreboard, O_ALL, entity),
+                all,
                 score(scoreboard, O_MAX_HP, entity),
                 score(scoreboard, O_SOUL, entity),
                 score(scoreboard, O_BLACK, entity),

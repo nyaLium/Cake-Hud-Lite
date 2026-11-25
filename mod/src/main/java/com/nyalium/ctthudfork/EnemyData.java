@@ -118,6 +118,24 @@ public final class EnemyData {
     }
 
     /**
+     * 1.5.1：只有百分比时的读数（payload 里 {@code AllHearts} 缺失 / 为 0 时的兜底）。
+     *
+     * <p>地图每 tick 先 {@code scoreboard players reset @e AllHearts}，只给 {@code tag=CTTAll}
+     * 重算；新刷的怪在 tag 补上之前 AllHearts 是空的，但 {@code RedHearts / MaxHP / HealthPercent}
+     * 已经就位。这时用 {@code HealthPercent} 画百分比条 + {@code ❤ 73%}，好过显示成「0/上限」。</p>
+     *
+     * @param percent 0~100（越界夹回）
+     */
+    public static Snapshot percentOnly(int percent, int defence, int[] armour) {
+        int[] fixed = new int[ARMOR_OBJECTIVES.length];
+        if (armour != null) {
+            System.arraycopy(armour, 0, fixed, 0, Math.min(armour.length, fixed.length));
+        }
+        int p = Math.max(0, Math.min(100, percent));
+        return new Snapshot(p, 100, true, p, defence, fixed, HeartCounts.unknown(), p / 100.0f);
+    }
+
+    /**
      * 用服务端组件（{@link MobHealthPayload}）推送的权威数据构造读数。
      *
      * <p><b>纯函数</b>，只吃整数，便于自检穷举。红心由
