@@ -9,7 +9,7 @@
 >
 > 当前版本 **1.5.0**（正式发布）：敌人血条为「心数 → 血条 → 名称」三段一体，血条按当前心类换原版配色纹理；
 > 另有纯客户端的**自身属性面板**（`/trigger ViewStats`），支持位置/列数/不透明度，
-> 88 个属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
+> 96 项属性逐项开关（三节分组 + 滚动），快捷键 `F8` 打开设置。
 > 1.20.39 修掉「进存档那一刻属性行刷进聊天栏」（进服后先静默 3 s 再问）；1.20.40 把面板/盾牌的位置改成**相对位置**，窗口大小或 GUI 缩放变化后不再错位；1.20.41 面板默认位置改到**左侧偏上（y = 屏幕高 ÷ 3）**；1.20.42 容器界面那两套的默认位置也一样。
 > **1.0.0 起版本号重新从 1.0.0 起算**（此前的 1.10.0 – 1.20.42 是工作版本线）。
 >
@@ -21,16 +21,16 @@
 | 项目 | 内容 |
 | --- | --- |
 | Mod ID | `ctt-hud-fork` |
-| 版本 | `1.3.0` |
+| 版本 | `1.5.0` |
 | Minecraft | `26.3` |
-| 环境 | 仅客户端 |
+| 环境 | 客户端必要；服务端可选（装了就推权威血量） |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
-| 产物 | `build/libs/ctt-hud-fork-1.3.0.jar` |
+| 产物 | `build/libs/ctt-hud-fork-1.5.0.jar` |
 | 仓库 | <https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version>（`fabric.mod.json` 的 `contact.homepage` / `sources` / `issues` 都指向这里，Mod Menu 会显示） |
 
 ## 代码导览（每个类做什么）
 
-`mod/src/main/java/com/nyalium/ctthudfork/` 下 39 个类 + 5 个 mixin，按职责分六组：
+`mod/src/main/java/com/nyalium/ctthudfork/` 下 40 个类 + 5 个 mixin，按职责分六组：
 
 **入口与生命周期**
 
@@ -51,7 +51,7 @@
 | `DebugSettingsScreen` | 「调试功能…」（1.4.5）：优先使用服务端数据、筛选实体数量、三个「隐藏」开关（1.5.0 删掉「调试模式」） |
 | `EntityHudSettingsScreen` | 「血条设置…」：通用 / 敌人 / 玩家三组，单列可滚动 |
 | `SelfStatsSettingsScreen` | 「属性面板设置…」：开关、刷新间隔、列数、不透明度、阴影、显示方式、调整位置、显示内容过滤 |
-| `SelfStatsFilterScreen` | 「显示内容过滤…」：按「属性 / 状态效果 / 其它」三节列 88 项，点击切换显示/隐藏 |
+| `SelfStatsFilterScreen` | 「显示内容过滤…」：按「属性 / 状态效果 / 其它」三节列 96 项，点击切换显示/隐藏 |
 | `SelfStatsLayoutScreen` | 「调整位置…」（面板）：拖动 + 方向键微调，模式 2 下可就地切 HUD / 容器那套 |
 | `ShieldIndicatorSettingsScreen` | 「盾牌指示器设置…」：显示开关、缩放比例、不透明度、调整位置 |
 | `ShieldLayoutScreen` | 「调整位置…」（盾牌）：同一套拖动逻辑（预览 `meter_0`）；1.4.8 起底行「回到初始位置」（左）+「返回」（居中），「初始位置是否自动调整」在「回到初始位置」正上方；1.4.9 起三个按钮同宽、上下一列对齐 |
@@ -82,7 +82,7 @@
 | 文件 | 作用 |
 | --- | --- |
 | `SelfStats` | 数据通道：定时 `/trigger ViewStats` 把地图回的 240 多行截下来、按类过滤、解析心数、进世界静默 3 s、超时收尾 |
-| `SelfStatsKind` | 每一行归到哪个属性（89 个枚举，88 项可过滤，分三节） |
+| `SelfStatsKind` | 每一行归到哪个属性（97 个枚举含 HINT，96 项可过滤：属性 64 + 状态效果 28 + 其它 4） |
 | `SelfStatsPanel` | 面板绘制：列优先排版、悬停显示官方属性名、HUD 与容器界面共用 |
 | `SelfStatsPanelAccess` | 给 mixin 包用的静态桥（`ContainerPanelMixin` 在别的包） |
 
@@ -108,7 +108,7 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `SelfCheck`（`src/test`） | 纯 JVM 自检：`gradlew selfCheck`，`build` 会自动带上；共 **4786** 条断言 |
+| `SelfCheck`（`src/test`） | 纯 JVM 自检：`gradlew selfCheck`，`build` 会自动带上；共 **4972** 条断言 |
 
 ## 绘制方式（1.15.0 起）
 
@@ -296,7 +296,7 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 | 文字阴影（属性面板） | `selfStatsTextShadow` | 同上 | 默认开 |
 | 显示方式 | `selfStatsMode` | 同上 | 0 HUD / 1 容器 / 2 两者（默认 2） |
 | 调整位置…（面板） | `*X` / `*Y` + `layoutGuiW/H` | `movePanel` / `panel` / `scalePos` | `-1` = 屏幕高 ÷ 3 |
-| 显示内容过滤… | `selfStatsHidden` | `hiddenKinds` / `SelfStatsKind` | 88 项，三节 |
+| 显示内容过滤… | `selfStatsHidden` | `hiddenKinds` / `SelfStatsKind` | 96 项，三节 |
 | 显示盾牌指示器 | `shieldEnabled` | `HudConfig.Cfg.shieldEnabled` | 默认开 |
 | 缩放比例（盾牌） | `shieldScale` | 同上 | 0.50~1.50，步进 0.05 |
 | 不透明度（盾牌） | `shieldOpacity` | 同上 | 0.10~1.00 |
@@ -589,7 +589,7 @@ A/B 对照图：`v1.20.2` 归档里的 `bar-caps.png`（旧=方头 / 新=圆头 
 | `showSelfStats` / `selfStatsSeconds` / `selfStatsColumns` / `selfStatsX` / `selfStatsY` | 自身属性面板：开关 / 刷新间隔（秒，1~5，默认 3；1.0.0 起没有「立即」档）/ 列数 / 左上角坐标（1.20.9 起界面上只能拖动，JSON 仍生效；**1.20.40 起是「量在 `layoutGuiW × layoutGuiH` 下」的相对位置**）；进他人服务器时强制 3 s 且不改这里；自身与容器的四套 `*Y` 字段 **-1 = 动态默认**（屏幕高 ÷ 3；HUD 那两套 1.20.41、容器那两套 1.20.42） | 1~5 / 1~3 / 0~4000（y 可为 -1） |
 | `layoutGuiW` / `layoutGuiH` | 1.20.40：这些像素坐标是量在多大的 GUI 上的（`0` = 还不知道，第一次绘制时用当时尺寸补上）；窗口大小或 GUI 缩放变化后按比例换算，面板/盾牌不会错位 | 0~10000 |
 | `selfStatsOpacity` | 属性面板不透明度 | 0.20 ~ 1.00（默认 1.0） |
-| `selfStatsHidden` | 要隐藏的属性（如 `["heart_red", "mana_recharge"]`）；共 88 项（属性 56 + 状态效果 28 + 其它 4），见 `SelfStatsKind`；旧配置里的粗类（`health`/`attack`/`status`/`misc`/…）会自动展开成细项 | — |
+| `selfStatsHidden` | 要隐藏的属性（如 `["heart_red", "mana_recharge"]`）；共 96 项（属性 64 + 状态效果 28 + 其它 4），见 `SelfStatsKind`；旧配置里的粗类（`health`/`attack`/`status`/`misc`/…）会自动展开成细项 | — |
 | `preferServerData` | 「调试功能」页：优先使用服务端数据（1.4.5）。关掉后完全忽略 payload，强制走 Boss 栏 + `HealthPercent` 的纯客户端回退，方便在双端环境里对比两条链路 | — |
 | `payloadLimit` | 「调试功能」页：筛选实体数量（1.4.5）。客户端只保留 payload 的前 N 条；服务端已按「玩家优先、其余按距离」排序，所以等价于「服务端只推了 N 条」 | 1 ~ 64（默认 64） |
 
@@ -676,11 +676,11 @@ A/B 对照图：`v1.20.2` 归档里的 `bar-caps.png`（旧=方头 / 新=圆头 
 gradlew selfCheck      # gradlew build 会自动带上
 ```
 
-**4786 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、缩放 5 档、
+**4972 条断言**：8 种显示开关组合 × 6 种数据形态、血条长度 9 档、缩放 5 档、
 心数推导边界（溢出 / 受击 / 0 / 负值 / 越界下标）、心数行顺序与组内/组间分隔、队伍条严格解析与宽松扫描、
 配置夹取（越界 / NaN / null）、Boss 栏标题解析（中英文/全角/负血/零上限）、诅咒键判定、
 护甲 2 项一页的分页、心类轮换、k/m/b 缩写、血条分段（50~150 每一档都验端盖 4 纹素 + 中段连续 + 满格才出右端盖）、
-属性面板（心数解析、88 项属性识别、提示键识别、过滤表清洗与粗类展开、三节 47 行的行结构、计时行/草方块上屏、
+属性面板（心数解析、96 项属性识别、提示键识别、过滤表清洗与粗类展开、三节 47 行的行结构、计时行/草方块上屏、
 滚动条拖拽的滑块高度/偏移/反解/命中容差、缩放/位置夹取、滚动列表的可见行/最大滚动/滚轮换算/列宽、
 **进世界静默窗口**（3 s 边界 / 实体 tick 门槛 / 窗口内吞掉属性行且不进面板 / 窗口外手动触发照旧显示）、
 局部设置独立性（「显示血条」整块开关的四个 flag、四套面板位置列数与不透明度、两种文字阴影互不串改）、
@@ -692,7 +692,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 # JDK 25
 ./gradlew build
 ```
-产物 `build/libs/ctt-hud-fork-1.3.0.jar` → 丢进 `.minecraft/mods`。
+产物 `build/libs/ctt-hud-fork-1.5.0.jar` → 丢进 `.minecraft/mods`。
 **不要**与上游 `Cake_HUD`（mod id `ctt-health-display`）同时装：两者都会画属性面板，bossbar 的 mixin 还会互相抢注入（1.20.12 起进服会提示一次）。
 
 ## 版本沿革
@@ -766,7 +766,12 @@ gradlew selfCheck      # gradlew build 会自动带上
 | ~~1.0.0（正式版）~~ | 界面文案统一：血条设置 / 最远显示距离 / 缩放比例 / 不透明度 / 调整位置… / 显示内容过滤… / 显示盾牌指示器；删掉面板「文字大小」与血条「垂直偏移」；面板显示方式默认 **HUD + 容器界面**；盾牌缩放步进 0.05、不再写「倍」；配置 v22；删掉一批死代码（`BoxOcclusion`、未被读取的写死开关、旧调用点重载等） |
 | ~~1.0.1~~ | **只动注释与文档**（无行为变化）：三个设置页补「行 ↔ 配置字段 ↔ 范围」表、每行一句注释；校正 v1.0.0 删改后的陈旧注释；补 `Panel`/`Line`/`Result`/`BarWidth` 等字段说明；README 新增「界面文案 ↔ 配置字段对照」 |
 | **1.0.2** | 更正 `LICENSE` 的上游版权署名（上游实际为 `Copyright (c) 2026 Kirin0321 (麒麟)`），根 / `mod/` 两份 LICENSE、`NOTICE.md`、`fabric.mod.json` 同步；**1.0.0 / 1.0.1 因署名错误已撤回**，jar、归档与 tag 均已从仓库移除 |
-| **1.20.42** | **容器界面**那两套面板的默认位置也改成 x=4、y = 屏幕高 ÷ 3（打开箱子/背包时同样在偏上 1/3）；配置 v21（只有仍停在旧默认 20 的才迁移） |
+| **1.0.3** | jar 内补仓库地址（Mod Menu 的 Homepage / Source / Issues）；重发 1.0.2 的署名修正 |
+| **1.1.0** | 盾牌指示器换 34×86 新纹理（按耐久四档）；Mod 简介改为「蛋糕塔」版本 |
+| 1.2.0–1.2.10 | 盾牌「初始位置跟随副手」开关；未知诅咒 / 癫狂门控；玩家两行心数排版；碎/粉心统一 ❤；队友百分比回退与 5 s 粘性；逐条见 `CHANGELOG.md` |
+| 1.3.0–1.3.7 | 内部重构：配置迁移表驱动、诅咒/癫狂探测合并、`options()` 合并、拆出 `SelfStatsCatalog`；属性过滤按新数据包细分（64 + 28 + 4 项） |
+| 1.4.0–1.4.9 | 自己的血条独立开关（默认关）；玩家只画心型（碎/粉用裂心字形）；双端 payload 64 条且玩家优先（协议 v2）；敌人 / 玩家 × 血条 / 文字四套不透明度；调试功能页；修红心数被治疗百分比覆盖、护甲行行首空格、过滤界面崩溃；盾牌界面按钮重排 |
+| **1.5.0** | **正式发布**：汇总 1.3.0–1.4.9 并删除「调试模式」；jar / 说明见 Release 与 `RELEASE.md` |
 
 ## 隐藏特征（写死在代码里的常量与行为）
 
