@@ -90,9 +90,10 @@ public final class HudWorldRenderer {
         EnemyData.Snapshot data = resolveData(mc, entity, teammate, self);
         if (data == null) return;
 
-        HudLayout.Options options = options(cfg, teammate);
-        // 自己按「玩家」的完整排版：两排心 + 护甲（服务端装了才有精确值）。
-        if (self) options.showArmor = true;
+        // 1.4.3：玩家（队友与自己）一律走「玩家」那套 —— 只有各类心型 + 绿条，没有护甲段。
+        // 自己传 true，顺带让血条长度 / 缩放 / 整块开关跟着「玩家」设置走，
+        // 而不是借用敌人那套（以前自己走的是 options(cfg, false)）。
+        HudLayout.Options options = options(cfg, teammate || self);
         // 元素护甲每页 2 项，按时间循环（用实体 id 错开，避免同一帧全体翻页）。
         long now = System.currentTimeMillis();
         options.armourPage = ArmourCycle.page(data.armor, now, entity.getId());
@@ -476,30 +477,31 @@ public final class HudWorldRenderer {
     // ── 布局选项 ──
 
     /**
-     * 把配置翻译成一套布局选项（敌人 / 队友共用这一个入口，1.3.4 合并）。
+     * 把配置翻译成一套布局选项（敌人 / 玩家共用这一个入口，1.3.4 合并）。
      *
-     * <h2>敌人（{@code teammate = false}）</h2>
+     * <h2>敌人（{@code player = false}）</h2>
      * <p>{@code showBar} 是**整块**开关（1.20.34）：关掉后血条与上方的心数 / 护甲文字一起不画，
      * 四个 flag 全跟着它走，{@link HudLayout#compute} 得到空结果，渲染直接返回 —— 只剩原版名字。</p>
      *
-     * <h2>队友（{@code teammate = true}）</h2>
+     * <h2>玩家（{@code player = true}：队友与「显示自己的血条」下的自己）</h2>
      * <p>长度 / 缩放用玩家自己的一套（{@code teamBarWidth} / {@code teamScale}）；
-     * {@code showHearts = true}：装了服务端组件时队友也有四色心 / 碎心 / 粉心，
+     * {@code showHearts = true}：装了服务端组件时玩家也有四色心 / 碎心 / 粉心，
      * 拿不到心数（服务端没装）时 {@link HudLayout} 自动退回「当前/最大」。</p>
      *
-     * <p>{@code showArmor = false}（1.16.3 起）：队友**只画心与血条**，不画护甲段 ——
-     * payload 里的 defence / armour 照旧收下（数据结构不用改），只是不给布局用。</p>
+     * <p>{@code showArmor = false}（1.16.3 起队友、1.4.3 起自己）：玩家**只画各类心型与血条**，
+     * 不画护甲段 —— payload 里的 defence / armour 照旧收下（敌人数据结构不用改），只是不给
+     * 玩家排版用。</p>
      *
-     * <p>1.20.34：队友整块由 {@code showTeammates} 管（关掉时 {@link HudTarget#managed} 直接返回
-     * false，根本不会走到这里），所以能画的时候血条一定画 —— 也就是说这里的 {@code showBar}
-     * <b>不吃</b> {@code cfg.showBar}（那是「敌人」的整块开关，不能连带把队友也关掉）。</p>
+     * <p>1.20.34：整块由 {@code showTeammates} / {@code showSelf} 管（关掉时不会走到这里），
+     * 所以能画的时候血条一定画 —— 也就是说这里的 {@code showBar} <b>不吃</b> {@code cfg.showBar}
+     * （那是「敌人」的整块开关，不能连带把玩家也关掉）。</p>
      *
-     * <p>{@code playerStyle} 也在这里设：它本来就恒等于 {@code teammate}，
+     * <p>{@code playerStyle} 也在这里设：它恒等于 {@code player}，
      * 放在调用点容易被漏掉。</p>
      */
-    static HudLayout.Options options(HudConfig.Cfg cfg, boolean teammate) {
+    static HudLayout.Options options(HudConfig.Cfg cfg, boolean player) {
         HudLayout.Options o = new HudLayout.Options();
-        if (teammate) {
+        if (player) {
             o.showNumbers = true;
             o.showHearts = true;
             o.showArmor = false;
@@ -515,7 +517,7 @@ public final class HudWorldRenderer {
             o.scale = cfg.scale;
         }
         o.textShadow = cfg.textShadow;
-        o.playerStyle = teammate;
+        o.playerStyle = player;
         return o;
     }
 

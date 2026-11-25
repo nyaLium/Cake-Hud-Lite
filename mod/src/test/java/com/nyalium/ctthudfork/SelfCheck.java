@@ -1940,6 +1940,20 @@ public final class SelfCheck {
         check(HudWorldRenderer.options(cfg, true).showBar, "关掉敌人「显示血条」不该连带队友");
         cfg.showBar = true;
         check(HudWorldRenderer.options(cfg, false).showBar, "打开后敌人血条应回来");
+
+        // 1.4.3：玩家（队友 + 自己）统一用玩家排版 —— 只有各类心型 + 条，不含护甲段；
+        // 长度 / 缩放 / 整块开关都跟「玩家」设置走，不再借敌人的 showBar / barWidth / scale。
+        HudLayout.Options playerOpts = HudWorldRenderer.options(cfg, true);
+        check(playerOpts.playerStyle, "玩家应使用玩家排版（两排心）");
+        check(!playerOpts.showArmor, "玩家（含自己）不该画护甲段");
+        check(playerOpts.showBar, "玩家的条不该被敌人「显示血条」关掉");
+        check(playerOpts.barWidth == cfg.teamBarWidth && playerOpts.scale == cfg.teamScale,
+                "玩家的条长度 / 缩放应取玩家设置");
+        HudLayout.Result playerLayout = HudLayout.compute(150, 150, false, 5,
+                new int[]{3, 1, 0, 0, 0, 0, 0}, HeartCounts.of(60, 40, 30, 20, 2),
+                playerOpts, SelfCheck::width);
+        check(join(playerLayout).replace(" ", "").equals("❤40❤30❤20❤60/150❤2"),
+                "玩家排版即便带护甲数据也只画心: " + join(playerLayout));
         HudLayout.Result on = HudLayout.compute(100, 100, false, 5,
                 new int[]{0, 0, 0, 0, 0, 0, 0}, HeartCounts.forMob(100, 100), HudWorldRenderer.options(cfg, false),
                 String::length);
