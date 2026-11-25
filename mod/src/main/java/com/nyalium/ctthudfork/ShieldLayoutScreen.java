@@ -17,8 +17,9 @@ import net.minecraft.resources.Identifier;
  * 不累加每帧增量（增量在某些输入后端是 0，累加式会「拖不动」）。
  * 1.20.28 起只在指示器上按住并拖动才移动，点一下空白处不会挪位置。另外支持方向键微调（4 px，Shift 16 px）。</p>
  *
- * <p>1.2.0：「初始位置是否跟随副手变化」（{@code shieldAutoMirror}）挪到本界面，
- * 放在「回到初始位置」左侧；只影响未移动过的默认位置。</p>
+ * <p>1.2.0：「初始位置是否跟随副手变化」（{@code shieldAutoMirror}）挪到本界面；
+ * 只影响未移动过的默认位置。1.4.8 起布局为：底行「回到初始位置」在左、「返回」居中，
+ * 该开关放在「回到初始位置」正上方。</p>
  *
  * <p>预览用 {@code meter_0.png}，按当前 {@code shieldScale} 与 {@code shieldOpacity} 画；
  * 坐标存 {@code shieldX/shieldY}（GUI 像素，左上角；{@code -1} = 跟随副手槽的默认位置，见
@@ -30,7 +31,6 @@ public final class ShieldLayoutScreen extends Screen {
             Identifier.fromNamespaceAndPath(CttHudForkClient.MOD_ID, "textures/gui/meter_0.png");
     private static final int ROW_HEIGHT = 20;
     private static final int BUTTON_WIDTH = 120;
-    private static final int GAP = 8;
 
     private final ShieldIndicatorSettingsScreen parent;
     private boolean dragging;
@@ -52,40 +52,35 @@ public final class ShieldLayoutScreen extends Screen {
 
     @Override
     protected void init() {
-        int y = this.height - ROW_HEIGHT - 8;
+        int bottomY = this.height - ROW_HEIGHT - 8;
         HudConfig.Cfg cfg = HudConfig.get();
 
-        // 初始位置是否跟随副手变化：shieldAutoMirror（1.2.0）
-        // 只影响「未移动过的初始位置」；放在「回到初始位置」左侧。
-        Component mirrorLabel = Component.translatable("ctt_hud_fork.config.shieldAutoMirror");
-        int mirrorWidth = Math.max(BUTTON_WIDTH, this.font.width(mirrorLabel) + 40);
-        int totalWidth = mirrorWidth + BUTTON_WIDTH * 2 + GAP * 2;
-        int left;
-        int mirrorY = y;
-        if (totalWidth > this.width - 8) {
-            // 窗口太窄：这一项单独占一行，放在下面两个按钮的上方
-            mirrorWidth = Math.min(mirrorWidth, this.width - 16);
-            totalWidth = mirrorWidth;
-            left = this.width / 2 - mirrorWidth / 2;
-            mirrorY = y - ROW_HEIGHT - 4;
-        } else {
-            left = this.width / 2 - totalWidth / 2;
-        }
-        CycleButton<Boolean> mirror = CycleButton.onOffBuilder(cfg.shieldAutoMirror)
-                .create(left, mirrorY, mirrorWidth, ROW_HEIGHT, mirrorLabel,
-                        (b, v) -> HudConfig.get().shieldAutoMirror = v);
-        mirror.setTooltip(Tooltip.create(
-                Component.translatable("ctt_hud_fork.config.shieldAutoMirror.tooltip")));
-        addRenderableWidget(mirror);
-
-        int rowLeft = left + mirrorWidth + GAP;
+        // 1.4.8：底行与其它子页一致 —— 「回到初始位置」在左、「返回」屏幕水平居中：
+        //   [初始位置是否跟随副手变化]      ← 在「回到初始位置」正上方
+        //   [回到初始位置]  [ 返回 ]
+        int resetX = this.width / 2 - BUTTON_WIDTH / 2 - (BUTTON_WIDTH + 8);
+        int backX = this.width / 2 - BUTTON_WIDTH / 2;
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.selfStatsMove.reset"), b -> {
             HudConfig.setShieldPosition(-1, -1, this.width, this.height);
             this.dragging = false;
             this.rebuildWidgets();
-        }).bounds(rowLeft, y, BUTTON_WIDTH, ROW_HEIGHT).build());
+        }).bounds(resetX, bottomY, BUTTON_WIDTH, ROW_HEIGHT).build());
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.back"), b -> back())
-                .bounds(rowLeft + BUTTON_WIDTH + GAP, y, BUTTON_WIDTH, ROW_HEIGHT).build());
+                .bounds(backX, bottomY, BUTTON_WIDTH, ROW_HEIGHT).build());
+
+        // 初始位置是否跟随副手变化：shieldAutoMirror（1.2.0；1.4.8 起放在「回到初始位置」上方）
+        Component mirrorLabel = Component.translatable("ctt_hud_fork.config.shieldAutoMirror");
+        int mirrorWidth = Math.max(BUTTON_WIDTH, this.font.width(mirrorLabel) + 40);
+        mirrorWidth = Math.min(mirrorWidth, Math.max(BUTTON_WIDTH, this.width - 16));
+        // 以「回到初始位置」的中心对齐，再夹回屏幕内（标签比较长）
+        int mirrorX = resetX + BUTTON_WIDTH / 2 - mirrorWidth / 2;
+        mirrorX = Math.max(4, Math.min(this.width - 4 - mirrorWidth, mirrorX));
+        CycleButton<Boolean> mirror = CycleButton.onOffBuilder(cfg.shieldAutoMirror)
+                .create(mirrorX, bottomY - ROW_HEIGHT - 4, mirrorWidth, ROW_HEIGHT, mirrorLabel,
+                        (b, v) -> HudConfig.get().shieldAutoMirror = v);
+        mirror.setTooltip(Tooltip.create(
+                Component.translatable("ctt_hud_fork.config.shieldAutoMirror.tooltip")));
+        addRenderableWidget(mirror);
     }
 
     private void back() {

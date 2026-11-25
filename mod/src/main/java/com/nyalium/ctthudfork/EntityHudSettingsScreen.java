@@ -30,7 +30,7 @@ import java.util.function.DoubleSupplier;
  *   <tr><td>通用</td><td>隐藏上方 Boss 栏（队伍血量）</td><td>{@code hideTeamBossBar}</td><td>队友数据源</td></tr>
  *   <tr><td>敌人</td><td>血条不透明度</td><td>{@code barOpacity}</td><td>10%~100%，1% 一档，默认 65%</td></tr>
  *   <tr><td>敌人</td><td>文字不透明度</td><td>{@code textOpacity}</td><td>10%~100%，1% 一档，默认 100%</td></tr>
- *   <tr><td>玩家</td><td>玩家血条 / 文字不透明度</td><td>{@code teamBarOpacity} / {@code teamTextOpacity}</td><td>各 10%~100%，默认 65% / 100%</td></tr>
+ *   <tr><td>玩家</td><td>血条 / 文字不透明度</td><td>{@code teamBarOpacity} / {@code teamTextOpacity}</td><td>各 10%~100%，默认 65% / 100%；标签与敌人两组共用</td></tr>
  *   <tr><td>敌人</td><td>显示血条</td><td>{@code showBar}</td><td>整块开关</td></tr>
  *   <tr><td>敌人</td><td>最远显示距离</td><td>{@code maxDistance}</td><td>4~256 格，默认 48</td></tr>
  *   <tr><td>敌人</td><td>血条长度</td><td>{@code barWidth}</td><td>50~150，默认 75</td></tr>
@@ -138,11 +138,12 @@ public final class EntityHudSettingsScreen extends Screen {
         y = slider("teamScale", y, 0.75, 1.5, 0.05, () -> HudConfig.get().teamScale,
                 v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> HudConfig.get().teamScale = v, 2);
         // 1.4.7：玩家（含自己）的血条 / 文字不透明度（各 10~100%）
-        y = slider("teamBarOpacity", y, 10, 100, 1, () -> HudConfig.get().teamBarOpacity * 100,
-                v -> key("teamBarOpacity", Math.round(v) + "%"),
+        // 1.4.8：标签与敌人那两条共用（所在分组已经写明「玩家设置」，不必再写「玩家」前缀）
+        y = slider("barOpacity", y, 10, 100, 1, () -> HudConfig.get().teamBarOpacity * 100,
+                v -> key("barOpacity", Math.round(v) + "%"),
                 v -> HudConfig.get().teamBarOpacity = v / 100.0, 2);
-        y = slider("teamTextOpacity", y, 10, 100, 1, () -> HudConfig.get().teamTextOpacity * 100,
-                v -> key("teamTextOpacity", Math.round(v) + "%"),
+        y = slider("textOpacity", y, 10, 100, 1, () -> HudConfig.get().teamTextOpacity * 100,
+                v -> key("textOpacity", Math.round(v) + "%"),
                 v -> HudConfig.get().teamTextOpacity = v / 100.0, 2);
         lastY = y;
     }

@@ -1,6 +1,6 @@
 {
   "modmenu.nameTranslation.ctt-hud-fork": "Cake Team Towers HUD - Fork",
-  "modmenu.descriptionTranslation.ctt-hud-fork": "Built for the Cake Team Towers map: health bars and info above enemies and players, a shield cooldown indicator, and a stats panel (/trigger ViewStats). Client-side only; server component optional.",
+  "modmenu.descriptionTranslation.ctt-hud-fork": "Built for the Cake Team Towers map:\nhealth bars and info above enemies and players, a shield cooldown indicator, and a stats panel (/trigger ViewStats).\nClient-side only; server component optional.",
   "ctt_hud_fork.config.title": "CTT HUD - Fork Settings",
   "ctt_hud_fork.config.section.general": "General settings",
   "ctt_hud_fork.config.section.enemy": "Enemy settings",
@@ -168,7 +168,5 @@
   "ctt_hud_fork.config.header.attributes.armor": "—— Attributes - Armour ——",
   "ctt_hud_fork.config.header.attributes.misc": "—— Attributes - Misc ——",
   "ctt_hud_fork.config.showSelf": "Show own bar",
-  "ctt_hud_fork.config.resetSection": "Reset settings",
-  "ctt_hud_fork.config.teamBarOpacity": "Player bar opacity: %s",
-  "ctt_hud_fork.config.teamTextOpacity": "Player text opacity: %s"
+  "ctt_hud_fork.config.resetSection": "Reset settings"
 }
