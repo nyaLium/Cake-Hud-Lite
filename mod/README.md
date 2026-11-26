@@ -26,7 +26,7 @@
 | 环境 | 客户端必要；服务端可选（装了就推权威血量） |
 | 依赖 | Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；**Mod Menu 可选** |
 | 产物 | `build/libs/ctt-hud-fork-1.5.0.jar` |
-| 仓库 | <https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version>（`fabric.mod.json` 的 `contact.homepage` / `sources` / `issues` 都指向这里，Mod Menu 会显示） |
+| 仓库 | <https://github.com/nyaLium/Cake-Hud-Fork>（`fabric.mod.json` 的 `contact.homepage` / `sources` / `issues` 都指向这里，Mod Menu 会显示） |
 
 ## 代码导览（每个类做什么）
 

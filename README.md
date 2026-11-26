@@ -35,7 +35,7 @@
 
 ## 下载
 
-jar 只在 **GitHub Releases** 里：<https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases>
+jar 只在 **GitHub Releases** 里：<https://github.com/nyaLium/Cake-Hud-Fork/releases>
 
 | 版本 | 附件 | 说明 |
 | --- | --- | --- |
@@ -97,7 +97,7 @@ cd mod
 
 - 功能与配置详解：[`mod/README.md`](mod/README.md)（代码导览、配置字段表、界面文案 ↔ 字段对照）
 - 版本沿革：[`CHANGELOG.md`](CHANGELOG.md)
-- 最新版说明与下载：[`RELEASES.md`](RELEASES.md) 或 [Release v1.5.0](https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/releases/tag/v1.5.0)
+- 最新版说明与下载：[`RELEASES.md`](RELEASES.md) 或 [Release v1.5.0](https://github.com/nyaLium/Cake-Hud-Fork/releases/tag/v1.5.0)
 - 版本规则：[`VERSIONING.md`](VERSIONING.md)
 - 测试清单：[docs/TEST-PLAN.md](docs/TEST-PLAN.md)（环境矩阵 + 分项勾选表）
 

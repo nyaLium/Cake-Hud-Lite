@@ -10,9 +10,9 @@
   ],
   "license": "MIT",
   "contact": {
-    "homepage": "https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version",
-    "sources": "https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version",
-    "issues": "https://github.com/nyaLium/CTT-HUD-Mod-Fork-Version/issues"
+    "homepage": "https://github.com/nyaLium/Cake-Hud-Fork",
+    "sources": "https://github.com/nyaLium/Cake-Hud-Fork",
+    "issues": "https://github.com/nyaLium/Cake-Hud-Fork/issues"
   },
   "icon": "assets/ctt-hud-fork/icon.png",
   "environment": "*",
