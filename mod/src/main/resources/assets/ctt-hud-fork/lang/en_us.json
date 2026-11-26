@@ -167,5 +167,18 @@
   "ctt_hud_fork.config.header.attributes.armor": "—— Attributes - Armour ——",
   "ctt_hud_fork.config.header.attributes.misc": "—— Attributes - Misc ——",
   "ctt_hud_fork.config.showSelf": "Show own bar",
-  "ctt_hud_fork.config.resetSection": "Reset settings"
+  "ctt_hud_fork.config.resetSection": "Reset settings",
+  "ctt_hud_fork.config.alwaysShowEnemyName": "Always show enemy names",
+  "ctt_hud_fork.config.barNoSeeThrough": "Bars hidden behind blocks",
+  "ctt_hud_fork.config.autoBarLength": "Auto bar length by health",
+  "ctt_hud_fork.config.autoBarMinWidth": "Auto length min: %s",
+  "ctt_hud_fork.config.autoBarMaxWidth": "Auto length max: %s",
+  "ctt_hud_fork.config.debugNoPermission": "Permission level %s or higher is required to change debug settings",
+  "ctt_hud_fork.config.debugLockedHint": "Debug settings require permission level %s or higher",
+  "ctt_hud_fork.config.section.title": "Titles…",
+  "ctt_hud_fork.config.titleOpacity": "Title opacity: %s",
+  "ctt_hud_fork.config.subtitleOpacity": "Subtitle opacity: %s",
+  "ctt_hud_fork.config.titleOffsetX": "Horizontal offset: %s",
+  "ctt_hud_fork.config.titleOffsetY": "Vertical offset: %s",
+  "ctt_hud_fork.config.titleHint": "/title title and subtitle (actionbar excluded) · offsets scale with the window"
 }

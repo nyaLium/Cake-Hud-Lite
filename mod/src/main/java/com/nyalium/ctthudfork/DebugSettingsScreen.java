@@ -1,11 +1,14 @@
 package com.nyalium.ctthudfork;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.permissions.Permission;
+import net.minecraft.server.permissions.Permissions;
 
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
@@ -36,11 +39,46 @@ public final class DebugSettingsScreen extends Screen {
     private static final int TOP = 60;
     private static final int WIDTH = 260;
 
+    /**
+     * 调试设置要求的最低权限等级 —— <b>写死在代码里，不提供任何设置项</b>。
+     *
+     * <p>2 = 游戏管理员（gamemaster，原版 op 等级 2）：能用 {@code /gamemode}、{@code /give}
+     * 这一档。1 = 协管（moderator），3 = 管理员（admin），4 = 服主（owner）。
+     * 想放宽/收紧就改这一行常量，配置界面上没有对应开关。</p>
+     */
+    static final int REQUIRED_PERMISSION_LEVEL = 2;
+
     private final HudConfigScreen menu;
 
     public DebugSettingsScreen(HudConfigScreen menu) {
         super(Component.translatable("ctt_hud_fork.config.debugTitle"));
         this.menu = menu;
+    }
+
+    /** 等级 → 26.3 的权限节点（0 = 不需要权限，返回 null）。 */
+    private static Permission permissionForLevel(int level) {
+        return switch (level) {
+            case 1 -> Permissions.COMMANDS_MODERATOR;
+            case 2 -> Permissions.COMMANDS_GAMEMASTER;
+            case 3 -> Permissions.COMMANDS_ADMIN;
+            case 4 -> Permissions.COMMANDS_OWNER;
+            default -> null;
+        };
+    }
+
+    /**
+     * 当前本地玩家有没有权限改调试设置。
+     *
+     * <p>26.3 把 op 等级换成了 {@code PermissionSet}（服务端同步到客户端，原版 F3 快捷键
+     * 判定用的就是同一套），所以这里直接查 {@link Permissions#COMMANDS_GAMEMASTER}。
+     * 单人游戏开了作弊时原版给的就是 4 级，一样通过。</p>
+     */
+    static boolean canAdjust() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.player == null) return false;
+        Permission required = permissionForLevel(REQUIRED_PERMISSION_LEVEL);
+        if (required == null) return true;
+        return mc.player.permissions().hasPermission(required);
     }
 
     @Override
@@ -49,6 +87,13 @@ public final class DebugSettingsScreen extends Screen {
         int x = this.width / 2 - width / 2;
         int y = TOP;
         HudConfig.Cfg cfg = HudConfig.get();
+
+        // 1.6.0：权限不够时整页不可调整，只留一个「返回」。
+        if (!canAdjust()) {
+            addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.back"), b -> back())
+                    .bounds(this.width / 2 - 60, this.height - ROW_HEIGHT - 8, 120, ROW_HEIGHT).build());
+            return;
+        }
 
         // 优先使用服务端数据：preferServerData（关掉后强制纯客户端回退，方便双端对比）
         addRenderableWidget(CycleButton.onOffBuilder(cfg.preferServerData)
@@ -85,6 +130,45 @@ public final class DebugSettingsScreen extends Screen {
                 .create(x, y, width, ROW_HEIGHT,
                         Component.translatable("ctt_hud_fork.config.hideTeamBossBar"),
                         (b, v) -> HudConfig.get().hideTeamBossBar = v));
+        y += ROW_GAP;
+
+        // ── 1.6.0 新增三项 ──
+        // 常显敌人名称：原版只在「近 / 准星对着」时画名牌，开了就任何距离都画
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.alwaysShowEnemyName)
+                .create(x, y, width, ROW_HEIGHT,
+                        Component.translatable("ctt_hud_fork.config.alwaysShowEnemyName"),
+                        (b, v) -> HudConfig.get().alwaysShowEnemyName = v));
+        y += ROW_GAP;
+        // 血条不可透视：隔墙看不到，但头顶的方块也切不掉
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.barNoSeeThrough)
+                .create(x, y, width, ROW_HEIGHT,
+                        Component.translatable("ctt_hud_fork.config.barNoSeeThrough"),
+                        (b, v) -> HudConfig.get().barNoSeeThrough = v));
+        y += ROW_GAP;
+        // 血量条长度自动调整：100% = 上限，0% = 下限
+        addRenderableWidget(CycleButton.onOffBuilder(cfg.autoBarLength)
+                .create(x, y, width, ROW_HEIGHT,
+                        Component.translatable("ctt_hud_fork.config.autoBarLength"),
+                        (b, v) -> {
+                            HudConfig.get().autoBarLength = v;
+                            this.rebuildWidgets();
+                        }));
+        y += ROW_GAP;
+        AbstractSliderButton minWidth = new ValueSlider(x, y, width, ROW_HEIGHT,
+                HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX, 1, cfg.autoBarMinWidth,
+                v -> Component.translatable("ctt_hud_fork.config.autoBarMinWidth",
+                        (int) Math.round(v)),
+                v -> HudConfig.get().autoBarMinWidth = Math.round(v));
+        minWidth.active = cfg.autoBarLength;
+        addRenderableWidget(minWidth);
+        y += ROW_GAP;
+        AbstractSliderButton maxWidth = new ValueSlider(x, y, width, ROW_HEIGHT,
+                HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX, 1, cfg.autoBarMaxWidth,
+                v -> Component.translatable("ctt_hud_fork.config.autoBarMaxWidth",
+                        (int) Math.round(v)),
+                v -> HudConfig.get().autoBarMaxWidth = Math.round(v));
+        maxWidth.active = cfg.autoBarLength;
+        addRenderableWidget(maxWidth);
 
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.resetSection"), b -> {
             HudConfig.resetDebug();
@@ -102,6 +186,14 @@ public final class DebugSettingsScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(this.font, this.title, this.width / 2, 24, 0xFFFFFFFF);
+        if (!canAdjust()) {
+            // 没权限：整页只有这一句提示（按钮都不建）
+            graphics.centeredText(this.font,
+                    Component.translatable("ctt_hud_fork.config.debugNoPermission",
+                            REQUIRED_PERMISSION_LEVEL),
+                    this.width / 2, 40, 0xFFFF5555);
+            return;
+        }
         graphics.centeredText(this.font, Component.translatable("ctt_hud_fork.config.debugHint"),
                 this.width / 2, 40, 0xFFA0A0A0);
     }

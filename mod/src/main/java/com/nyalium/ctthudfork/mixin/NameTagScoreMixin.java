@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityAttachment;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -35,7 +36,27 @@ public abstract class NameTagScoreMixin {
         // 无论摘不摘分数，都要把实体挂到渲染状态上：submit 阶段只拿得到状态，
         // 而头顶血条要按实体 UUID 取数据（见 HudRenderBridge）。
         HudRenderBridge.attach(state, entity);
-        if (!HudConfig.get().hideBelowNameScore) return;
+
+        // 1.6.0「常显敌人名称」：原版只在自己愿意的时候（近处 / 准星正对着）才填
+        // state.nameTag，这里把它补上 —— 之后仍由原版 submitNameTag 绘制，
+        // 因此名字的样式 / 位置 / 遮挡行为都与原版完全一致。
+        // 是否显示用 HudTarget.showsHud 判定：与血条**完全同一个**判据（接管 / 距离 / 遮挡），
+        // 所以名字与血条一定同进同退，不会出现「有名字没血条」。
+        HudConfig.Cfg cfg = HudConfig.get();
+        Minecraft mc = Minecraft.getInstance();
+        if (cfg.alwaysShowEnemyName && state.nameTag == null
+                && entity instanceof net.minecraft.world.entity.LivingEntity
+                && HudTarget.showsHud(mc, entity)) {
+            state.nameTag = entity.getDisplayName();
+            if (state.nameTagAttachment == null) {
+                // 原版在「不显示名字」那条分支里会把挂点也清成 null，这里补回原版算挂点的方式，
+                // 否则名字会被画到实体脚下。
+                state.nameTagAttachment = entity.getAttachments()
+                        .getNullable(EntityAttachment.NAME_TAG, 0, entity.getYRot(partialTick));
+            }
+        }
+
+        if (!cfg.hideBelowNameScore) return;
         // 1.4.0：分数对**所有玩家**一律隐藏（含旁观、自己、非队友）；其它实体仍只摘接管的。
         if (entity instanceof net.minecraft.world.entity.player.Player
                 || HudTarget.managed(Minecraft.getInstance(), entity)) {

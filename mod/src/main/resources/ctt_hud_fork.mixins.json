@@ -8,7 +8,8 @@
     "BossHealthOverlayAccessor",
     "ContainerPanelMixin",
     "NameTagHudMixin",
-    "NameTagScoreMixin"
+    "NameTagScoreMixin",
+    "TitleTextMixin"
   ],
   "injectors": {
     "defaultRequire": 1

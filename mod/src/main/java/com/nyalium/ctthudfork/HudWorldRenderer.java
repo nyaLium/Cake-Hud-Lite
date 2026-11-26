@@ -91,7 +91,14 @@ public final class HudWorldRenderer {
 
         boolean teammate = entity instanceof Player;
         EnemyData.Snapshot data = resolveData(mc, entity, teammate, self);
-        if (data == null) return;
+        if (data == null) {
+            // 1.6.1：数据断帧兜底 —— 地图每 tick 先 reset 分数再重算，客户端偶尔会有一帧
+            // 读不到任何数据；以前这会让整组 HUD 闪一下，这里沿用 250 ms 内的上一次快照。
+            data = stickySnapshot(entity);
+            if (data == null) return;
+        } else {
+            rememberSnapshot(entity, data);
+        }
 
         // 1.4.3：玩家（队友与自己）一律走「玩家」那套 —— 只有各类心型 + 绿条，没有护甲段。
         // 自己传 true，顺带让血条长度 / 缩放 / 整块开关跟着「玩家」设置走，
@@ -102,6 +109,10 @@ public final class HudWorldRenderer {
         options.armourPage = ArmourCycle.page(data.armor, now, entity.getId());
         // 心数行只显示红心 + 一种其它心，按时间轮换（玩家只在魂/黑之间换）。
         options.cycleKind = HeartCycle.pick(data.hearts, teammate, now, entity.getId());
+        // 1.6.0：血量条长度随当前血量百分比自动调整（100% = 上限、0% = 下限）。
+        if (cfg.autoBarLength) {
+            options.barWidth = autoBarWidth(cfg, data.ratio);
+        }
         HudLayout.Result layout = HudLayout.compute(
                 data.hp, data.maxHp, data.percentOnly,
                 data.defence, data.armor, data.hearts, options, mc.font::width);
@@ -109,6 +120,12 @@ public final class HudWorldRenderer {
 
         Vec3 attachment = state.nameTagAttachment;
         if (attachment == null) attachment = new Vec3(0.0, state.boundingBoxHeight, 0.0);
+        // 1.6.0「血条不可透视」：只有「玩家确实看得到这只实体」时才画整组 HUD。
+        // 判据与「常显敌人名称」共用 HudTarget（同一个缓存），所以名字与血条一定同进同退；
+        // 判定打在碰撞箱上（不是那个悬空的 HUD 挂点），头顶天花板不会把它判掉；
+        // 绘制时再走无深度通道，方块也就切不掉它。
+        boolean noDepth = cfg.barNoSeeThrough;
+        if (noDepth && HudTarget.occludedByBlocks(mc, entity)) return;
         // 1.20.13：HUD 用**全亮**光照，不再取实体所在方块的光照 ——
         // 以前在暗处/阴影里文字和血条会跟着变暗（甚至全黑），读不清。原版名牌也是全亮。
         final int light = 0xF000F0;   // LightTexture.FULL_BRIGHT：方块光 15 + 天空光 15
@@ -136,12 +153,12 @@ public final class HudWorldRenderer {
         int alpha = (int) Math.round(255.0 * textOpacity);
         int bgAlpha = (int) Math.round(0x40 * textOpacity);   // 原版名牌底色 ≈ 25% 黑
         submitRows(collector, pose, camera, attachment, layout, options.scale,
-                cfg, light, alpha, bgAlpha);
+                cfg, light, alpha, bgAlpha, noDepth);
 
         // ③ 血条：同样的 billboard 变换，用原版 boss_bar 纹理自己提交两个四边形。
         if (layout.barWidth > 0) {
             submitBar(mc, pose, collector, camera, attachment, layout, data, teammate, cfg, light,
-                    (float) options.scale);
+                    (float) options.scale, noDepth);
         }
 
         if (pushed) pose.popPose();
@@ -162,7 +179,8 @@ public final class HudWorldRenderer {
     private static void submitRows(SubmitNodeCollector collector, PoseStack pose,
                                    CameraRenderState camera, Vec3 attachment,
                                    HudLayout.Result layout, double scale,
-                                   HudConfig.Cfg cfg, int light, int alpha, int bgAlpha) {
+                                   HudConfig.Cfg cfg, int light, int alpha, int bgAlpha,
+                                   boolean noDepth) {
         float s = (float) scale;
         int color = (alpha << 24) | 0xFFFFFF;
         // 原版透视副本的文字 alpha ≈ 128（0.5），背景 ≈ 64（0.25）。
@@ -176,10 +194,17 @@ public final class HudWorldRenderer {
         for (HudLayout.Row row : layout.rows) {
             float x = -row.width / 2.0f;
             var text = toComponent(row).getVisualOrderText();
-            collector.submitText(pose, x, row.top, text, cfg.textShadow,
-                    Font.DisplayMode.NORMAL, light, color, 0, 0);
-            collector.submitText(pose, x, row.top, text, cfg.textShadow,
-                    Font.DisplayMode.SEE_THROUGH, light, seeColor, background, 0);
+            if (noDepth) {
+                // 1.6.0「血条不可透视」：只提交无深度那一层（满不透明度）。
+                // 隔墙不可见由 HudTarget 的射线判定保证，这一层负责「头顶的方块切不掉」。
+                collector.submitText(pose, x, row.top, text, cfg.textShadow,
+                        Font.DisplayMode.SEE_THROUGH, light, color, background, 0);
+            } else {
+                collector.submitText(pose, x, row.top, text, cfg.textShadow,
+                        Font.DisplayMode.NORMAL, light, color, 0, 0);
+                collector.submitText(pose, x, row.top, text, cfg.textShadow,
+                        Font.DisplayMode.SEE_THROUGH, light, seeColor, background, 0);
+            }
         }
         pose.popPose();
     }
@@ -472,7 +497,7 @@ public final class HudWorldRenderer {
                                   CameraRenderState camera, Vec3 attachment,
                                   HudLayout.Result layout, EnemyData.Snapshot data,
                                   boolean teammate, HudConfig.Cfg cfg, int light,
-                                  float scale) {
+                                  float scale, boolean noDepth) {
         BossBarTexture.Tint tint = teammate
                 ? BossBarTexture.Tint.GREEN
                 : BossBarTexture.tintFor(data.kind);
@@ -512,13 +537,17 @@ public final class HudWorldRenderer {
         // 只会变成半透明的一条（以前只有文字有这层，条会被直接裁掉）。
         RenderType seeBackground = RenderTypes.textSeeThrough(BossBarTexture.backgroundTexture(tint));
         RenderType seeProgress = RenderTypes.textSeeThrough(BossBarTexture.progressTexture(tint));
-        int seeColor = (Math.max(0, alpha * 128 / 255) << 24) | 0xFFFFFF;
+        int seeColor = noDepth
+                ? color                                  // 无深度模式下只画这一层，用满不透明度
+                : (Math.max(0, alpha * 128 / 255) << 24) | 0xFFFFFF;
 
         // ① 整条背景（含空槽）：两端圆角按原尺寸，中段拉伸
         submitBarSpan(collector, pose, seeBackground, x0, x0 + width, 0.0f, nativeWidth,
                 y0, y1, seeColor, light, BACKGROUND_Z);
-        submitBarSpan(collector, pose, background, x0, x0 + width, 0.0f, nativeWidth,
-                y0, y1, color, light, BACKGROUND_Z);
+        if (!noDepth) {
+            submitBarSpan(collector, pose, background, x0, x0 + width, 0.0f, nativeWidth,
+                    y0, y1, color, light, BACKGROUND_Z);
+        }
 
         // ② 填充段：从左裁到 fill（和原版 blitSprite 的 width 参数一样）。
         //    裁到满格时 ub 正好是纹理右端，右端盖才会画出来 —— 与原版一致。
@@ -526,8 +555,10 @@ public final class HudWorldRenderer {
             float uFill = nativeWidth * Math.min(1.0f, fill / width);
             submitBarSpan(collector, pose, seeProgress, x0, x0 + fill, 0.0f, uFill,
                     y0, y1, seeColor, light, 0.01f);
-            submitBarSpan(collector, pose, progress, x0, x0 + fill, 0.0f, uFill,
-                    y0, y1, color, light, 0.0f);
+            if (!noDepth) {
+                submitBarSpan(collector, pose, progress, x0, x0 + fill, 0.0f, uFill,
+                        y0, y1, color, light, 0.0f);
+            }
         }
         pose.popPose();
     }
@@ -603,6 +634,44 @@ public final class HudWorldRenderer {
      * <p>{@code playerStyle} 也在这里设：它恒等于 {@code player}，
      * 放在调用点容易被漏掉。</p>
      */
+    /** 1.6.1：最近一次成功解析的快照（断帧时兜底用）。 */
+    private static final java.util.Map<UUID, EnemyData.Snapshot> LAST_SNAPSHOT = new java.util.HashMap<>();
+    private static final java.util.Map<UUID, Long> LAST_SNAPSHOT_AT = new java.util.HashMap<>();
+    /** 快照粘性：250 ms（刚好盖住「reset → 重算」的窗口，又不会把旧数据留太久）。 */
+    private static final long SNAPSHOT_STICKY_MS = 250L;
+
+    private static void rememberSnapshot(net.minecraft.world.entity.Entity entity, EnemyData.Snapshot data) {
+        if (entity == null || data == null) return;
+        UUID id = entity.getUUID();
+        LAST_SNAPSHOT.put(id, data);
+        LAST_SNAPSHOT_AT.put(id, System.currentTimeMillis());
+        if (LAST_SNAPSHOT.size() > 256) {
+            long now = System.currentTimeMillis();
+            LAST_SNAPSHOT_AT.entrySet().removeIf(e -> now - e.getValue() > 5_000L);
+            LAST_SNAPSHOT.keySet().removeIf(id2 -> !LAST_SNAPSHOT_AT.containsKey(id2));
+        }
+    }
+
+    private static EnemyData.Snapshot stickySnapshot(net.minecraft.world.entity.Entity entity) {
+        if (entity == null) return null;
+        UUID id = entity.getUUID();
+        Long at = LAST_SNAPSHOT_AT.get(id);
+        if (at == null) return null;
+        if (System.currentTimeMillis() - at > SNAPSHOT_STICKY_MS) return null;
+        return LAST_SNAPSHOT.get(id);
+    }
+
+    /**
+     * 1.6.0「血量条长度自动调整」：100% 血量 = 上限（默认 75）、0% = 下限（默认 50），中间线性插值。
+     * 上下限已在 {@code HudConfig.normalize} 里夹进 50~150 且保证 min ≤ max。
+     */
+    static double autoBarWidth(HudConfig.Cfg cfg, float ratio) {
+        double min = Math.min(cfg.autoBarMinWidth, cfg.autoBarMaxWidth);
+        double max = Math.max(cfg.autoBarMinWidth, cfg.autoBarMaxWidth);
+        float r = Float.isNaN(ratio) ? 0.0f : Math.max(0.0f, Math.min(1.0f, ratio));
+        return min + (max - min) * r;
+    }
+
     static HudLayout.Options options(HudConfig.Cfg cfg, boolean player) {
         HudLayout.Options o = new HudLayout.Options();
         if (player) {

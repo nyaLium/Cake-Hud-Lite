@@ -109,6 +109,48 @@ public final class HudConfig {
          * 范围 1 ~ {@link MobHealthPayload#MAX_ENTRIES}（调大也不会超过服务端实际推的条数）。</p>
          */
         public int payloadLimit = MobHealthPayload.MAX_ENTRIES;
+        // ── 1.6.1：/title 的标题 / 副标题（不含 actionbar） ──
+
+        /** 标题文本不透明度（0.10 ~ 1.00，默认 1.00）：只乘在原版淡入淡出的 alpha 上。 */
+        public double titleOpacity = 1.00;
+        /** 副标题文本不透明度（0.10 ~ 1.00，默认 1.00）。 */
+        public double subtitleOpacity = 1.00;
+        /** 标题 + 副标题整块的水平位移（GUI 像素，正 = 右）。 */
+        public int titleOffsetX = 0;
+        /** 标题 + 副标题整块的垂直位移（GUI 像素，正 = 下）。 */
+        public int titleOffsetY = 0;
+        /**
+         * 1.6.0 调试功能：**常显敌人名称**（默认开）。
+         *
+         * <p>原版只在自己愿意的时候（近处 / 准星正对着）才填 {@code state.nameTag}，
+         * 这里把名字补上，之后仍然由<b>原版</b> {@code submitNameTag} 绘制 ——
+         * 样式、位置、遮挡行为都与原版完全一致，也不吃本 Mod 的不透明度 / 阴影 / 缩放 /
+         * 「血条不可透视」等任何设置。关：完全交还原版。</p>
+         */
+        public boolean alwaysShowEnemyName = true;
+        /**
+         * 1.6.0 调试功能：**血条不可透视**（默认开）。
+         *
+         * <p>开：只有「玩家确实看得到这只实体」时才画整组 HUD（名字也一起）—— 判定是相机到实体
+         * 碰撞箱的射线。算「能看过去」的只有：玻璃系建材、植物（<b>不含树叶</b>）、
+         * 无碰撞箱的功能方块、流体；冰类 / 铜格栅 / 台阶 / 栅栏 / 箱子等一律算挡。
+         * 而且半透明方块穿透超过 1 层（有厚度）就按不透明处理。
+         * 看得见时改用无深度通道绘制，于是头顶的天花板 / 屋檐也切不掉它。
+         * 关：维持原来的两层（深度 + 透视副本）画法，隔墙也能看到一份半透明的。</p>
+         */
+        public boolean barNoSeeThrough = true;
+        /**
+         * 1.6.0 调试功能：**血量条长度随血量百分比自动调整**（默认开）。
+         *
+         * <p>100% 血量 = 上限长度（默认 75，与默认条长一致），0% = 下限长度（默认 50），
+         * 中间线性插值；上下限可调，都会被夹进
+         * {@link HudLayout#BAR_WIDTH_MIN} ~ {@link HudLayout#BAR_WIDTH_MAX}。</p>
+         */
+        public boolean autoBarLength = true;
+        /** 自动长度：血量为 0 时的条长（布局像素）。 */
+        public double autoBarMinWidth = HudLayout.BAR_WIDTH_MIN;
+        /** 自动长度：满血时的条长（布局像素），默认与默认条长 75 一致。 */
+        public double autoBarMaxWidth = 75.0;
         /**
          * 自身属性面板（1.20.3）。纯客户端：定时 {@code /trigger ViewStats}，
          * 抓地图回的那些属性行画成面板，不依赖服务端组件。
@@ -470,6 +512,20 @@ public final class HudConfig {
         c.layoutGuiH = guiH;
     }
 
+    /**
+     * 「标题设置」的位移（当前 GUI 尺寸下）：配置里存的是<b>参考 GUI 尺寸</b>下的像素，
+     * 这里按窗口比例换算 —— 窗口 / GUI Scale 一变，标题在屏幕上的相对位置保持不变，
+     * 不会因为窗口变小就被顶出屏幕外（1.6.1 修正：之前是绝对像素）。
+     */
+    public static int[] titleOffset(int guiW, int guiH) {
+        Cfg c = withLayoutRef(get(), guiW, guiH);
+        if (c.titleOffsetX == 0 && c.titleOffsetY == 0) return new int[]{0, 0};
+        return new int[]{
+                scalePos(c.titleOffsetX, c.layoutGuiW, guiW),
+                scalePos(c.titleOffsetY, c.layoutGuiH, guiH)
+        };
+    }
+
     /** 盾牌指示器位置（当前 GUI 尺寸下；{@code {-1,-1}} = 跟随副手槽的自动位置）。 */
     public static int[] shieldPosition(int guiW, int guiH) {
         Cfg c = withLayoutRef(get(), guiW, guiH);
@@ -754,6 +810,11 @@ public final class HudConfig {
         Cfg c = get();
         c.preferServerData = d.preferServerData;
         c.payloadLimit = d.payloadLimit;
+        c.alwaysShowEnemyName = d.alwaysShowEnemyName;
+        c.barNoSeeThrough = d.barNoSeeThrough;
+        c.autoBarLength = d.autoBarLength;
+        c.autoBarMinWidth = d.autoBarMinWidth;
+        c.autoBarMaxWidth = d.autoBarMaxWidth;
         c.hideBelowNameScore = d.hideBelowNameScore;
         c.hideEnemyBossBar = d.hideEnemyBossBar;
         c.hideTeamBossBar = d.hideTeamBossBar;
@@ -769,6 +830,16 @@ public final class HudConfig {
         c.shieldScale = d.shieldScale;
         c.shieldOpacity = d.shieldOpacity;
         c.shieldAutoMirror = d.shieldAutoMirror;
+    }
+
+    /** 重置「标题设置」这一页（1.6.1：/title 的位移与不透明度）。 */
+    static void resetTitle() {
+        Cfg d = new Cfg();
+        Cfg c = get();
+        c.titleOpacity = d.titleOpacity;
+        c.subtitleOpacity = d.subtitleOpacity;
+        c.titleOffsetX = d.titleOffsetX;
+        c.titleOffsetY = d.titleOffsetY;
     }
 
     /**
@@ -792,6 +863,16 @@ public final class HudConfig {
         read.teamBarWidth = clamp(read.teamBarWidth, HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX);
         read.teamScale = clamp(read.teamScale, 0.75, 1.5);
         read.teamMaxDistance = clamp(read.teamMaxDistance, 4.0, 256.0);
+        // 1.6.0 调试功能：自动条长的上下限也夹在布局允许的 50~150，并保证 min ≤ max。
+        if (Double.isNaN(read.autoBarMinWidth)) read.autoBarMinWidth = HudLayout.BAR_WIDTH_MIN;
+        if (Double.isNaN(read.autoBarMaxWidth)) read.autoBarMaxWidth = HudLayout.BAR_WIDTH_MAX;
+        read.autoBarMinWidth = clamp(read.autoBarMinWidth, HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX);
+        read.autoBarMaxWidth = clamp(read.autoBarMaxWidth, HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX);
+        if (read.autoBarMinWidth > read.autoBarMaxWidth) {
+            double swap = read.autoBarMinWidth;
+            read.autoBarMinWidth = read.autoBarMaxWidth;
+            read.autoBarMaxWidth = swap;
+        }
         // 自身属性面板（1.20.3）：间隔 0~600 s，列 1~3，坐标夹进屏幕范围
         read.selfStatsSeconds = (int) clamp(read.selfStatsSeconds, 1.0, 5.0);
         read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);
@@ -827,6 +908,11 @@ public final class HudConfig {
         }
         read.shieldScale = clamp(read.shieldScale, SHIELD_SCALE_MIN, SHIELD_SCALE_MAX);
         read.shieldOpacity = clamp(read.shieldOpacity, 0.1, 1.0);
+        // 1.6.1：/title 的标题 / 副标题（不透明度 0.10 ~ 1.00，位移 ±4000 px）
+        read.titleOpacity = clamp(read.titleOpacity, 0.1, 1.0);
+        read.subtitleOpacity = clamp(read.subtitleOpacity, 0.1, 1.0);
+        read.titleOffsetX = (int) clamp(read.titleOffsetX, -4000.0, 4000.0);
+        read.titleOffsetY = (int) clamp(read.titleOffsetY, -4000.0, 4000.0);
         // 1.4.5 调试功能：筛选实体数量 1 ~ 单包上限
         read.payloadLimit = (int) clamp(read.payloadLimit, 1.0, MobHealthPayload.MAX_ENTRIES);
         return read;

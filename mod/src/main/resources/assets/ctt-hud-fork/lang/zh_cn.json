@@ -167,5 +167,18 @@
   "ctt_hud_fork.config.header.attributes.armor": "── 属性 - 护甲 ──",
   "ctt_hud_fork.config.header.attributes.misc": "── 属性 - 杂项 ──",
   "ctt_hud_fork.config.showSelf": "显示自己的血条",
-  "ctt_hud_fork.config.resetSection": "重置设置"
+  "ctt_hud_fork.config.resetSection": "重置设置",
+  "ctt_hud_fork.config.alwaysShowEnemyName": "常显敌人名称",
+  "ctt_hud_fork.config.barNoSeeThrough": "血条不可透视",
+  "ctt_hud_fork.config.autoBarLength": "血量条长度自动调整",
+  "ctt_hud_fork.config.autoBarMinWidth": "自动长度下限：%s",
+  "ctt_hud_fork.config.autoBarMaxWidth": "自动长度上限：%s",
+  "ctt_hud_fork.config.debugNoPermission": "需要权限等级 %s 及以上才能调整调试设置",
+  "ctt_hud_fork.config.debugLockedHint": "调试功能需要权限等级 %s 及以上",
+  "ctt_hud_fork.config.section.title": "标题设置…",
+  "ctt_hud_fork.config.titleOpacity": "标题不透明度：%s",
+  "ctt_hud_fork.config.subtitleOpacity": "副标题不透明度：%s",
+  "ctt_hud_fork.config.titleOffsetX": "水平位移：%s",
+  "ctt_hud_fork.config.titleOffsetY": "垂直位移：%s",
+  "ctt_hud_fork.config.titleHint": "/title 的标题与副标题（不含 actionbar）· 位移按窗口比例换算"
 }
