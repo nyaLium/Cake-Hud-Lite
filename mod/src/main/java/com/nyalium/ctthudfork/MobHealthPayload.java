@@ -36,14 +36,28 @@ import java.util.UUID;
  * <h2>编码</h2>
  * <p>可能为负的字段（碎心、防御、元素护甲）用 zigzag varint，其余用普通 varint，
  * 一只怪典型 40 字节左右；配合服务端的差量判定，静态场景完全静默。</p>
+ *
+ * <h2>抑制列表（v3）</h2>
+ * <p>地图里的 NPC（{@code tag=NPC}，例如大厅/塔里的对话角色）也有 {@code MaxHP / RedHearts /
+ * HealthPercent} 分数，但它们是**无敌布景**、不是敌人。客户端看不到 entity tag，所以由服务端
+ * 在包里附一份 {@code suppressed}：客户端据此**不画 HUD**，但仍把 {@code managed} 当成真，
+ * 好把原版 {@code below_name} 分数一并摘掉。</p>
+ *
+ * @param version    协议版本
+ * @param entries    要画的实体数据
+ * @param suppressed 要抑制显示的实体 UUID（v3；老包为空）
  */
-public record MobHealthPayload(byte version, List<Entry> entries) implements CustomPacketPayload {
+public record MobHealthPayload(byte version, List<Entry> entries, List<UUID> suppressed)
+        implements CustomPacketPayload {
 
     /** 协议版本；客户端遇到更高版本会整包忽略，避免半懂不懂地解析。
      *
      * <p>v2（1.4.4）：单包上限 32 → 64 条。旧客户端（v1）会整包忽略、退回
-     * 「Boss 栏 + HealthPercent」，不会按 32 条硬读剩下的字节。</p> */
-    public static final byte CURRENT_VERSION = 2;
+     * 「Boss 栏 + HealthPercent」，不会按 32 条硬读剩下的字节。</p>
+     *
+     * <p>v3（1.5.3）：新增 {@code suppressed}（要**抑制显示**的实体 UUID，主要是 NPC）。
+     * 旧客户端（v1/v2）遇到 v3 会整包忽略，退回纯客户端路径。</p> */
+    public static final byte CURRENT_VERSION = 3;
 
     /** 一次最多推多少条：玩家（含自己）优先，其余按距离取最近的，合计不超过这个数。 */
     public static final int MAX_ENTRIES = 64;
@@ -122,7 +136,7 @@ public record MobHealthPayload(byte version, List<Entry> entries) implements Cus
 
     /** 空包：告诉客户端「视野内没有 CTT 怪」，用来清缓存。 */
     public static MobHealthPayload empty() {
-        return new MobHealthPayload(CURRENT_VERSION, List.of());
+        return new MobHealthPayload(CURRENT_VERSION, List.of(), List.of());
     }
 
     // ── 编解码 ──
@@ -147,6 +161,10 @@ public record MobHealthPayload(byte version, List<Entry> entries) implements Cus
             for (int v : armour) writeSigned(buf, v);
             buf.writeBoolean(e.targetted());
         }
+        // v3：抑制列表（NPC 等「不要让 HUD 画、但要把 below_name 分数摘掉」的实体）
+        List<UUID> hidden = suppressed == null ? List.of() : suppressed;
+        buf.writeVarInt(hidden.size());
+        for (UUID id : hidden) buf.writeUUID(id);
     }
 
     private static MobHealthPayload read(RegistryFriendlyByteBuf buf) {
@@ -172,7 +190,13 @@ public record MobHealthPayload(byte version, List<Entry> entries) implements Cus
             out.add(new Entry(uuid, hp, maxHp, soul, black, blue, cracked,
                     maxSoul, maxBlack, maxBlue, defence, armour, targetted));
         }
-        return new MobHealthPayload(version, List.copyOf(out));
+        // v3 起才有抑制列表；更老的包结构里没有这段，不能硬读（会越界）。
+        List<UUID> hidden = new ArrayList<>();
+        if (version >= 3) {
+            int hiddenCount = Math.max(0, Math.min(MAX_ENTRIES, buf.readVarInt()));
+            for (int i = 0; i < hiddenCount; i++) hidden.add(buf.readUUID());
+        }
+        return new MobHealthPayload(version, List.copyOf(out), List.copyOf(hidden));
     }
 
     /** zigzag：小负数/小正数都只占 1 字节。 */

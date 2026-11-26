@@ -77,6 +77,9 @@ public final class HudTarget {
             // 就说明他在这局里 = 队友；没有就不管（大厅里的其他玩家）。
             return EnemyData.healthPercentOf(mc.level.getScoreboard(), player) >= 0;
         }
+        // 1.5.3：服务端明确要求抑制的实体（NPC）也算「接管」——接管只为了把原版 below_name
+        // 分数摘掉，渲染端会跳过它（见 HudWorldRenderer）。这样大厅 NPC 不再顶着血条/数字。
+        if (ClientMobHealthCache.isSuppressed(entity.getUUID())) return true;
         // 有数据才算「数据包管控的敌人」——这一条也排除了掉落物、船、画等。
         return EnemyData.hasData(mc.level.getScoreboard(), entity);
     }

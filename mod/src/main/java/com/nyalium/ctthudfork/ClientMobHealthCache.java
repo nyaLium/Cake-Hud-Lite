@@ -4,8 +4,10 @@ import net.minecraft.client.Minecraft;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -27,6 +29,8 @@ final class ClientMobHealthCache {
     private static final long FRESH_WINDOW_MS = 5_000L;
 
     private static volatile Map<UUID, MobHealthPayload.Entry> snapshot = Collections.emptyMap();
+    /** 1.5.3：服务端标记「别画 HUD」（NPC 等）；只用于隐藏，不影响别的实体。 */
+    private static volatile Set<UUID> suppressed = Collections.emptySet();
     private static volatile long lastPushMs = 0L;
 
     private ClientMobHealthCache() {}
@@ -44,6 +48,8 @@ final class ClientMobHealthCache {
             map.put(entry.uuid(), entry);
         }
         snapshot = Collections.unmodifiableMap(map);
+        List<UUID> hidden = payload.suppressed() == null ? List.of() : payload.suppressed();
+        suppressed = Collections.unmodifiableSet(new HashSet<>(hidden));
         lastPushMs = System.currentTimeMillis();
     }
 
@@ -76,8 +82,15 @@ final class ClientMobHealthCache {
         return snapshot.get(entityId);
     }
 
+    /** 1.5.3：服务端要求「别画」的实体（NPC）。失鲜后自动失效。 */
+    static boolean isSuppressed(UUID entityId) {
+        if (entityId == null || !isFresh()) return false;
+        return suppressed.contains(entityId);
+    }
+
     static void reset() {
         snapshot = Collections.emptyMap();
+        suppressed = Collections.emptySet();
         lastPushMs = 0L;
     }
 

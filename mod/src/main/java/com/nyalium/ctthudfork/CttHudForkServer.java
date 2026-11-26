@@ -54,6 +54,9 @@ public final class CttHudForkServer implements ModInitializer {
     /** 内容没变化时也强制重发的周期，需小于客户端 5 s 失鲜窗口。 */
     private static final long KEEPALIVE_MS = 3_000L;
 
+    /** 抑制列表最多带几个 NPC（只用于「别画、把分数摘掉」，按距离取最近的）。 */
+    private static final int MAX_NPC = 32;
+
     /** 数据包里的 objective 名（与数据包一致）。 */
     private static final String O_ALL = "AllHearts";
     /** 1.5.1：AllHearts 缺失时退回 RedHearts（地图每 tick 先 reset AllHearts，只给 tag=CTTAll 重算）。 */
@@ -68,8 +71,11 @@ public final class CttHudForkServer implements ModInitializer {
     private static final String O_MAX_BLUE = "MaxBlueHearts";
     private static final String O_DEFENCE = "Defence";
 
+    /** 一次要发的内容：要画的条目 + 要抑制显示的 NPC。 */
+    private record Plan(List<MobHealthPayload.Entry> entries, List<UUID> suppressed) {}
+
     /** 每名玩家上次实际发出去的内容 + 时间（差量判定）。 */
-    private static final Map<UUID, List<MobHealthPayload.Entry>> LAST_SENT = new HashMap<>();
+    private static final Map<UUID, Plan> LAST_SENT = new HashMap<>();
     private static final Map<UUID, Long> LAST_SENT_MS = new HashMap<>();
 
     private static int tickCounter;
@@ -97,19 +103,19 @@ public final class CttHudForkServer implements ModInitializer {
             // 客户端没装本 Mod（或没声明接收）→ 不发。
             if (!ServerPlayNetworking.canSend(player, MobHealthPayload.TYPE)) continue;
 
-            List<MobHealthPayload.Entry> entries = collect(scoreboard, player);
+            Plan plan = collect(scoreboard, player);
             UUID id = player.getUUID();
-            List<MobHealthPayload.Entry> previous = LAST_SENT.get(id);
-            boolean changed = previous == null || !previous.equals(entries);
+            Plan previous = LAST_SENT.get(id);
+            boolean changed = previous == null || !previous.equals(plan);
             long lastMs = LAST_SENT_MS.getOrDefault(id, 0L);
             boolean keepaliveDue = now - lastMs >= KEEPALIVE_MS;
             if (!changed && !keepaliveDue) continue;
 
-            LAST_SENT.put(id, entries);
+            LAST_SENT.put(id, plan);
             LAST_SENT_MS.put(id, now);
             try {
                 ServerPlayNetworking.send(player, new MobHealthPayload(
-                        MobHealthPayload.CURRENT_VERSION, entries));
+                        MobHealthPayload.CURRENT_VERSION, plan.entries(), plan.suppressed()));
             } catch (Throwable ignored) {
                 // 发包失败无副作用：下一轮还会重试。
             }
@@ -121,7 +127,7 @@ public final class CttHudForkServer implements ModInitializer {
     }
 
     /** 取这名玩家周围的 CTT 实体：**玩家（含自己）优先，其余按距离**，最多 MAX_ENTRIES 条。 */
-    private static List<MobHealthPayload.Entry> collect(Scoreboard scoreboard, ServerPlayer player) {
+    private static Plan collect(Scoreboard scoreboard, ServerPlayer player) {
         AABB box = player.getBoundingBox().inflate(RADIUS);
         // 1.4.2：getEntities(player, box) **排除**了 source 实体本身，
         // 所以「自己」永远不会出现在 nearby 里 —— 必须先手动加进来，
@@ -133,6 +139,7 @@ public final class CttHudForkServer implements ModInitializer {
         double pz = player.getZ();
 
         List<Entity> mobs = new ArrayList<>(nearby.size());
+        List<Entity> npcs = new ArrayList<>();
         for (Entity entity : nearby) {
             if (!(entity instanceof LivingEntity)) continue;
             if (entity instanceof ArmorStand) continue;
@@ -143,9 +150,15 @@ public final class CttHudForkServer implements ModInitializer {
             // 死亡 / 观战：CTT 里死掉的玩家就是旁观模式，客户端一律不画，推了也没人用。
             if (entity instanceof Player other && other.isSpectator()) continue;
             if (!isCttMob(scoreboard, entity)) continue;
+            // 1.5.3：NPC（tag=NPC，如大厅/塔里的对话角色）有 RedHearts/MaxHP/HealthPercent 分数，
+            // 但它们是布景、不是敌人。客户端看不到 tag，所以放进「抑制列表」让客户端别画。
+            if (entity.entityTags().contains("NPC")) {
+                npcs.add(entity);
+                continue;
+            }
             mobs.add(entity);
         }
-        if (mobs.isEmpty()) return List.of();
+        if (mobs.isEmpty() && npcs.isEmpty()) return new Plan(List.of(), List.of());
 
         // 1.4.4：玩家优先 —— 先排玩家（含自己，距离 0），再排怪；同组内按距离。
         // 以前纯按距离，怪多的时候远处的队友会被挤掉 → 那一格退回「当前/上限」。
@@ -158,7 +171,12 @@ public final class CttHudForkServer implements ModInitializer {
             Entity entity = mobs.get(i);
             out.add(entryOf(scoreboard, entity));
         }
-        return List.copyOf(out);
+        // NPC 只按距离取最近的若干条，避免大厅人多时把包撑大。
+        npcs.sort(Comparator.comparingDouble(e -> e.distanceToSqr(px, py, pz)));
+        int npcLimit = Math.min(npcs.size(), MAX_NPC);
+        List<UUID> hidden = new ArrayList<>(npcLimit);
+        for (int i = 0; i < npcLimit; i++) hidden.add(npcs.get(i).getUUID());
+        return new Plan(List.copyOf(out), List.copyOf(hidden));
     }
 
     private static MobHealthPayload.Entry entryOf(Scoreboard scoreboard, Entity entity) {

@@ -1115,7 +1115,7 @@ public final class SelfCheck {
         // 1.4.4：单包上限 32 → 64 条（玩家优先），协议版本跟着升到 2；
         // 旧客户端（v1）收到 v2 会整包忽略（ClientMobHealthCache.accept），安全降级。
         check(MobHealthPayload.MAX_ENTRIES == 64, "单包上限应为 64 条: " + MobHealthPayload.MAX_ENTRIES);
-        check(MobHealthPayload.CURRENT_VERSION == 2, "协议版本应为 2: " + MobHealthPayload.CURRENT_VERSION);
+        check(MobHealthPayload.CURRENT_VERSION == 3, "协议版本应为 3: " + MobHealthPayload.CURRENT_VERSION);
 
         // 1.4.5 调试功能「筛选实体数量」：客户端只保留前 N 条，保持服务端顺序（玩家优先）。
         MobHealthPayload.Entry e1 = new MobHealthPayload.Entry(java.util.UUID.randomUUID(),
@@ -1153,6 +1153,18 @@ public final class SelfCheck {
         check(HudLayout.fillPixels(75, 1.0f / 325.0f) == 1,
                 "1/325 应至少 1 px: " + HudLayout.fillPixels(75, 1.0f / 325.0f));
         check(HudLayout.fillPixels(0, 1.0f) == 0, "宽度 0 不应有填充");
+
+        // 1.5.3：NPC 抑制列表 —— 服务端说「别画」的实体，客户端只隐藏、不画
+        ClientMobHealthCache.reset();
+        java.util.UUID npcId = java.util.UUID.randomUUID();
+        ClientMobHealthCache.accept(new MobHealthPayload(MobHealthPayload.CURRENT_VERSION,
+                java.util.List.of(e1), java.util.List.of(npcId)));
+        check(ClientMobHealthCache.isSuppressed(npcId), "抑制列表里的实体应被判为抑制");
+        check(!ClientMobHealthCache.isSuppressed(e1.uuid()), "普通怪不应被抑制");
+        check(ClientMobHealthCache.lookup(e1.uuid()) != null, "普通怪仍应有 payload");
+        check(ClientMobHealthCache.lookup(npcId) == null, "被抑制的 NPC 不在数据表里");
+        ClientMobHealthCache.reset();
+        check(!ClientMobHealthCache.isSuppressed(npcId), "reset 后抑制表应清空");
     }
 
     // ── 6. Boss 栏标题解析 ──

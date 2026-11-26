@@ -184,7 +184,7 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 
 | 数据源 | 能拿到什么 | 覆盖 | 需要服务端吗 |
 | --- | --- | --- | --- |
-| **服务端组件 `ctt-hud-fork:mob_health`** | 按 **UUID** 的 `AllHearts / MaxHP / 护甲 / 红魂黑蓝碎`（`AllHearts` 缺失时退回 `RedHearts`，1.5.1） | 视野内最近 64 条（玩家与队友优先） | 选装 |
+| **服务端组件 `ctt-hud-fork:mob_health`** | 按 **UUID** 的 `AllHearts / MaxHP / 护甲 / 红魂黑蓝碎`（`AllHearts` 缺失时退回 `RedHearts`，1.5.1）；另带 **NPC 抑制列表**（v3，1.5.3） | 视野内最近 64 条（玩家与队友优先）+ 32 个 NPC | 选装 |
 | 客户端 Boss 栏 `targetting*` 标题 | 精确 `AllHearts / MaxHP` + `🛡防御` + 元素护甲 | 被地图锁定的那一只 | 否 |
 | 同一条 bar 的 progress / color | 当前心类的剩余比例 + 是哪一类心 | 同上 | 否 |
 | `below_name` 展示槽的 `HealthPercent` | 0~100 百分比（红心口径；**0 也算有效数据**，1.5.2） | 视野内全部敌人 | 否 |
@@ -208,10 +208,11 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 
 | 字段 | 说明 |
 | --- | --- |
-| `version` | 协议版本，客户端遇到更高版本整包忽略 |
+| `version` | 协议版本（当前 **3**），客户端遇到更高版本整包忽略 |
 | `entries[]` | 最多 64 条：玩家（含自己）优先，其余按距离 |
+| `suppressed[]` | **v3**：要「接管但不画」的实体 UUID（最多 32 个，主要是 `tag=NPC` 的布景角色）——客户端据此不画 HUD，但仍把原版 `below_name` 分数摘掉 |
 
-单条：`uuid / hp(AllHearts) / maxHp / soul / black / blue / cracked / maxSoul / maxBlack / maxBlue / defence / armour[7] / targetted`。
+单条：`uuid / hp(AllHearts，缺失时退回 RedHearts) / maxHp / soul / black / blue / cracked / maxSoul / maxBlack / maxBlue / defence / armour[7] / targetted`。
 可负字段用 zigzag varint，一只怪约 40 字节。红心由 `AllHearts - 魂 - 黑 - 蓝` 反算。
 客户端在 5 s 内收到包才用，超时自动回落到纯客户端路径（`ClientMobHealthCache`）。
 
