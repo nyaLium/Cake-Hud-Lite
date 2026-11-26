@@ -1178,6 +1178,14 @@ public final class SelfCheck {
         check(!HudTarget.hidesByName(net.minecraft.network.chat.Component.literal("兵蚁")),
                 "普通怪名字不该被隐藏");
         check(!HudTarget.hidesByName(null), "null 名字不该被隐藏");
+
+        // 1.5.5：同名分身组统一显示 —— 组内取最低百分比（分身 100、真身掉血后更低）
+        check(EnemyData.minPercent(-1, 80) == 80, "只有一侧有值时取那一侧");
+        check(EnemyData.minPercent(80, -1) == 80, "只有一侧有值时取那一侧（反序）");
+        check(EnemyData.minPercent(80, 100) == 80, "应取较低的 80");
+        check(EnemyData.minPercent(100, 80) == 80, "应取较低的 80（反序）");
+        check(EnemyData.minPercent(-1, -1) == -1, "都没有时返回 -1");
+        check(EnemyData.minPercent(0, 100) == 0, "0 也是合法百分比");
     }
 
     // ── 6. Boss 栏标题解析 ──

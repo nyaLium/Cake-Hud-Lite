@@ -84,8 +84,6 @@ public final class HudWorldRenderer {
             if (!HudTarget.managed(mc, entity)) return;
             // 1.5.3：NPC 等「接管但不画」的实体直接跳过（分数仍会被摘掉）。
             if (ClientMobHealthCache.isSuppressed(entity.getUUID())) return;
-            // 1.5.4：同名分身 Boss（Psy 等）—— 真身/分身名字与外观一致，画了就会暴露。
-            if (HudTarget.hidesHud(entity)) return;
             // 距离 / 被墙挡住 / 被其它实体挡住 —— 保留为「少提交一点」的额外剔除，
             // 真正的遮挡由深度测试负责。
             if (!HudTarget.visible(mc, entity)) return;
@@ -268,6 +266,16 @@ public final class HudWorldRenderer {
             return data;
         }
 
+        // 1.5.5：同组分身 Boss（Psy 等）。双端时 payload 里分身已经复制了真身的读数（上面已返回）；
+        // 纯客户端拿不到真身数据，就取**组内最低百分比**：分身固定 100%，真身掉血后更低 →
+        // 整组显示同一个值，不会暴露真身。
+        if (HudTarget.hidesHud(entity)) {
+            int groupPercent = hiddenGroupPercent(mc, entity);
+            return groupPercent >= 0
+                    ? EnemyData.percentOnly(groupPercent, 0, NO_ARMOUR)
+                    : null;
+        }
+
         if (self) {
             // 1.4.0：自己 —— 个人状态条优先，最后百分比。
             // 双端且没关「优先使用服务端数据」时，上面的 payload 分支已经带着自己返回了
@@ -332,6 +340,28 @@ public final class HudWorldRenderer {
             data.kind = bar.kind;
         }
         return data;
+    }
+
+    /** 1.5.5：「同名分身组」统一百分比：缓存 50 ms，避免每个实体每帧都扫一遍实体表。 */
+    private static long hiddenGroupStamp = 0L;
+    private static int hiddenGroupPercentCache = -1;
+
+    /** 同名分身组里最低的 {@code HealthPercent}（-1 = 一个都读不到）。 */
+    private static int hiddenGroupPercent(Minecraft mc, Entity self) {
+        long now = System.nanoTime();
+        if (now - hiddenGroupStamp < CACHE_NS) return hiddenGroupPercentCache;
+        hiddenGroupStamp = now;
+        int best = -1;
+        if (mc.level != null) {
+            for (Entity other : mc.level.entitiesForRendering()) {
+                if (other == null || !HudTarget.hidesHud(other)) continue;
+                int p = EnemyData.healthPercentOf(mc.level.getScoreboard(), other);
+                best = EnemyData.minPercent(best, p);
+            }
+        }
+        if (best < 0) best = EnemyData.healthPercentOf(mc.level.getScoreboard(), self);
+        hiddenGroupPercentCache = best;
+        return best;
     }
 
     /** 队友红心百分比的粘性缓存：% 短暂读不到时沿用最近一次（见 resolveData 的注释）。 */

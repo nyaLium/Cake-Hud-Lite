@@ -167,11 +167,21 @@ public final class CttHudForkServer implements ModInitializer {
         mobs.sort(Comparator
                 .comparingInt((Entity e) -> e instanceof Player ? 0 : 1)
                 .thenComparingDouble(e -> e.distanceToSqr(px, py, pz)));
+        // 1.5.5：Psy 的分身（tag=PsyClone）与真身（tag=Psy）同名同外观 —— 分身一律**复制真身的读数**，
+        // 于是所有 Psy 头顶显示完全一样，玩家没法靠血条认出真身。
+        Entity psy = null;
+        for (Entity entity : nearby) {
+            if (entity.entityTags().contains("Psy")) {
+                psy = entity;
+                break;
+            }
+        }
         int limit = Math.min(mobs.size(), MobHealthPayload.MAX_ENTRIES);
         List<MobHealthPayload.Entry> out = new ArrayList<>(limit);
         for (int i = 0; i < limit; i++) {
             Entity entity = mobs.get(i);
-            out.add(entryOf(scoreboard, entity));
+            Entity data = entity.entityTags().contains("PsyClone") && psy != null ? psy : entity;
+            out.add(entryOf(scoreboard, data, entity.getUUID()));
         }
         // NPC 只按距离取最近的若干条，避免大厅人多时把包撑大。
         npcs.sort(Comparator.comparingDouble(e -> e.distanceToSqr(px, py, pz)));
@@ -181,13 +191,12 @@ public final class CttHudForkServer implements ModInitializer {
         return new Plan(List.copyOf(out), List.copyOf(hidden));
     }
 
-    /** 1.5.3/1.5.4：不该出现在 HUD 里的实体（布景 NPC、同名分身 Boss）。 */
+    /** 1.5.3：不该出现在 HUD 里的实体（布景 NPC）。 */
     private static boolean isHiddenIdentity(Entity entity) {
-        var tags = entity.entityTags();
-        return tags.contains("NPC") || tags.contains("Psy") || tags.contains("PsyClone");
+        return entity.entityTags().contains("NPC");
     }
 
-    private static MobHealthPayload.Entry entryOf(Scoreboard scoreboard, Entity entity) {
+    private static MobHealthPayload.Entry entryOf(Scoreboard scoreboard, Entity entity, UUID uuid) {
         int[] armour = new int[EnemyData.ARMOR_OBJECTIVES.length];
         for (int i = 0; i < armour.length; i++) {
             armour[i] = score(scoreboard, EnemyData.ARMOR_OBJECTIVES[i], entity);
@@ -198,7 +207,7 @@ public final class CttHudForkServer implements ModInitializer {
         int all = score(scoreboard, O_ALL, entity);
         if (all <= 0) all = score(scoreboard, O_RED, entity);
         return new MobHealthPayload.Entry(
-                entity.getUUID(),
+                uuid,
                 all,
                 score(scoreboard, O_MAX_HP, entity),
                 score(scoreboard, O_SOUL, entity),

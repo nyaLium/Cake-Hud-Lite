@@ -118,6 +118,18 @@ public final class EnemyData {
     }
 
     /**
+     * 1.5.5：合并两个百分比（{@code -1} = 没有）。用于「同名分身组」统一显示。
+     *
+     * <p>分身与真身同名同外观，任何数值差都会暴露真身；纯客户端取组内**最低**百分比：
+     * 分身固定 100%，真身掉血后百分比更低，于是整组都显示真身那个值。</p>
+     */
+    public static int minPercent(int a, int b) {
+        if (a < 0) return b;
+        if (b < 0) return a;
+        return Math.min(a, b);
+    }
+
+    /**
      * 1.5.1：只有百分比时的读数（payload 里 {@code AllHearts} 缺失 / 为 0 时的兜底）。
      *
      * <p>地图每 tick 先 {@code scoreboard players reset @e AllHearts}，只给 {@code tag=CTTAll}
