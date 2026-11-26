@@ -35,10 +35,10 @@ import java.util.UUID;
  * </ul>
  *
  * <h2>循环</h2>
- * <p>{@code END_SERVER_TICK} 钩子，每 {@value #INTERVAL_TICKS} tick（默认 4 = 5 Hz）扫一次
+ * <p>{@code END_SERVER_TICK} 钩子，每 {@value #INTERVAL_TICKS} tick（5 = 4 Hz）扫一次
  * 每名玩家周围 {@value #RADIUS} 格内的 CTT 实体，**玩家（含自己）优先、其余按距离**，
  * 合计取最近 {@link MobHealthPayload#MAX_ENTRIES} 条，拼一包发给该玩家。差量：与上次内容
- * 完全一致就跳过（静态场景 0 流量），但每 {@value #KEEPALIVE_MS} ms 至少重发一次，
+ * 完全一致就跳过（静态场景 0 流量），但每 {@value #KEEPALIVE_ROUNDS} 轮至少重发一次，
  * 保证客户端的 5 s 失鲜窗口不会误判。</p>
  *
  * <h2>开销</h2>
@@ -47,12 +47,12 @@ import java.util.UUID;
  */
 public final class CttHudForkServer implements ModInitializer {
 
-    /** 推送间隔（tick）：4 tick = 5 Hz。 */
-    private static final int INTERVAL_TICKS = 4;
-    /** 扫描半径（格）。 */
-    private static final double RADIUS = 64.0;
-    /** 内容没变化时也强制重发的周期，需小于客户端 5 s 失鲜窗口。 */
-    private static final long KEEPALIVE_MS = 3_000L;
+    /** 推送间隔（tick）：5 tick = 4 Hz（与上游 Cake-Hud 一致）。 */
+    private static final int INTERVAL_TICKS = 5;
+    /** 扫描半径（格）：128（与上游一致；比原来的 64 更能覆盖 Boss 场地）。 */
+    private static final double RADIUS = 128.0;
+    /** 内容没变化时也强制重发的周期（按「轮」计）：12 轮 × 5 tick = 60 tick = 3 s。 */
+    private static final int KEEPALIVE_ROUNDS = 12;
 
     /** 抑制列表最多带几个 NPC（只用于「别画、把分数摘掉」，按距离取最近的）。 */
     private static final int MAX_NPC = 32;
@@ -76,7 +76,10 @@ public final class CttHudForkServer implements ModInitializer {
 
     /** 每名玩家上次实际发出去的内容 + 时间（差量判定）。 */
     private static final Map<UUID, Plan> LAST_SENT = new HashMap<>();
-    private static final Map<UUID, Long> LAST_SENT_MS = new HashMap<>();
+    /** 上一轮「强制重发」记在第几轮；差值达到 {@link #KEEPALIVE_ROUNDS} 就重发。 */
+    private static final Map<UUID, Integer> LAST_SENT_ROUND = new HashMap<>();
+    /** 轮计数：每 {@link #INTERVAL_TICKS} tick +1。 */
+    private static int roundCounter;
 
     private static int tickCounter;
 
@@ -93,9 +96,9 @@ public final class CttHudForkServer implements ModInitializer {
         if (server == null) return;
         if (++tickCounter < INTERVAL_TICKS) return;
         tickCounter = 0;
+        int round = ++roundCounter;
 
         Scoreboard scoreboard = server.getScoreboard();
-        long now = System.currentTimeMillis();
         List<ServerPlayer> players = server.getPlayerList().getPlayers();
 
         for (ServerPlayer player : players) {
@@ -107,12 +110,12 @@ public final class CttHudForkServer implements ModInitializer {
             UUID id = player.getUUID();
             Plan previous = LAST_SENT.get(id);
             boolean changed = previous == null || !previous.equals(plan);
-            long lastMs = LAST_SENT_MS.getOrDefault(id, 0L);
-            boolean keepaliveDue = now - lastMs >= KEEPALIVE_MS;
+            int lastRound = LAST_SENT_ROUND.getOrDefault(id, Integer.MIN_VALUE / 2);
+            boolean keepaliveDue = round - lastRound >= KEEPALIVE_ROUNDS;
             if (!changed && !keepaliveDue) continue;
 
             LAST_SENT.put(id, plan);
-            LAST_SENT_MS.put(id, now);
+            LAST_SENT_ROUND.put(id, round);
             try {
                 ServerPlayNetworking.send(player, new MobHealthPayload(
                         MobHealthPayload.CURRENT_VERSION, plan.entries(), plan.suppressed()));
@@ -123,7 +126,7 @@ public final class CttHudForkServer implements ModInitializer {
 
         // 玩家离线后清掉记录，避免长期运行内存增长。
         LAST_SENT.keySet().removeIf(uuid -> server.getPlayerList().getPlayer(uuid) == null);
-        LAST_SENT_MS.keySet().removeIf(uuid -> server.getPlayerList().getPlayer(uuid) == null);
+        LAST_SENT_ROUND.keySet().removeIf(uuid -> server.getPlayerList().getPlayer(uuid) == null);
     }
 
     /** 取这名玩家周围的 CTT 实体：**玩家（含自己）优先，其余按距离**，最多 MAX_ENTRIES 条。 */
@@ -202,18 +205,24 @@ public final class CttHudForkServer implements ModInitializer {
             armour[i] = score(scoreboard, EnemyData.ARMOR_OBJECTIVES[i], entity);
         }
         boolean targetted = entity.entityTags().contains("Targetting");
+        // 1.5.11：结构化姓名（保留 translate 键与样式），客户端做 Psy 识别 / 悬浮显示都不再依赖实体名。
+        net.minecraft.network.chat.Component nameText = entity.getCustomName() != null
+                ? entity.getCustomName() : entity.getDisplayName();
+        // 1.5.11：CrackedHearts / PinkHearts（负值）只有玩家有；怪一律 0，不再浪费一次查表。
+        int cracked = entity instanceof Player ? score(scoreboard, O_CRACKED, entity) : 0;
         // 1.5.1：与客户端 EnemyData.read 同口径 —— AllHearts 读不到（地图先 reset、这一 tick 还没给
         // CTTAll 补上）时退回 RedHearts；否则存活怪会显示成「0/上限」、条也是空的。
         int all = score(scoreboard, O_ALL, entity);
         if (all <= 0) all = score(scoreboard, O_RED, entity);
         return new MobHealthPayload.Entry(
                 uuid,
+                nameText,
                 all,
                 score(scoreboard, O_MAX_HP, entity),
                 score(scoreboard, O_SOUL, entity),
                 score(scoreboard, O_BLACK, entity),
                 score(scoreboard, O_BLUE, entity),
-                score(scoreboard, O_CRACKED, entity),
+                cracked,
                 score(scoreboard, O_MAX_SOUL, entity),
                 score(scoreboard, O_MAX_BLACK, entity),
                 score(scoreboard, O_MAX_BLUE, entity),

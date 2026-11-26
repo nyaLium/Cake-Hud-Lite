@@ -75,7 +75,11 @@ public final class HudTarget {
 
     /** 这只实体要不要「整组统一显示」（摘掉原版分数，并让整组共用一份快照）。 */
     static boolean hidesHud(Entity entity) {
-        return entity != null && hidesByName(entity.getCustomName());
+        if (entity == null) return false;
+        if (hidesByName(entity.getCustomName())) return true;
+        // 1.5.11：服务端下发的结构化名字（translate 键原样）也能命中 —— 双端时更可靠。
+        MobHealthPayload.Entry pushed = ClientMobHealthCache.lookup(entity.getUUID());
+        return pushed != null && hidesByName(pushed.nameText());
     }
 
     private HudTarget() {}

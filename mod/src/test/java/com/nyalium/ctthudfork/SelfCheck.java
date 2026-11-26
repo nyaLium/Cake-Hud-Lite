@@ -1115,14 +1115,17 @@ public final class SelfCheck {
         // 1.4.4：单包上限 32 → 64 条（玩家优先），协议版本跟着升到 2；
         // 旧客户端（v1）收到 v2 会整包忽略（ClientMobHealthCache.accept），安全降级。
         check(MobHealthPayload.MAX_ENTRIES == 64, "单包上限应为 64 条: " + MobHealthPayload.MAX_ENTRIES);
-        check(MobHealthPayload.CURRENT_VERSION == 3, "协议版本应为 3: " + MobHealthPayload.CURRENT_VERSION);
+        check(MobHealthPayload.CURRENT_VERSION == 4, "协议版本应为 3: " + MobHealthPayload.CURRENT_VERSION);
 
         // 1.4.5 调试功能「筛选实体数量」：客户端只保留前 N 条，保持服务端顺序（玩家优先）。
         MobHealthPayload.Entry e1 = new MobHealthPayload.Entry(java.util.UUID.randomUUID(),
+                net.minecraft.network.chat.Component.literal("mob"),
                 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, new int[7], false);
         MobHealthPayload.Entry e2 = new MobHealthPayload.Entry(java.util.UUID.randomUUID(),
+                net.minecraft.network.chat.Component.literal("mob"),
                 20, 20, 0, 0, 0, 0, 0, 0, 0, 0, new int[7], false);
         MobHealthPayload.Entry e3 = new MobHealthPayload.Entry(java.util.UUID.randomUUID(),
+                net.minecraft.network.chat.Component.literal("mob"),
                 30, 30, 0, 0, 0, 0, 0, 0, 0, 0, new int[7], false);
         java.util.List<MobHealthPayload.Entry> three = java.util.List.of(e1, e2, e3);
         java.util.List<MobHealthPayload.Entry> capped = ClientMobHealthCache.cap(three, 2);

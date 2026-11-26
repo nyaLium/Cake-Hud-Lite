@@ -1,6 +1,8 @@
 package com.nyalium.ctthudfork;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
@@ -56,8 +58,11 @@ public record MobHealthPayload(byte version, List<Entry> entries, List<UUID> sup
      * 「Boss 栏 + HealthPercent」，不会按 32 条硬读剩下的字节。</p>
      *
      * <p>v3（1.5.3）：新增 {@code suppressed}（要**抑制显示**的实体 UUID，主要是 NPC）。
-     * 旧客户端（v1/v2）遇到 v3 会整包忽略，退回纯客户端路径。</p> */
-    public static final byte CURRENT_VERSION = 3;
+     * 旧客户端（v1/v2）遇到 v3 会整包忽略，退回纯客户端路径。</p>
+     *
+     * <p>v4（1.5.11）：每条新增 {@code nameText}（结构化姓名，translate 键与样式原样保留），
+     * 客户端不再依赖实体名做识别；旧客户端遇到 v4 整包忽略、退回纯客户端。</p> */
+    public static final byte CURRENT_VERSION = 4;
 
     /** 一次最多推多少条：玩家（含自己）优先，其余按距离取最近的，合计不超过这个数。 */
     public static final int MAX_ENTRIES = 64;
@@ -93,7 +98,8 @@ public record MobHealthPayload(byte version, List<Entry> entries, List<UUID> sup
      * @param armour    7 档元素护甲（Fire/Ice/Dark/Light/True/Water/Electric）
      * @param targetted 数据包当前是否把它当成「被锁定的敌人」（{@code Targetting} 标签）
      */
-    public record Entry(UUID uuid, int hp, int maxHp, int soul, int black, int blue, int cracked,
+    public record Entry(UUID uuid, Component nameText, int hp, int maxHp, int soul, int black,
+                        int blue, int cracked,
                         int maxSoul, int maxBlack, int maxBlue,
                         int defence, int[] armour, boolean targetted) {
 
@@ -105,12 +111,14 @@ public record MobHealthPayload(byte version, List<Entry> entries, List<UUID> sup
                     && blue == e.blue && cracked == e.cracked
                     && maxSoul == e.maxSoul && maxBlack == e.maxBlack && maxBlue == e.maxBlue
                     && defence == e.defence && targetted == e.targetted
-                    && uuid.equals(e.uuid) && Arrays.equals(armour, e.armour);
+                    && uuid.equals(e.uuid) && Arrays.equals(armour, e.armour)
+                    && java.util.Objects.equals(nameText, e.nameText);
         }
 
         @Override
         public int hashCode() {
             int h = uuid.hashCode();
+            h = 31 * h + java.util.Objects.hashCode(nameText);
             h = 31 * h + hp;
             h = 31 * h + maxHp;
             h = 31 * h + soul;
@@ -124,7 +132,8 @@ public record MobHealthPayload(byte version, List<Entry> entries, List<UUID> sup
 
         @Override
         public String toString() {
-            return "Entry[" + uuid + " " + hp + "/" + maxHp + " soul=" + soul + " black=" + black
+            return "Entry[" + uuid + " " + (nameText == null ? "?" : nameText.getString())
+                    + " " + hp + "/" + maxHp + " soul=" + soul + " black=" + black
                     + " blue=" + blue + " cracked=" + cracked + " def=" + defence + "]";
         }
     }
@@ -146,6 +155,8 @@ public record MobHealthPayload(byte version, List<Entry> entries, List<UUID> sup
         buf.writeVarInt(entries.size());
         for (Entry e : entries) {
             buf.writeUUID(e.uuid());
+            ComponentSerialization.STREAM_CODEC.encode(buf,
+                    e.nameText() == null ? Component.empty() : e.nameText());
             buf.writeVarInt(Math.max(0, e.hp()));
             buf.writeVarInt(Math.max(0, e.maxHp()));
             buf.writeVarInt(Math.max(0, e.soul()));
@@ -173,6 +184,7 @@ public record MobHealthPayload(byte version, List<Entry> entries, List<UUID> sup
         List<Entry> out = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             UUID uuid = buf.readUUID();
+            Component nameText = version >= 4 ? ComponentSerialization.STREAM_CODEC.decode(buf) : null;
             int hp = buf.readVarInt();
             int maxHp = buf.readVarInt();
             int soul = buf.readVarInt();
@@ -187,7 +199,7 @@ public record MobHealthPayload(byte version, List<Entry> entries, List<UUID> sup
             int[] armour = new int[armourLen];
             for (int k = 0; k < armourLen; k++) armour[k] = readSigned(buf);
             boolean targetted = buf.readBoolean();
-            out.add(new Entry(uuid, hp, maxHp, soul, black, blue, cracked,
+            out.add(new Entry(uuid, nameText, hp, maxHp, soul, black, blue, cracked,
                     maxSoul, maxBlack, maxBlue, defence, armour, targetted));
         }
         // v3 起才有抑制列表；更老的包结构里没有这段，不能硬读（会越界）。
