@@ -178,16 +178,28 @@ public final class CttHudForkServer implements ModInitializer {
         }
         int limit = Math.min(mobs.size(), MobHealthPayload.MAX_ENTRIES);
         List<MobHealthPayload.Entry> out = new ArrayList<>(limit);
+        int npcLimit = 0;
+        List<UUID> hidden = new ArrayList<>();
         for (int i = 0; i < limit; i++) {
             Entity entity = mobs.get(i);
-            Entity data = entity.entityTags().contains("PsyClone") && psy != null ? psy : entity;
-            out.add(entryOf(scoreboard, data, entity.getUUID()));
+            if (entity.entityTags().contains("PsyClone")) {
+                if (psy == null) {
+                    // 找不到真身就别发分身自己的读数（100 之类）——那本身就会暴露谁是真身；
+                    // 放进抑制列表，客户端会按「整组统一」处理。
+                    hidden.add(entity.getUUID());
+                    continue;
+                }
+                out.add(entryOf(scoreboard, psy, entity.getUUID()));
+            } else {
+                out.add(entryOf(scoreboard, entity, entity.getUUID()));
+            }
         }
         // NPC 只按距离取最近的若干条，避免大厅人多时把包撑大。
         npcs.sort(Comparator.comparingDouble(e -> e.distanceToSqr(px, py, pz)));
-        int npcLimit = Math.min(npcs.size(), MAX_NPC);
-        List<UUID> hidden = new ArrayList<>(npcLimit);
-        for (int i = 0; i < npcLimit; i++) hidden.add(npcs.get(i).getUUID());
+        int prevLimit = Math.min(npcs.size(), MAX_NPC);
+        for (int i = 0; i < prevLimit && hidden.size() < MAX_NPC; i++) {
+            hidden.add(npcs.get(i).getUUID());
+        }
         return new Plan(List.copyOf(out), List.copyOf(hidden));
     }
 

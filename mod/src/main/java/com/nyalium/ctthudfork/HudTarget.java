@@ -67,9 +67,27 @@ public final class HudTarget {
         return text != null && HIDDEN_NAMES.contains(text.trim());
     }
 
-    /** 这只实体要不要「接管但不画」（摘掉原版分数，也不画血条）。 */
+    /** 1.5.7：Boss 栏名字里出现 Psy → 这段时间内把场上所有末影人当成同一组。 */
+    private static volatile long psyWindowUntil = 0L;
+
+    /** 1.5.7：由渲染端在读到「名字含 Psy」的 Boss 栏时续期。 */
+    static void markPsyEncounter(long untilMs) {
+        psyWindowUntil = untilMs;
+    }
+
+    /** Boss 栏标题/自定义名里像不像 Psy 家族（大小写不敏感）。 */
+    static boolean isPsyName(String text) {
+        return text != null && text.toLowerCase(java.util.Locale.ROOT).contains("psy");
+    }
+
+    /** 这只实体要不要「整组统一显示」（摘掉原版分数，并让整组共用一份快照）。 */
     static boolean hidesHud(Entity entity) {
-        return entity != null && hidesByName(entity.getCustomName());
+        if (entity == null) return false;
+        if (hidesByName(entity.getCustomName())) return true;
+        // 1.5.7：纯客户端读不到自定义名时兜底 —— 只要「Psy」Boss 栏还在（2 s 窗口），
+        // 场上所有末影人都按分身组处理（Psy 真身与分身都是末影人，同模型同皮肤）。
+        return System.currentTimeMillis() < psyWindowUntil
+                && entity instanceof net.minecraft.world.entity.monster.Enderman;
     }
 
     private HudTarget() {}

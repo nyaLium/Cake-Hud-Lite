@@ -436,7 +436,16 @@ public final class HudWorldRenderer {
         if (now - cacheStamp < CACHE_NS) return;
         cacheStamp = now;
         HudConfig.Cfg cfg = HudConfig.get();
-        exactBars = BossBarTracker.resolve(mc, BossBarTracker.snapshot(mc));
+        java.util.List<BossBarTracker.Bar> bars = BossBarTracker.snapshot(mc);
+        exactBars = BossBarTracker.resolve(mc, bars);
+        // 1.5.7：纯客户端读不到 entity tag / 有时连 custom name 都拿不到，
+        // 用地图自己那条「最近敌人」Boss 栏的标题名兜底：名字含 Psy 就开 2 s 窗口。
+        for (BossBarTracker.Bar bar : bars) {
+            if (HudTarget.isPsyName(bar.name)) {
+                HudTarget.markPsyEncounter(System.currentTimeMillis() + 2_000L);
+                break;
+            }
+        }
         if (cfg.showTeammates) {
             PartyBossbarAutoToggle.tick(mc, BossBarTracker.hasTeamBar(mc),
                     BossBarTracker.hasPersonalBar(mc));
