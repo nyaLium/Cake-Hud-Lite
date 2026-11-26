@@ -84,6 +84,8 @@ public final class HudWorldRenderer {
             if (!HudTarget.managed(mc, entity)) return;
             // 1.5.3：NPC 等「接管但不画」的实体直接跳过（分数仍会被摘掉）。
             if (ClientMobHealthCache.isSuppressed(entity.getUUID())) return;
+            // 1.5.4：同名分身 Boss（Psy 等）—— 真身/分身名字与外观一致，画了就会暴露。
+            if (HudTarget.hidesHud(entity)) return;
             // 距离 / 被墙挡住 / 被其它实体挡住 —— 保留为「少提交一点」的额外剔除，
             // 真正的遮挡由深度测试负责。
             if (!HudTarget.visible(mc, entity)) return;

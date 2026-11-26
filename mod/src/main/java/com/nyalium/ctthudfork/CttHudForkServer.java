@@ -152,7 +152,9 @@ public final class CttHudForkServer implements ModInitializer {
             if (!isCttMob(scoreboard, entity)) continue;
             // 1.5.3：NPC（tag=NPC，如大厅/塔里的对话角色）有 RedHearts/MaxHP/HealthPercent 分数，
             // 但它们是布景、不是敌人。客户端看不到 tag，所以放进「抑制列表」让客户端别画。
-            if (entity.entityTags().contains("NPC")) {
+            // 1.5.4：同名分身 Boss（Psy：真身 tag=Psy / 分身 tag=PsyClone）也一并抑制 ——
+            // 它们名字与外观完全一样，画血条等于告诉玩家哪个是真身。
+            if (isHiddenIdentity(entity)) {
                 npcs.add(entity);
                 continue;
             }
@@ -177,6 +179,12 @@ public final class CttHudForkServer implements ModInitializer {
         List<UUID> hidden = new ArrayList<>(npcLimit);
         for (int i = 0; i < npcLimit; i++) hidden.add(npcs.get(i).getUUID());
         return new Plan(List.copyOf(out), List.copyOf(hidden));
+    }
+
+    /** 1.5.3/1.5.4：不该出现在 HUD 里的实体（布景 NPC、同名分身 Boss）。 */
+    private static boolean isHiddenIdentity(Entity entity) {
+        var tags = entity.entityTags();
+        return tags.contains("NPC") || tags.contains("Psy") || tags.contains("PsyClone");
     }
 
     private static MobHealthPayload.Entry entryOf(Scoreboard scoreboard, Entity entity) {

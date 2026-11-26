@@ -2,6 +2,8 @@ package com.nyalium.ctthudfork;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
@@ -37,6 +39,38 @@ public final class HudTarget {
 
     private static final Map<Entity, Boolean> MEMO = new IdentityHashMap<>();
     private static long memoStamp = 0L;
+
+    /**
+     * 1.5.4：这些「同名分身」Boss 的名字 —— 真身与分身**名字、外观完全一样**，
+     * 任何头顶数据（血量数字 / 护甲行 / 血条长度）都能把真身指出来，所以整组一律不画。
+     *
+     * <p>依据数据包：真身 {@code enemies/psy.mcfunction} 是 {@code tag=Psy}、
+     * {@code CustomName={translate:"Psy"}}、红心 750~3500；分身由
+     * {@code floors/boss16_psy.mcfunction:332-334} 召唤，{@code tag=PsyClone}，
+     * 但 {@code CustomName} 与真身**完全相同**（{@code {translate:"Psy"}}），红心固定 100。
+     * 地狱难度还有 {@code Rockstar_Psy} 皮肤名。</p>
+     *
+     * <p>双端时服务端还会按 tag（{@code Psy}/{@code PsyClone}）把它们放进抑制列表；
+     * 这里是纯客户端也能用的名字判定（custom name 是同步到客户端的）。</p>
+     */
+    private static final java.util.Set<String> HIDDEN_NAMES =
+            java.util.Set.of("Psy", "Psy Clone", "Rockstar_Psy");
+
+    /** 这个名字是不是「身份必须隐藏」的 Boss（纯函数，自检直接打）。 */
+    static boolean hidesByName(Component name) {
+        if (name == null) return false;
+        if (name.getContents() instanceof TranslatableContents tc && tc.getKey() != null
+                && HIDDEN_NAMES.contains(tc.getKey())) {
+            return true;
+        }
+        String text = name.getString();
+        return text != null && HIDDEN_NAMES.contains(text.trim());
+    }
+
+    /** 这只实体要不要「接管但不画」（摘掉原版分数，也不画血条）。 */
+    static boolean hidesHud(Entity entity) {
+        return entity != null && hidesByName(entity.getCustomName());
+    }
 
     private HudTarget() {}
 
@@ -80,6 +114,9 @@ public final class HudTarget {
         // 1.5.3：服务端明确要求抑制的实体（NPC）也算「接管」——接管只为了把原版 below_name
         // 分数摘掉，渲染端会跳过它（见 HudWorldRenderer）。这样大厅 NPC 不再顶着血条/数字。
         if (ClientMobHealthCache.isSuppressed(entity.getUUID())) return true;
+        // 1.5.4：同名分身 Boss（Psy 等）同样「接管但不画」，否则原版 below_name 的
+        // 百分比也会把真身暴露出来。
+        if (hidesHud(entity)) return true;
         // 有数据才算「数据包管控的敌人」——这一条也排除了掉落物、船、画等。
         return EnemyData.hasData(mc.level.getScoreboard(), entity);
     }

@@ -1165,6 +1165,19 @@ public final class SelfCheck {
         check(ClientMobHealthCache.lookup(npcId) == null, "被抑制的 NPC 不在数据表里");
         ClientMobHealthCache.reset();
         check(!ClientMobHealthCache.isSuppressed(npcId), "reset 后抑制表应清空");
+
+        // 1.5.4：同名分身 Boss（Psy）—— 真身与分身名字一致，必须整组不画
+        check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Psy")),
+                "translate=Psy 应被隐藏");
+        check(HudTarget.hidesByName(net.minecraft.network.chat.Component.literal("Psy")),
+                "字面量 Psy 应被隐藏");
+        check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Psy Clone")),
+                "translate=Psy Clone 应被隐藏");
+        check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Rockstar_Psy")),
+                "Rockstar_Psy 皮肤名应被隐藏");
+        check(!HudTarget.hidesByName(net.minecraft.network.chat.Component.literal("兵蚁")),
+                "普通怪名字不该被隐藏");
+        check(!HudTarget.hidesByName(null), "null 名字不该被隐藏");
     }
 
     // ── 6. Boss 栏标题解析 ──

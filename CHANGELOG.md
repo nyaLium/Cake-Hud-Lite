@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.5.4**（本地调整，未发布） | 修「**Boss 分身被血条暴露真身**」：Psy 的真身（`tag=Psy`，红心 750~3500）与分身（`tag=PsyClone`，红心固定 100）**同名同外观**，头顶数值/护甲行会直接指出真身。现在两者都：① 双端由服务端按 tag 放进抑制列表，② 纯客户端按 custom name（`Psy` / `Psy Clone` / `Rockstar_Psy`）判定 —— **整组不画 HUD**，原版 `below_name` 百分比也一并摘掉 |
 | **1.5.3**（本地调整，未发布） | 修复「**NPC 被当成敌人画血条**」：地图里的 NPC（`tag=NPC`，如大厅/塔里的角色）也有 `RedHearts / MaxHP / HealthPercent` 分数，但它们是无敌布景、不是敌人（没有 `E` tag）。客户端看不到 tag，改由服务端在协议 **v3** 里附 **`suppressed` 抑制列表**（每个玩家最近 32 个 NPC）：客户端不画 HUD，但仍算「接管」以便把原版 `below_name` 的 `0 ❤ / 100 ❤` 分数摘掉；协议 v2 → v3（旧客户端整包忽略） |
 | **1.5.2**（本地调整，未发布） | 修「残血怪的 HUD 整块消失」：`HealthPercent` 为 **0 也是合法分数**（红心 1 / 上限 325 的整数除法就是 0%），`hasData` / `read` 原来按「值 > 0」判定，导致只剩 1 点血的怪既不画血条、又把原版 `0 ❤` 露出来。现在改成「这条分数存在即算有数据」，血条填充在比例 &gt; 0 时至少 1 px |
 | **1.5.1**（本地调整，未发布） | 修双端下**存活怪显示成「0/上限」+ 空条**：地图每 tick 先 `reset @e AllHearts`、只给 `tag=CTTAll` 重算，新刷的怪在 tag 补上之前只有 `RedHearts / MaxHP / HealthPercent`；服务端 payload 改为 `AllHearts <= 0` 时退回 `RedHearts`（与客户端 `EnemyData.read` 同口径），客户端再补一层「hp<=0 → 用 HealthPercent 画百分比」的兜底 |
