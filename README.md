@@ -11,10 +11,10 @@
 > - 盾牌进入冷却时，会显示冷却指示器
 > - 能够随时查看属性的属性面板
 >
-> 纯客户端（Fork 自 [Cake-Hud](https://github.com/TheHolyLord/Cake-Hud)，MIT）；**客户端必装、服务端选装**，
+> **客户端必装、服务端选装**，
 > 服务端只装 Fabric API 也能用完整功能。
 >
-> 当前正式版 **1.5.0**（2026-11-25）。发布前的 67 个测试版（1.10.0 – 1.20.42）只在本地归档，**不随仓库上传**。
+> 当前正式版 **1.5.11**（2026-11-26）。
 
 ## 功能
 
@@ -35,22 +35,9 @@
 
 ## 下载
 
-jar 只在 **GitHub Releases** 里：<https://github.com/nyaLium/Cake-Hud-Fork/releases>
-
-| 版本 | 附件 | 说明 |
-| --- | --- | --- |
-| **1.5.0**（最新） | `ctt-hud-fork-1.5.0.jar` + `-sources.jar` | 汇总 1.3.0–1.4.9：玩家血条只画心型（含地图裂心字形）、自己的血条独立开关、双端 64 条玩家优先、四套不透明度、调试功能页；修红心数被治疗百分比覆盖、护甲行行首空格、属性过滤界面崩溃等 |
-| 1.2.10 | `ctt-hud-fork-1.2.10.jar` + `-sources.jar` | 癫狂只隐藏属性面板；修魂心溢出时血条瞬间变满 |
-| 1.1.0 | `ctt-hud-fork-1.1.0.jar` + `-sources.jar` | 盾牌指示器换新纹理（34×86 四档） |
-| 1.0.3 | `ctt-hud-fork-1.0.3.jar` + `-sources.jar` | 上一稳定版：jar 内带仓库地址 |
-
-仓库里**不保存**任何 jar 或历史归档：逐版本的日期 / 大小 / SHA-256 见 [`RELEASES.md`](RELEASES.md)。
-
-> **1.0.0 / 1.0.1 已撤回**：这两个版本的 `LICENSE` 把上游版权人写成了仓库账号名（实际为 `Copyright (c) 2026 Kirin0321 (麒麟)`）。
-> 为免分发署名错误的产物，它们的 jar、归档与 tag 已从本仓库移除。
+jar 只在 **GitHub Releases** 里：<https://github.com/nyaLium/Cake-Hud-Lite/releases>
 
 依赖：Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；Mod Menu 可选（装了就有设置入口）。
-配置：`config/ctt-hud-fork.json`；旧的 `ctt-enemy-hud.json` 会自动复制迁移。
 
 ## 截图
 
@@ -97,7 +84,6 @@ cd mod
 
 - 功能与配置详解：[`mod/README.md`](mod/README.md)（代码导览、配置字段表、界面文案 ↔ 字段对照）
 - 版本沿革：[`CHANGELOG.md`](CHANGELOG.md)
-- 最新版说明与下载：[`RELEASES.md`](RELEASES.md) 或 [Release v1.5.0](https://github.com/nyaLium/Cake-Hud-Fork/releases/tag/v1.5.0)
 - 版本规则：[`VERSIONING.md`](VERSIONING.md)
 - 测试清单：[docs/TEST-PLAN.md](docs/TEST-PLAN.md)（环境矩阵 + 分项勾选表）
 
