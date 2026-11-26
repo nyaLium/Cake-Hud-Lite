@@ -91,6 +91,7 @@ public final class ShieldIndicatorSettingsScreen extends Screen {
     }
 
     private void back() {
+        HudConfig.save();
         this.minecraft.gui.setScreen(this.menu);
     }
 

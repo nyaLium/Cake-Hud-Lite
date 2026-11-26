@@ -76,6 +76,8 @@ public final class CttHudForkServer implements ModInitializer {
 
     /** 每名玩家上次实际发出去的内容 + 时间（差量判定）。 */
     private static final Map<UUID, Plan> LAST_SENT = new HashMap<>();
+    /** 1.6.2：每个玩家上一次告知的「调试标签」状态（只在变化时发包）。 */
+    private static final Map<UUID, Boolean> DEBUG_TAG_SENT = new HashMap<>();
     private static final Map<UUID, Long> LAST_SENT_MS = new HashMap<>();
 
     private static int tickCounter;
@@ -86,6 +88,8 @@ public final class CttHudForkServer implements ModInitializer {
         // 注意 Fabric API 6.x 的方法名：clientboundPlay() / serverboundPlay()
         // （旧版叫 playS2C() / playC2S()，这里按当前 API 来）。
         PayloadTypeRegistry.clientboundPlay().register(MobHealthPayload.TYPE, MobHealthPayload.CODEC);
+        // 1.6.2：调试标签通道（实体 tag 是纯服务端数据，客户端读不到，只能由这里告知）。
+        PayloadTypeRegistry.clientboundPlay().register(DebugTagPayload.TYPE, DebugTagPayload.CODEC);
         ServerTickEvents.END_SERVER_TICK.register(CttHudForkServer::onEndServerTick);
     }
 
@@ -100,11 +104,27 @@ public final class CttHudForkServer implements ModInitializer {
 
         for (ServerPlayer player : players) {
             if (player == null) continue;
-            // 客户端没装本 Mod（或没声明接收）→ 不发。
-            if (!ServerPlayNetworking.canSend(player, MobHealthPayload.TYPE)) continue;
-
+            // 客户端没装本 Mod（或没声明接收）→ 血量包不发。
+            boolean canSendHealth = ServerPlayNetworking.canSend(player, MobHealthPayload.TYPE);
+            if (!canSendHealth) continue;
             Plan plan = collect(scoreboard, player);
             UUID id = player.getUUID();
+
+            // 1.6.2：调试标签 —— 只在状态变化时发一次（一字节，随血量包同一个 4 Hz 循环）。
+            if (ServerPlayNetworking.canSend(player, DebugTagPayload.TYPE)) {
+                boolean hasTag = player.entityTags().contains(DebugTagPayload.DEBUG_TAG);
+                Boolean was = DEBUG_TAG_SENT.get(id);
+                if (was == null || was != hasTag) {
+                    try {
+                        ServerPlayNetworking.send(player, new DebugTagPayload(hasTag));
+                        DEBUG_TAG_SENT.put(id, hasTag);
+                    } catch (Throwable ignored) {
+                        // 发包失败无副作用：下一轮还会重试。
+                    }
+                }
+            }
+
+            // 客户端没装本 Mod（或没声明接收）→ 血量包不发。
             Plan previous = LAST_SENT.get(id);
             boolean changed = previous == null || !previous.equals(plan);
             long lastMs = LAST_SENT_MS.getOrDefault(id, 0L);
@@ -124,6 +144,7 @@ public final class CttHudForkServer implements ModInitializer {
         // 玩家离线后清掉记录，避免长期运行内存增长。
         LAST_SENT.keySet().removeIf(uuid -> server.getPlayerList().getPlayer(uuid) == null);
         LAST_SENT_MS.keySet().removeIf(uuid -> server.getPlayerList().getPlayer(uuid) == null);
+        DEBUG_TAG_SENT.keySet().removeIf(uuid -> server.getPlayerList().getPlayer(uuid) == null);
     }
 
     /** 取这名玩家周围的 CTT 实体：**玩家（含自己）优先，其余按距离**，最多 MAX_ENTRIES 条。 */

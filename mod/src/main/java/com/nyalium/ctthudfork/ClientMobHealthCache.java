@@ -92,6 +92,8 @@ final class ClientMobHealthCache {
         snapshot = Collections.emptyMap();
         suppressed = Collections.emptySet();
         lastPushMs = 0L;
+        // 1.6.2：换服后标签要重新由服务端告知（否则上一局的调试权限会被带过来）。
+        debugTag = null;
     }
 
     /** 供调试输出。 */
@@ -111,5 +113,32 @@ final class ClientMobHealthCache {
                         client.execute(() -> accept(payload));
                     }
                 });
+        // 1.6.2：服务端告知「本玩家有没有 CTT-HUD-LITE-DEBUG 标签」（实体 tag 不同步给客户端）。
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+                DebugTagPayload.TYPE,
+                (payload, context) -> {
+                    boolean hasTag = payload.hasTag();
+                    Minecraft client = context.client();
+                    if (client == null) {
+                        debugTag = hasTag;
+                    } else {
+                        client.execute(() -> debugTag = hasTag);
+                    }
+                });
+    }
+
+    // ── 1.6.2：调试标签（服务端推送） ──
+
+    /** 本玩家是否带 {@link DebugTagPayload#DEBUG_TAG}；{@code null} = 还没收到服务端消息。 */
+    private static volatile Boolean debugTag;
+
+    /** 是否带调试标签（没收到消息按 false 处理：调试设置保持锁定）。 */
+    public static boolean debugTag() {
+        return Boolean.TRUE.equals(debugTag);
+    }
+
+    /** 是否已经从服务端拿到过标签信息（用于界面上区分「没标签」和「服务端没装本 Mod」）。 */
+    public static boolean debugTagKnown() {
+        return debugTag != null;
     }
 }

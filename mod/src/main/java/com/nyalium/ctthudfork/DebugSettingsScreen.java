@@ -72,13 +72,35 @@ public final class DebugSettingsScreen extends Screen {
      * <p>26.3 把 op 等级换成了 {@code PermissionSet}（服务端同步到客户端，原版 F3 快捷键
      * 判定用的就是同一套），所以这里直接查 {@link Permissions#COMMANDS_GAMEMASTER}。
      * 单人游戏开了作弊时原版给的就是 4 级，一样通过。</p>
+     *
+     * <p>1.6.2：除权限外，还要求玩家身上有 {@link DebugTagPayload#DEBUG_TAG} 标签。
+     * 实体 tag 是纯服务端数据（原版协议不同步给客户端），所以这个状态由本 Mod 的服务端
+     * 在变化时推过来（见 {@link DebugTagPayload}）。服务端没装本 Mod → 按「没有标签」处理。</p>
      */
     static boolean canAdjust() {
+        return lockReason() == Lock.NONE;
+    }
+
+    /** 不能调整时的原因。 */
+    enum Lock {
+        /** 可以调整。 */
+        NONE,
+        /** 权限等级不够。 */
+        PERMISSION,
+        /** 缺少调试标签（或服务端没告知）。 */
+        TAG
+    }
+
+    static Lock lockReason() {
         Minecraft mc = Minecraft.getInstance();
-        if (mc == null || mc.player == null) return false;
+        if (mc == null || mc.player == null) return Lock.PERMISSION;
         Permission required = permissionForLevel(REQUIRED_PERMISSION_LEVEL);
-        if (required == null) return true;
-        return mc.player.permissions().hasPermission(required);
+        if (required != null && !mc.player.permissions().hasPermission(required)) {
+            return Lock.PERMISSION;
+        }
+        // 1.6.2：第二个条件 —— CTT-HUD-LITE-DEBUG 标签。
+        if (!ClientMobHealthCache.debugTag()) return Lock.TAG;
+        return Lock.NONE;
     }
 
     @Override
@@ -179,6 +201,7 @@ public final class DebugSettingsScreen extends Screen {
     }
 
     private void back() {
+        HudConfig.save();
         this.minecraft.gui.setScreen(this.menu);
     }
 
@@ -186,14 +209,8 @@ public final class DebugSettingsScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(this.font, this.title, this.width / 2, 24, 0xFFFFFFFF);
-        if (!canAdjust()) {
-            // 没权限：整页只有这一句提示（按钮都不建）
-            graphics.centeredText(this.font,
-                    Component.translatable("ctt_hud_fork.config.debugNoPermission",
-                            REQUIRED_PERMISSION_LEVEL),
-                    this.width / 2, 40, 0xFFFF5555);
-            return;
-        }
+        // 1.6.3：没有权限 / 没有标签时**不写任何原因**（入口已经灰掉，普通玩家不需要知道细节）。
+        if (!canAdjust()) return;
         graphics.centeredText(this.font, Component.translatable("ctt_hud_fork.config.debugHint"),
                 this.width / 2, 40, 0xFFA0A0A0);
     }

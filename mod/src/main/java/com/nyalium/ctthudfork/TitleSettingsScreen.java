@@ -89,6 +89,7 @@ public final class TitleSettingsScreen extends Screen {
     }
 
     private void back() {
+        HudConfig.save();
         this.minecraft.gui.setScreen(this.menu);
     }
 

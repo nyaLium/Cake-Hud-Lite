@@ -36,9 +36,6 @@ public final class HudConfigScreen extends Screen {
 
     private final Screen parent;
 
-    /** 1.6.0：调试入口因权限不足被灰掉（渲染时补一句提示）。 */
-    private boolean debugLocked;
-
     public HudConfigScreen(Screen parent) {
         super(Component.translatable("ctt_hud_fork.config.title"));
         this.parent = parent;
@@ -89,6 +86,14 @@ public final class HudConfigScreen extends Screen {
         addRenderableWidget(title);
         y += ROW_GAP;
 
+        // 1.6.2：杂项（粗体渲染优化等）
+        Button misc = Button.builder(section("misc"),
+                        b -> this.minecraft.gui.setScreen(new MiscSettingsScreen(this)))
+                .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build();
+        if (!cfg.enabled) misc.active = false;
+        addRenderableWidget(misc);
+        y += ROW_GAP;
+
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.reset"), b -> {
             // 只改内存、不落盘：还要点「完成」才写盘。
             HudConfig.reset();
@@ -103,8 +108,10 @@ public final class HudConfigScreen extends Screen {
         Button debug = Button.builder(Component.translatable("ctt_hud_fork.config.section.debug"),
                         b -> this.minecraft.gui.setScreen(new DebugSettingsScreen(this)))
                 .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build();
-        debugLocked = cfg.enabled && !DebugSettingsScreen.canAdjust();
-        if (!cfg.enabled || debugLocked) debug.active = false;
+        // 1.6.0：调试设置需要权限 + CTT-HUD-LITE-DEBUG 标签。
+        // 1.6.3：不满足条件就把入口**直接灰掉**，并且**不写任何提示文案**
+        // （调试设置是给维护者排查用的，普通玩家不该去改它）。
+        if (!cfg.enabled || !DebugSettingsScreen.canAdjust()) debug.active = false;
         addRenderableWidget(debug);
 
         // 完成：永远贴屏幕最底部。
@@ -123,12 +130,6 @@ public final class HudConfigScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(this.font, this.title, this.width / 2, 24, 0xFFFFFFFF);
-        if (debugLocked) {
-            graphics.centeredText(this.font,
-                    Component.translatable("ctt_hud_fork.config.debugLockedHint",
-                            DebugSettingsScreen.REQUIRED_PERMISSION_LEVEL),
-                    this.width / 2, this.height - 20 - 22, 0xFFA0A0A0);
-        }
     }
 
     /** ESC 等同「完成」（与原版设置界面一致）。 */

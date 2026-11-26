@@ -119,6 +119,25 @@ public final class HudConfig {
         public int titleOffsetX = 0;
         /** 标题 + 副标题整块的垂直位移（GUI 像素，正 = 下）。 */
         public int titleOffsetY = 0;
+
+        // ── 1.6.2：杂项 ──
+
+        /**
+         * 杂项：<b>粗体渲染优化</b>（默认开）。
+         *
+         * <p>原版每个粗体字形都要画两遍（第二遍右移 1 像素），顶点数与四边形数量翻倍。
+         * 打开后按 {@link #boldMode} 处理：膨胀模式改为「一张更粗的字形只画一遍」，
+         * 偏移模式保留双画但第二遍的距离可调。只对位图字体生效，其它字体自动沿用原版；
+         * 关掉 = 完全原版。实现见 {@link BoldDilation}。</p>
+         */
+        public boolean boldOptimize = true;
+
+        /** 粗体模式：0 = 膨胀（默认，粗体只画一遍）/ 1 = 偏移（保留双画，仅调距离）。 */
+        public int boldMode = 0;
+        /** 膨胀强度（0 ~ 0.5，默认 0.25 像素）：仅膨胀模式生效。 */
+        public double boldDilation = 0.25;
+        /** 偏移距离（0 ~ 1.0，默认 0.35 像素）：仅偏移模式生效。 */
+        public double boldOffset = 0.35;
         /**
          * 1.6.0 调试功能：**常显敌人名称**（默认开）。
          *
@@ -842,6 +861,24 @@ public final class HudConfig {
         c.titleOffsetY = d.titleOffsetY;
     }
 
+    /** 重置「杂项」这一页（1.6.2）。 */
+    static void resetMisc() {
+        Cfg d = new Cfg();
+        Cfg c = get();
+        c.boldOptimize = d.boldOptimize;
+        resetBold();
+    }
+
+    /** 重置「杂项 → 粗体渲染」这一页（1.6.3）。 */
+    static void resetBold() {
+        Cfg d = new Cfg();
+        Cfg c = get();
+        c.boldOptimize = d.boldOptimize;
+        c.boldMode = d.boldMode;
+        c.boldDilation = d.boldDilation;
+        c.boldOffset = d.boldOffset;
+    }
+
     /**
      * 把任意（含非法 / 缺省 / NaN）配置夹到安全范围。
      *
@@ -913,6 +950,11 @@ public final class HudConfig {
         read.subtitleOpacity = clamp(read.subtitleOpacity, 0.1, 1.0);
         read.titleOffsetX = (int) clamp(read.titleOffsetX, -4000.0, 4000.0);
         read.titleOffsetY = (int) clamp(read.titleOffsetY, -4000.0, 4000.0);
+        // 1.6.3：粗体渲染（模式 0/1，膨胀 0~0.5，偏移 0~1）
+        // 滑块步进是 0.05，顺便按 2 位小数取整，免得 json 里出现 0.35000000000000003
+        read.boldMode = (int) clamp(read.boldMode, 0.0, 1.0);
+        read.boldDilation = round2(clamp(read.boldDilation, 0.0, 0.5));
+        read.boldOffset = round2(clamp(read.boldOffset, 0.0, 1.0));
         // 1.4.5 调试功能：筛选实体数量 1 ~ 单包上限
         read.payloadLimit = (int) clamp(read.payloadLimit, 1.0, MobHealthPayload.MAX_ENTRIES);
         return read;
@@ -980,5 +1022,10 @@ public final class HudConfig {
     private static double clamp(double v, double lo, double hi) {
         if (Double.isNaN(v)) return hi;
         return Math.max(lo, Math.min(hi, v));
+    }
+
+    /** 滑块量全部按 2 位小数存盘（步进 0.05），避免浮点噪声写进 json。 */
+    private static double round2(double v) {
+        return Math.round(v * 100.0) / 100.0;
     }
 }
