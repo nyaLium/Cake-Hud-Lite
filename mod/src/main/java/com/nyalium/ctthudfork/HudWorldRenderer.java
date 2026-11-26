@@ -232,6 +232,13 @@ public final class HudWorldRenderer {
                                                  boolean self) {
         UUID id = entity.getUUID();
 
+        // 1.5.6：同名分身组（Psy 等）**整组统一取数**，必须在 per-entity payload 之前判定 ——
+        // 否则一旦某些分身有 payload、某些没有（旧服务端 / 客户端 payloadLimit 截断 / 真身刚好在扫描半径外），
+        // 同一组里就会一半显示「x/y」一半显示「xx%」，这本身就暴露了谁是谁。
+        if (HudTarget.hidesHud(entity)) {
+            return hiddenGroupSnapshot(mc, entity);
+        }
+
         // 服务端选装组件优先（1.20.35 起正常没有开关；1.4.5 的调试功能「优先使用服务端数据」
         // 可以临时关掉它，强制走下面的纯客户端回退，方便在双端环境里对比两条链路）。
         // 玩家和怪一样有 uuid/hp/四色心/碎心/粉心，队友那一行因此也能画心数。
@@ -264,16 +271,6 @@ public final class HudWorldRenderer {
                 ArmourCache.observe(id, fullArmourSlots(pushed));
             }
             return data;
-        }
-
-        // 1.5.5：同组分身 Boss（Psy 等）。双端时 payload 里分身已经复制了真身的读数（上面已返回）；
-        // 纯客户端拿不到真身数据，就取**组内最低百分比**：分身固定 100%，真身掉血后更低 →
-        // 整组显示同一个值，不会暴露真身。
-        if (HudTarget.hidesHud(entity)) {
-            int groupPercent = hiddenGroupPercent(mc, entity);
-            return groupPercent >= 0
-                    ? EnemyData.percentOnly(groupPercent, 0, NO_ARMOUR)
-                    : null;
         }
 
         if (self) {
@@ -342,26 +339,51 @@ public final class HudWorldRenderer {
         return data;
     }
 
-    /** 1.5.5：「同名分身组」统一百分比：缓存 50 ms，避免每个实体每帧都扫一遍实体表。 */
+    /**
+     * 1.5.5 / 1.5.6：「同名分身组」的**整组共同读数**（缓存 50 ms）。
+     *
+     * <p>取数顺序：</p>
+     * <ol>
+     *   <li>调试功能「优先使用服务端数据」开着时，只要组内**任意一条** payload 就在整组用这一条
+     *       （服务端 1.5.5+ 已经把分身的条目复制成真身数据）；</li>
+     *   <li>否则用组内**最低 `HealthPercent`** —— 分身恒 100%，真身掉血后更低，
+     *       于是整组显示真身那个值（纯客户端 / 服务端没装 / 调试关掉服务端数据都走这条）。</li>
+     * </ol>
+     *
+     * <p>关键点：整组共用**同一个快照**，不按实体各取各的 —— 只要组里出现两种显示格式，
+     * 玩家就能从中分辨真身。</p>
+     */
     private static long hiddenGroupStamp = 0L;
-    private static int hiddenGroupPercentCache = -1;
+    private static EnemyData.Snapshot hiddenGroupCache;
 
-    /** 同名分身组里最低的 {@code HealthPercent}（-1 = 一个都读不到）。 */
-    private static int hiddenGroupPercent(Minecraft mc, Entity self) {
+    private static EnemyData.Snapshot hiddenGroupSnapshot(Minecraft mc, Entity self) {
         long now = System.nanoTime();
-        if (now - hiddenGroupStamp < CACHE_NS) return hiddenGroupPercentCache;
+        if (now - hiddenGroupStamp < CACHE_NS) return hiddenGroupCache;
         hiddenGroupStamp = now;
-        int best = -1;
-        if (mc.level != null) {
-            for (Entity other : mc.level.entitiesForRendering()) {
-                if (other == null || !HudTarget.hidesHud(other)) continue;
-                int p = EnemyData.healthPercentOf(mc.level.getScoreboard(), other);
-                best = EnemyData.minPercent(best, p);
+        hiddenGroupCache = computeHiddenGroupSnapshot(mc, self);
+        return hiddenGroupCache;
+    }
+
+    private static EnemyData.Snapshot computeHiddenGroupSnapshot(Minecraft mc, Entity self) {
+        if (mc.level == null) return null;
+        boolean preferServer = HudConfig.get().preferServerData;
+        int lowestPercent = -1;
+        for (Entity other : mc.level.entitiesForRendering()) {
+            if (other == null || !HudTarget.hidesHud(other)) continue;
+            if (preferServer) {
+                MobHealthPayload.Entry pushed = ClientMobHealthCache.lookup(other.getUUID());
+                if (pushed != null && pushed.hp() > 0) {
+                    return EnemyData.fromPayload(pushed.hp(), pushed.maxHp(),
+                            pushed.soul(), pushed.black(), pushed.blue(), pushed.cracked(),
+                            pushed.maxSoul(), pushed.maxBlack(), pushed.maxBlue(),
+                            pushed.defence(), pushed.armour());
+                }
             }
+            lowestPercent = EnemyData.minPercent(lowestPercent,
+                    EnemyData.healthPercentOf(mc.level.getScoreboard(), other));
         }
-        if (best < 0) best = EnemyData.healthPercentOf(mc.level.getScoreboard(), self);
-        hiddenGroupPercentCache = best;
-        return best;
+        if (lowestPercent < 0) return null;
+        return EnemyData.percentOnly(lowestPercent, 0, NO_ARMOUR);
     }
 
     /** 队友红心百分比的粘性缓存：% 短暂读不到时沿用最近一次（见 resolveData 的注释）。 */
