@@ -1166,24 +1166,26 @@ public final class SelfCheck {
         ClientMobHealthCache.reset();
         check(!ClientMobHealthCache.isSuppressed(npcId), "reset 后抑制表应清空");
 
-        // 1.5.4：同名分身 Boss（Psy）—— 真身与分身名字一致，必须整组不画
+        // 1.5.9：Psy 只按**翻译键**判定（去掉末尾不可见字符 U+E007 后精确比较）
         check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Psy")),
-                "translate=Psy 应被隐藏");
-        check(HudTarget.hidesByName(net.minecraft.network.chat.Component.literal("Psy")),
-                "字面量 Psy 应被隐藏");
-        check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Psy Clone")),
-                "translate=Psy Clone 应被隐藏");
+                "键名 Psy 应被隐藏");
+        check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Psy\uE007")),
+                "键名 Psy + U+E007 应被隐藏");
+        check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Psy\uE007\uE007\uE007")),
+                "键名 Psy + 多个 U+E007 也应被隐藏");
+        check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Psy_2XXX")),
+                "键名 Psy_2XXX 应被隐藏");
         check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Rockstar_Psy")),
-                "Rockstar_Psy 皮肤名应被隐藏");
-        check(!HudTarget.hidesByName(net.minecraft.network.chat.Component.literal("兵蚁")),
-                "普通怪名字不该被隐藏");
+                "键名 Rockstar_Psy 应被隐藏");
+        check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Rockstar Psy")),
+                "键名 Rockstar Psy 应被隐藏");
+        // 负向：必须精确匹配（改成前缀匹配就会误伤地图的物品名键）
+        check(!HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Psys Hat")),
+                "物品名键 Psys Hat 不该被隐藏");
+        // 负向：字面量不参与匹配（只看键名，与显示语言无关）
+        check(!HudTarget.hidesByName(net.minecraft.network.chat.Component.literal("Psy")),
+                "字面量 Psy 不该被隐藏");
         check(!HudTarget.hidesByName(null), "null 名字不该被隐藏");
-        // 1.5.7：Boss 栏标题名兜底（纯客户端读不到 custom name / tag 时靠它）
-        check(HudTarget.isPsyName("Psy (HP 75/75)"), "Boss 栏标题含 Psy 应被识别");
-        check(HudTarget.isPsyName("PsyCloneA"), "PsyClone 应被识别");
-        check(HudTarget.isPsyName("Rockstar_Psy"), "Rockstar_Psy 应被识别");
-        check(!HudTarget.isPsyName("兵蚁 (HP 10/10)"), "普通怪名不该被识别");
-        check(!HudTarget.isPsyName(null), "null 不该被识别");
 
         // 1.5.5：同名分身组统一显示 —— 组内取最低百分比（分身 100、真身掉血后更低）
         check(EnemyData.minPercent(-1, 80) == 80, "只有一侧有值时取那一侧");

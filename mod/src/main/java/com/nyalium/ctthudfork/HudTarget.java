@@ -41,53 +41,41 @@ public final class HudTarget {
     private static long memoStamp = 0L;
 
     /**
-     * 1.5.4：这些「同名分身」Boss 的名字 —— 真身与分身**名字、外观完全一样**，
-     * 任何头顶数据（血量数字 / 护甲行 / 血条长度）都能把真身指出来，所以整组一律不画。
+     * 1.5.9：Boss 的身份名（数据包里的 custom name 键）。
      *
-     * <p>依据数据包：真身 {@code enemies/psy.mcfunction} 是 {@code tag=Psy}、
-     * {@code CustomName={translate:"Psy"}}、红心 750~3500；分身由
-     * {@code floors/boss16_psy.mcfunction:332-334} 召唤，{@code tag=PsyClone}，
-     * 但 {@code CustomName} 与真身**完全相同**（{@code {translate:"Psy"}}），红心固定 100。
-     * 地狱难度还有 {@code Rockstar_Psy} 皮肤名。</p>
-     *
-     * <p>双端时服务端还会按 tag（{@code Psy}/{@code PsyClone}）把它们放进抑制列表；
-     * 这里是纯客户端也能用的名字判定（custom name 是同步到客户端的）。</p>
+     * <p>地图给 Psy 的皮肤/分身用的是「{@code Psy} + N 个 {@code U+E007}」这类键
+     * （{@code U+E007} 是地图字体里的不可见字符），翻译后都显示「鸟叔」；
+     * 真身是 {@code Psy}、地狱皮肤是 {@code Rockstar_Psy}。之前只匹配精确的 {@code "Psy"}，
+     * 所以 1.5.6 的纯客户端判定全部失效 —— 日志已经证实客户端能读到 custom name。</p>
      */
     private static final java.util.Set<String> HIDDEN_NAMES =
-            java.util.Set.of("Psy", "Psy Clone", "Rockstar_Psy");
+            java.util.Set.of("Psy", "Psy_2XXX", "Rockstar_Psy", "Rockstar Psy");
 
-    /** 这个名字是不是「身份必须隐藏」的 Boss（纯函数，自检直接打）。 */
+    /** 去掉键名末尾的不可见字符（{@code U+E007}，地图用来区分皮肤）。 */
+    static String stripNameKey(String key) {
+        if (key == null) return null;
+        int end = key.length();
+        while (end > 0 && key.charAt(end - 1) == '\uE007') end--;
+        return key.substring(0, end);
+    }
+
+    /**
+     * 这个名字是不是「身份必须隐藏」的 Boss（纯函数，自检直接打）。
+     *
+     * <p><b>只看翻译键</b>，不看渲染出来的文字 —— 这样与语言无关：
+     * 中文是「鸟叔」、英文是「Psy」、其它语言又是别的，按显示名判定会漏。</p>
+     */
     static boolean hidesByName(Component name) {
         if (name == null) return false;
-        if (name.getContents() instanceof TranslatableContents tc && tc.getKey() != null
-                && HIDDEN_NAMES.contains(tc.getKey())) {
-            return true;
+        if (!(name.getContents() instanceof TranslatableContents tc) || tc.getKey() == null) {
+            return false;
         }
-        String text = name.getString();
-        return text != null && HIDDEN_NAMES.contains(text.trim());
-    }
-
-    /** 1.5.7：Boss 栏名字里出现 Psy → 这段时间内把场上所有末影人当成同一组。 */
-    private static volatile long psyWindowUntil = 0L;
-
-    /** 1.5.7：由渲染端在读到「名字含 Psy」的 Boss 栏时续期。 */
-    static void markPsyEncounter(long untilMs) {
-        psyWindowUntil = untilMs;
-    }
-
-    /** Boss 栏标题/自定义名里像不像 Psy 家族（大小写不敏感）。 */
-    static boolean isPsyName(String text) {
-        return text != null && text.toLowerCase(java.util.Locale.ROOT).contains("psy");
+        return HIDDEN_NAMES.contains(stripNameKey(tc.getKey()));
     }
 
     /** 这只实体要不要「整组统一显示」（摘掉原版分数，并让整组共用一份快照）。 */
     static boolean hidesHud(Entity entity) {
-        if (entity == null) return false;
-        if (hidesByName(entity.getCustomName())) return true;
-        // 1.5.7：纯客户端读不到自定义名时兜底 —— 只要「Psy」Boss 栏还在（2 s 窗口），
-        // 场上所有末影人都按分身组处理（Psy 真身与分身都是末影人，同模型同皮肤）。
-        return System.currentTimeMillis() < psyWindowUntil
-                && entity instanceof net.minecraft.world.entity.monster.Enderman;
+        return entity != null && hidesByName(entity.getCustomName());
     }
 
     private HudTarget() {}
