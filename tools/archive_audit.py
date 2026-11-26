@@ -37,7 +37,7 @@ REPO_URL = 'https://github.com/nyaLium/Cake-Hud-Fork'
 
 # 已经发过 GitHub Release 的版本：`RELEASES.md` 只列这些；其余只算本地归档。
 # 发布新 Release 后，把版本号加进这个集合，再跑一次本脚本。
-PUBLISHED = {'v1.5.0', 'v1.2.10', 'v1.1.0', 'v1.0.3'}
+PUBLISHED = {'v1.5.11'}
 RELEASES_URL = REPO_URL + '/releases'
 
 # 1.20.37 起项目/产物改名为 ctt-hud-fork；更早的归档仍是 cake_team_tower_hud_fork-*。
@@ -63,6 +63,15 @@ def sha256(path):
 
 def git(*args):
     return subprocess.check_output(['git', '-C', REPO] + list(args), text=True).strip()
+
+
+def _range_of(names):
+    ordered = sorted(names, key=lambda n: version_key(n if n.startswith('v') else 'v' + n))
+    if not ordered:
+        return ''
+    if len(ordered) == 1:
+        return ordered[0]
+    return '%s – %s' % (ordered[0], ordered[-1])
 
 
 def version_key(name):
@@ -180,9 +189,10 @@ def main():
 
     # ── 公开清单（仓库根目录 RELEASES.md） ──
     pub = ['# 发布清单（GitHub Releases）\n',
-           '> 本仓库**不保存 jar，也不保存历史归档**：每个正式版对应一个',
-           '> [GitHub Release](%s)，附件里有 `ctt-hud-fork-X.Y.Z.jar` 与 `-sources.jar`。' % RELEASES_URL,
+           '> 本仓库**不保存 jar，也不保存历史归档**：正式版以',
+           '> [GitHub Release](%s) 形式发布，附件里有 `ctt-hud-fork-X.Y.Z.jar` 与 `-sources.jar`。' % RELEASES_URL,
            '> `versions/` 目录只在维护者本地保留（已被 `.gitignore` 排除）。\n',
+           '> 本仓库**当前只发布 v1.5.11**；更早的版本未在此发布。\n',
            '> 下载：<%s>\n' % RELEASES_URL,
            '| 版本 | 日期 | jar 大小 | jar SHA-256（前 16 位） | 附件 |',
            '| --- | --- | --- | --- | --- |']
@@ -197,7 +207,8 @@ def main():
     pub.append('')
     local_only = [r['version'] for r in rows if r['name'] not in PUBLISHED]
     if local_only:
-        pub.append('> 另有 %s 只做本地归档、未单独发布（产物未上传）。\n' % '、'.join(local_only))
+        pub.append('> **历史版本未在本仓库发布**：%s 只有维护者本地归档，不提供下载。\n'
+                   % _range_of(local_only))
     if local_tests:
         pub.append('发布前的 67 个测试版（1.10.0 – 1.20.42）不公开，只保存在维护者本地 `versions/pre-release/`。')
     pub_path = os.path.join(REPO, 'RELEASES.md')
