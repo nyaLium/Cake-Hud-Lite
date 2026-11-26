@@ -366,19 +366,20 @@ public final class HudWorldRenderer {
 
     private static EnemyData.Snapshot computeHiddenGroupSnapshot(Minecraft mc, Entity self) {
         if (mc.level == null) return null;
+        refresh(mc);
         boolean preferServer = HudConfig.get().preferServerData;
+        java.util.Set<UUID> group = new java.util.HashSet<>();
         int lowestPercent = -1;
         for (Entity other : mc.level.entitiesForRendering()) {
             if (other == null || !HudTarget.hidesHud(other)) continue;
+            group.add(other.getUUID());
             lowestPercent = EnemyData.minPercent(lowestPercent,
                     EnemyData.healthPercentOf(mc.level.getScoreboard(), other));
         }
-        // 双端：服务端已把分身条目复制成真身读数，整组共用这一份；
-        // 纯客户端：没有绝对值通道，整组只显示组内最低百分比。
+        // 1) 双端：服务端已把分身条目复制成真身读数，整组共用这一份。
         if (preferServer) {
-            for (Entity other : mc.level.entitiesForRendering()) {
-                if (other == null || !HudTarget.hidesHud(other)) continue;
-                MobHealthPayload.Entry pushed = ClientMobHealthCache.lookup(other.getUUID());
+            for (UUID id : group) {
+                MobHealthPayload.Entry pushed = ClientMobHealthCache.lookup(id);
                 if (pushed != null && pushed.hp() > 0) {
                     return EnemyData.fromPayload(pushed.hp(), pushed.maxHp(),
                             pushed.soul(), pushed.black(), pushed.blue(), pushed.cracked(),
@@ -387,6 +388,20 @@ public final class HudWorldRenderer {
                 }
             }
         }
+        // 2) 纯客户端：地图那条「最近敌人」Boss 栏**永远优先锁定 tag=Boss**（真 Psy），
+        //    所以整组直接复用这条条 —— 分身显示的正是本体的血条/文字。
+        for (java.util.Map.Entry<UUID, BossBarTracker.Bar> en : exactBars.entrySet()) {
+            if (!group.contains(en.getKey())) continue;
+            BossBarTracker.Bar bar = en.getValue();
+            int[] slots = ArmourCache.snapshot(en.getKey());
+            int[] elements = new int[EnemyData.ARMOR_OBJECTIVES.length];
+            System.arraycopy(slots, 1, elements, 0, elements.length);
+            EnemyData.Snapshot data = EnemyData.exact(bar.hp, bar.maxHp, bar.progress,
+                    slots[0], elements, HeartCounts.forMob(bar.hp, bar.maxHp));
+            data.kind = bar.kind;
+            return data;
+        }
+        // 3) 连 Boss 栏都没有（本体不在 20 格内）→ 整组只显示最低百分比。
         if (lowestPercent < 0) return null;
         return EnemyData.percentOnly(lowestPercent, 0, NO_ARMOUR);
     }
