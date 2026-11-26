@@ -37,7 +37,7 @@ REPO_URL = 'https://github.com/nyaLium/Cake-Hud-Fork'
 
 # 已经发过 GitHub Release 的版本：`RELEASES.md` 只列这些；其余只算本地归档。
 # 发布新 Release 后，把版本号加进这个集合，再跑一次本脚本。
-PUBLISHED = {'v1.5.11'}
+PUBLISHED = {'v1.5.11', 'v1.6.1'}
 RELEASES_URL = REPO_URL + '/releases'
 
 # 1.20.37 起项目/产物改名为 ctt-hud-fork；更早的归档仍是 cake_team_tower_hud_fork-*。
@@ -192,7 +192,8 @@ def main():
            '> 本仓库**不保存 jar，也不保存历史归档**：正式版以',
            '> [GitHub Release](%s) 形式发布，附件里有 `ctt-hud-fork-X.Y.Z.jar` 与 `-sources.jar`。' % RELEASES_URL,
            '> `versions/` 目录只在维护者本地保留（已被 `.gitignore` 排除）。\n',
-           '> 本仓库**当前只发布 v1.5.11**；更早的版本未在此发布。\n',
+           '> 本仓库**当前发布 %s**；更早的版本未在此发布。\n'
+           % '、'.join(sorted(PUBLISHED, key=lambda v: [int(x) for x in v.lstrip('v').split('.')])),
            '> 下载：<%s>\n' % RELEASES_URL,
            '| 版本 | 日期 | jar 大小 | jar SHA-256（前 16 位） | 附件 |',
            '| --- | --- | --- | --- | --- |']
