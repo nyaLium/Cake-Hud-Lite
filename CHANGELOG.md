@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.6.7**（本地，待发布） | 修复「标题设置…」入口消失：`HudConfigScreen` 里按钮创建后漏了 `addRenderableWidget`，导致 `/title` 标题 / 副标题的位移与不透明度设置页进不去；其余与 1.6.6 一致 | 待发布 |
 | **1.6.6**（已发布） | 仓库更名为 `Cake-Team_Towers-Hud-Lite`，mod 元数据与文档链接统一到新地址（`contact`、`tools/archive_audit.py`、README/RELEASES/NOTICE）；无代码改动 | [Release](https://github.com/nyaLium/Cake-Team_Towers-Hud-Lite/releases/tag/v1.6.6) |
 | **1.6.5**（已发布） | 把**粗体渲染优化**与**告示牌荧光文本描边优化**移出到独立 mod （[Font Tweaks](https://github.com/nyaLium/Font-Tweaks)），本版回到纯 HUD；删除 `bold*` / `signGlow*` 六个配置字段与「杂项…」入口；修正底部按钮（完成与上方入口同宽同轴，重置在其左侧） | [Release](https://github.com/nyaLium/Cake-Team_Towers-Hud-Lite/releases/tag/v1.6.5) |
 | **1.6.3**（已发布） | 杂项页 + **粗体渲染优化**：对位图与 TTF 字形做掩膜膨胀，粗体只画一遍（顶点数减半、四周对称加粗），另提供保留双画只调距离的「偏移」模式；调试页再加 `CTT-HUD-LITE-DEBUG` 标签门槛（服务端下发 `ctt-hud-fork:debug_tag`）；子设置页返回即落盘 | [Release](https://github.com/nyaLium/Cake-Team_Towers-Hud-Lite/releases/tag/v1.6.3) |

@@ -83,6 +83,7 @@ public final class HudConfigScreen extends Screen {
                         b -> this.minecraft.gui.setScreen(new TitleSettingsScreen(this)))
                 .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build();
         if (!cfg.enabled) title.active = false;
+        addRenderableWidget(title);
         y += ROW_GAP;
 
         // 原来是「调试模式」一行开关，现在改成入口按钮 → 调试功能页
