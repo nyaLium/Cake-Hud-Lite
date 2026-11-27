@@ -62,6 +62,12 @@ public abstract class TitleTextMixin {
     /** 文字盒中心相对 {@code y} 的偏移（字体行高 9 的一半）。 */
     private static final float TEXT_CENTER_Y = 4.5F;
 
+    /** 原版字体行高（GUI 像素），用来算文字盒的下边界。 */
+    private static final float TEXT_HEIGHT = 9.0F;
+
+    /** 钳制位移时留出的屏幕边距（GUI 像素），贴着边不好看。 */
+    private static final int SCREEN_MARGIN = 2;
+
     /** 标题：{@code ordinal = 0}（原版第一处 {@code textWithBackdrop}）。 */
     @Redirect(method = EXTRACT_TITLE, at = @At(value = "INVOKE", target = TEXT_WITH_BACKDROP, ordinal = 0))
     private void cttHudFork$title(GuiGraphicsExtractor graphics, Font font, Component text,
@@ -89,11 +95,12 @@ public abstract class TitleTextMixin {
         float zoom = (float) clamp(scale, 0.25, 4.0);
         float centerX = x + width / 2.0F;
         float centerY = y + TEXT_CENTER_Y;
+        int[] clamped = clampToScreen(graphics, x, y, width, factor, zoom, offset);
 
         graphics.pose().pushMatrix();
         // 位移：GUI 像素 → 当前 item 的 local 单位；写在最外层，不受 zoom 影响
-        if (offset[0] != 0 || offset[1] != 0) {
-            graphics.pose().translate(offset[0] / factor, offset[1] / factor);
+        if (clamped[0] != 0 || clamped[1] != 0) {
+            graphics.pose().translate(clamped[0] / factor, clamped[1] / factor);
         }
         // 缩放：绕文字盒中心
         if (zoom != 1.0F) {
@@ -104,6 +111,40 @@ public abstract class TitleTextMixin {
 
         graphics.textWithBackdrop(font, text, x, y, width, applyOpacity(argb, opacity));
         graphics.pose().popMatrix();
+    }
+
+    /**
+     * 把位移钳制到「文字仍然完整留在屏幕内」的范围。
+     *
+     * <p>进 {@code drawItem} 时 pose 原点已经在屏幕中心，所以文字盒在屏幕上的中心是
+     * {@code 屏幕中心 + 文字盒中心 × 原版倍数}（不含位移），半宽 / 半高再乘上我们的缩放。
+     * 位移取能让四条边都留在屏幕内的区间；文字本身就比屏幕还宽时不硬塞，直接居中。</p>
+     */
+    private static int[] clampToScreen(GuiGraphicsExtractor graphics, int x, int y, int width,
+                                       float factor, float zoom, int[] offset) {
+        int guiWidth = graphics.guiWidth();
+        int guiHeight = graphics.guiHeight();
+        float screenCenterX = guiWidth / 2.0F + (x + width / 2.0F) * factor;
+        float screenCenterY = guiHeight / 2.0F + (y + TEXT_CENTER_Y) * factor;
+        float halfWidth = width * factor * zoom / 2.0F;
+        float halfHeight = TEXT_HEIGHT * factor * zoom / 2.0F;
+
+        return new int[]{
+                clampAxis(offset[0], screenCenterX, halfWidth, guiWidth),
+                clampAxis(offset[1], screenCenterY, halfHeight, guiHeight)
+        };
+    }
+
+    private static int clampAxis(int offset, float center, float half, int size) {
+        float lower = SCREEN_MARGIN + half - center;
+        float upper = size - SCREEN_MARGIN - half - center;
+
+        if (lower > upper) {
+            // 文字比可用区域还大：居中，别让它再被推到一边
+            return 0;
+        }
+
+        return (int) Math.max(Math.ceil(lower), Math.min(Math.floor(upper), (double) offset));
     }
 
     /** 把颜色里已有的 alpha（原版淡入淡出算出来的）再乘一个系数。 */

@@ -1,9 +1,11 @@
 package com.nyalium.ctthudfork;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.InputType;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 
@@ -153,6 +155,8 @@ public final class TitleSettingsScreen extends Screen {
         private final double step;
         private final DoubleFunction<Component> label;
         private final DoubleConsumer onChange;
+        /** 是否处于「可调值」状态（左右键调值，而不是移动焦点）。 */
+        private boolean editing;
 
         ValueSlider(int x, int y, int width, int height, double min, double max, double step, double initial,
                     DoubleFunction<Component> label, DoubleConsumer onChange) {
@@ -182,7 +186,8 @@ public final class TitleSettingsScreen extends Screen {
         }
 
         /**
-         * 方向键：一次正好走<b>一个步进</b>。
+         * 方向键：<b>未进入调值态时左右键留给界面做焦点导航</b>（同一行 / 相邻控件之间换选），
+         * 进入调值态后一次正好走<b>一个步进</b>。
          *
          * <p>原版 {@code AbstractSliderButton} 一次走 {@code 1/(width-8)} 的<b>比例</b>，
          * 换算到「-300~300」这种量程上被放大成 3~4 像素一跳，微调很不顺手；
@@ -190,16 +195,38 @@ public final class TitleSettingsScreen extends Screen {
          */
         @Override
         public boolean keyPressed(KeyEvent event) {
-            boolean left = event.isLeft();
-            boolean right = event.isRight();
-            if (this.active && (left || right)) {
+            // 26.3 的滑块是「先选中再用左右键调值」：Enter / 空格进入调值态
+            if (event.isSelection()) {
+                this.editing = !this.editing;
+                return true;
+            }
+
+            if (event.isLeft() || event.isRight()) {
+                if (!this.editing) {
+                    return false;
+                }
+
                 double fraction = this.step / (this.max - this.min);
-                double next = this.value + (left ? -fraction : fraction);
+                double next = this.value + (event.isLeft() ? -fraction : fraction);
                 setValue(Math.max(0.0, Math.min(1.0, next)));
                 return true;
             }
 
             return super.keyPressed(event);
+        }
+
+        /** 与 26.3 一致：鼠标 / Tab 聚焦后可直接调值，方向键导航过来则要先 Enter / 空格。 */
+        @Override
+        public void setFocused(boolean focused) {
+            super.setFocused(focused);
+
+            if (!focused) {
+                this.editing = false;
+                return;
+            }
+
+            InputType type = Minecraft.getInstance().getLastInputType();
+            this.editing = type == InputType.MOUSE || type == InputType.KEYBOARD_TAB;
         }
     }
 }
