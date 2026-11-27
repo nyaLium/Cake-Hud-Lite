@@ -98,17 +98,17 @@ public final class HudConfigScreen extends Screen {
         if (!cfg.enabled || !DebugSettingsScreen.canAdjust()) debug.active = false;
         addRenderableWidget(debug);
 
-        // 底部：重置（左）/ 完成（右），两个按钮与上方入口同宽。
+        // 底部：完成与上方入口**同宽同轴**；重置是它左侧的一个小按钮。
         int bottomY = Math.max(y + ROW_GAP, this.height - ROW_HEIGHT - 8);
-        int totalWidth = BUTTON_WIDTH * 2 + 8;
-        int leftX = this.width / 2 - totalWidth / 2;
+        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> done())
+                .bounds(x, bottomY, BUTTON_WIDTH, ROW_HEIGHT).build());
+        int resetWidth = 60;
+        int resetX = Math.max(0, x - 8 - resetWidth);
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.resetAll"), b -> {
             HudConfig.reset();
             HudConfig.save();
             this.rebuildWidgets();
-        }).bounds(leftX, bottomY, BUTTON_WIDTH, ROW_HEIGHT).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> done())
-                .bounds(leftX + BUTTON_WIDTH + 8, bottomY, BUTTON_WIDTH, ROW_HEIGHT).build());
+        }).bounds(resetX, bottomY, resetWidth, ROW_HEIGHT).build());
     }
 
     /** 完成：写盘并关闭。 */
