@@ -183,5 +183,6 @@
   "ctt_hud_fork.config.titleScale": "标题缩放：%s",
   "ctt_hud_fork.config.subtitleScale": "副标题缩放：%s",
   "ctt_hud_fork.config.titleHint": "左列 = 标题，右列 = 副标题（不含 actionbar）· 缩放以文字中心为基准",
-  "ctt_hud_fork.config.titlePage": "标题设置"
+  "ctt_hud_fork.config.titlePage": "标题设置",
+  "ctt_hud_fork.config.resetAll": "总重置"
 }

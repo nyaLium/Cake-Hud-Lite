@@ -183,5 +183,6 @@
   "ctt_hud_fork.config.titleScale": "Title scale: %s",
   "ctt_hud_fork.config.subtitleScale": "Subtitle scale: %s",
   "ctt_hud_fork.config.titleHint": "Left column = title, right = subtitle (actionbar excluded) · scale is around the text centre",
-  "ctt_hud_fork.config.titlePage": "Titles"
+  "ctt_hud_fork.config.titlePage": "Titles",
+  "ctt_hud_fork.config.resetAll": "Reset all"
 }
