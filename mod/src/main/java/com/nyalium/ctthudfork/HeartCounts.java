@@ -52,13 +52,13 @@ public final class HeartCounts {
     /**
      * 图标：红 / 魂 / 黑 / 蓝 = {@code ❤}，碎 / 粉 = 地图资源包里的私有区字形 {@code U+E026}。
      *
-     * <p>1.2.2：六类原来都用 ❤，靠颜色区分。但地图的碎心 / 粉心用的是<b>自定义字形</b>
+     * <p>六类原来都用 ❤，靠颜色区分。但地图的碎心 / 粉心用的是<b>自定义字形</b>
      * （数据包 {@code view_stats.mcfunction} 第 26/27 行 {@code {text:"\uE026"}}，
      * 资源包 {@code assets/minecraft/font/default.json} 把它映射到
      * {@code minecraft:custom/cracked_heart.png}，一张白色裂心贴图，由文字颜色染色）。
      * 所以 HUD 里碎 / 粉也要写这个字形，才和游戏内一致；</p>
      *
-     * <p>1.4.7：客户端没装地图资源包时这个字形不存在，{@link #icon(int)} 会自动退回 ❤
+     * <p>客户端没装地图资源包时这个字形不存在，{@link #icon(int)} 会自动退回 ❤
      * （可用性由渲染端用 {@code Font.width} 探测一次，见 {@link #setCrackedGlyphAvailable(boolean)}）。</p>
      */
     public static final String HEART_GLYPH = "\u2764";

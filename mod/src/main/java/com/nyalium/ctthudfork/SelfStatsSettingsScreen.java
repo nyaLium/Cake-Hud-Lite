@@ -70,16 +70,16 @@ public final class SelfStatsSettingsScreen extends Screen {
         int y = 0;
         // 总开关：showSelfStats（整个模组的总开关是 enabled，不在这页）
         y = toggle("showSelfStats", y);
-        // 刷新间隔：selfStatsSeconds（1~5 秒，默认 3；1.0.0 起没有「立即」档）
+        // 刷新间隔：selfStatsSeconds（1~5 秒，默认 3；没有「立即」档）
         y = slider("selfStatsSeconds", y, 1, 5, 1, cfg.selfStatsSeconds, mode);
-        // 列数 / 不透明度（1.4.1 起**全局**，只看 selfStatsColumns / selfStatsOpacity）
+        // 列数 / 不透明度（**全局**，只看 selfStatsColumns / selfStatsOpacity）
         y = slider("selfStatsColumns", y, 1, 3, 1, cfg.selfStatsColumns, mode);
         y = slider("selfStatsOpacity", y, 0.2, 1.0, 0.05, cfg.selfStatsOpacity, mode);
         // 文字阴影：selfStatsTextShadow（只管面板，与实体血条 textShadow 分开）
         y = toggle("selfStatsTextShadow", y);
         // 显示方式：selfStatsMode（0 HUD / 1 容器 / 2 两者；循环顺序见 nextMode）
         y = button("selfStatsMode", y, "mode");
-        // 1.4.1：不再有「编辑对象」—— 模式 2 的两套位置在「调整位置…」里各自摆。
+        // 不再有「编辑对象」—— 模式 2 的两套位置在「调整位置…」里各自摆。
         // 调整位置…：进 SelfStatsLayoutScreen（拖动 / 方向键，写 *X/*Y + layoutGuiW/H）
         y = button("selfStatsMove", y, "move");
         // 显示内容过滤…：进 SelfStatsFilterScreen（88 项，三节；写 selfStatsHidden）
@@ -125,7 +125,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         return Component.translatable("ctt_hud_fork.config." + id);
     }
 
-    /** 开关行的当前值（1.20.32：面板文字阴影独立，不再只有一个开关）。 */
+    /** 开关行的当前值（面板文字阴影独立，不再只有一个开关）。 */
     private static boolean toggleValue(String id) {
         HudConfig.Cfg cfg = HudConfig.get();
         return switch (id) {
@@ -153,7 +153,7 @@ public final class SelfStatsSettingsScreen extends Screen {
 
         HudConfig.Cfg cfg = HudConfig.get();
         int mode = cfg.selfStatsMode;
-        // 1.4.1：列数/不透明度全局；这里只在「容器显示」时把位置编辑指向容器那套。
+        // 列数/不透明度全局；这里只在「容器显示」时把位置编辑指向容器那套。
         boolean editContainer = mode == 1;
         boolean enabled = cfg.showSelfStats;
         boolean forced = SelfStats.forcedByServer(this.minecraft);
@@ -270,7 +270,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         return true;
     }
 
-    // ── 滚动条：可点可拖（1.20.32） ──
+    // ── 滚动条：可点可拖 ──
 
     /** 是否正在拖滑块。 */
     private boolean barDragging;

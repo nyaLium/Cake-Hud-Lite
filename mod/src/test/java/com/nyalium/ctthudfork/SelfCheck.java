@@ -126,7 +126,7 @@ public final class SelfCheck {
     /**
      * 纯客户端只有 {@code below_name = HealthPercent} 时：血条 + 「73%」数字。
      *
-     * <p>1.20.7 起 percentOnly 不再只画条：数字行写百分比（口径 = hp*100/maxHp 四舍五入夹 0~100）。</p>
+     * <p>percentOnly 不再只画条：数字行写百分比（口径 = hp*100/maxHp 四舍五入夹 0~100）。</p>
      */
     private static void percentOnlyText() {
         int[][] cases = {
@@ -183,7 +183,7 @@ public final class SelfCheck {
     // ── 1c. 大厅里不该发 ViewStats / 失败提示要吞掉 ──
 
     /**
-     * 1.20.8：大厅里不发 {@code /trigger ViewStats}，并且「无法触发该计分项」这类回显要被过滤。
+     * 大厅里不发 {@code /trigger ViewStats}，并且「无法触发该计分项」这类回显要被过滤。
      */
     private static void lobbyTriggerGuard() {
         check(SelfStats.isTriggerDenied("You cannot trigger this objective yet"),
@@ -224,7 +224,7 @@ public final class SelfCheck {
     // ── 1d. 同名怪：bossbar 认领要「血量对得上」才认 ──
 
     /**
-     * 1.20.9：同名怪附近时，bossbar 只认血量差 ≤ {@link BossBarTracker#PERCENT_TOLERANCE} 的实体，
+     * 同名怪附近时，bossbar 只认血量差 ≤ {@link BossBarTracker#PERCENT_TOLERANCE} 的实体，
      * 不再因为「上一帧绑过」或「名字一样」就继续粘着旧的那只。
      */
     private static void bossBarBinding() {
@@ -253,7 +253,7 @@ public final class SelfCheck {
         check(BossBarTracker.matchScore(0, true, false, 0)
                         > BossBarTracker.matchScore(0, true, false, 4096),
                 "同分时更近的优先");
-        // 1.20.10：距离优先于粘性，但 2 格以内不换绑
+        // 距离优先于粘性，但 2 格以内不换绑
         check(BossBarTracker.matchScore(0, true, true, 9)
                         > BossBarTracker.matchScore(0, true, false, 6),
                 "粘性绑定的怪在 2 格以内应继续沿用");
@@ -280,7 +280,7 @@ public final class SelfCheck {
 
     // ── 1f. 属性面板显示方式：四套配置 ──
 
-    /** 1.20.14：HUD / 容器界面各一套位置·列数·不透明度；模式 0/1/2（v1.0.0 起没有「文字大小」）。 */
+    /** HUD / 容器界面各一套位置·列数·不透明度；模式 0/1/2（v1.0.0 起没有「文字大小」）。 */
     private static void panelModes() {
         HudConfig.Cfg c = HudConfig.get();
         int oldMode = c.selfStatsMode;
@@ -423,9 +423,9 @@ public final class SelfCheck {
         check(defaults.barWidth == 75.0, "默认血条长度应为 75");
         check(defaults.teamBarWidth == 75.0, "队友血条默认长度也应为 75");
         check(defaults.scale == 0.9, "默认缩放应为 0.9: " + defaults.scale);
-        // 1.4.0：自己的血条默认关
+        // 自己的血条默认关
         check(!new HudConfig.Cfg().showSelf, "自己的血条默认应关闭");
-        // 1.4.5：调试功能默认值 —— 优先服务端数据、筛选数量 = 单包上限
+        // 调试功能默认值 —— 优先服务端数据、筛选数量 = 单包上限
         check(new HudConfig.Cfg().preferServerData, "默认应优先使用服务端数据");
         check(defaults.payloadLimit == MobHealthPayload.MAX_ENTRIES,
                 "默认筛选数量应等于单包上限: " + defaults.payloadLimit);
@@ -437,7 +437,7 @@ public final class SelfCheck {
         check(HudConfig.normalize(highLimit).payloadLimit == MobHealthPayload.MAX_ENTRIES,
                 "筛选数量上限应夹到 " + MobHealthPayload.MAX_ENTRIES);
         check(defaults.teamScale == 0.9, "队友默认缩放也应为 0.9: " + defaults.teamScale);
-        // 1.4.6：血条 / 文字的不透明度分开，默认 65% / 100%
+        // 血条 / 文字的不透明度分开，默认 65% / 100%
         check(defaults.barOpacity == 0.65, "默认血条不透明度应为 0.65: " + defaults.barOpacity);
         check(defaults.textOpacity == 1.0, "默认文字不透明度应为 1.00: " + defaults.textOpacity);
         check(defaults.teamBarOpacity == 0.65, "玩家默认血条不透明度应为 0.65: " + defaults.teamBarOpacity);
@@ -450,7 +450,7 @@ public final class SelfCheck {
 
         check(HudConfig.normalize(null) != null, "normalize(null) 不能返回 null");
 
-        // 1.2.5：癫狂靠专属 Boss 栏的翻译键识别（写死，无开关）
+        // 癫狂靠专属 Boss 栏的翻译键识别（写死，无开关）
         check(BerserkDetector.isBerserkKey("Misc_Bossbars_P10_Bossbar_11"),
                 "癫狂专属 bar 的键应被识别");
         check(!BerserkDetector.isBerserkKey("Items_status_effect21_berserk_1"),
@@ -500,7 +500,7 @@ public final class SelfCheck {
         HudConfig.migrate("{\"configVersion\":2,\"barWidth\":100.0}", current);
         check(current.barWidth == 100.0, "新配置里显式写 100 不该被改: " + current.barWidth);
 
-        // v2 的旧默认缩放 1.0 → 0.9（1.19.0 起），自己调过的保留。
+        // v2 的旧默认缩放 1.0 → 0.9，自己调过的保留。
         HudConfig.Cfg v2 = new HudConfig.Cfg();
         v2.configVersion = 2;
         v2.scale = 1.0;
@@ -515,7 +515,7 @@ public final class SelfCheck {
         HudConfig.migrate("{\"configVersion\":2,\"scale\":1.25}", customScale);
         check(customScale.scale == 1.25, "自己调过的缩放不该被迁移覆盖: " + customScale.scale);
 
-        // 1.3.6：表驱动后仍保持旧顺序 —— 先做 v7 的跨字段复制，再由 v21 把仍为 20 的 containerY
+        // 表驱动后仍保持旧顺序 —— 先做 v7 的跨字段复制，再由 v21 把仍为 20 的 containerY
         // 改成「屏幕高 ÷ 3」哨兵（如果顺序反了，复制会把哨兵又覆盖回 20）。
         HudConfig.Cfg v5 = new HudConfig.Cfg();
         v5.configVersion = 5;
@@ -531,7 +531,7 @@ public final class SelfCheck {
         HudConfig.migrate("{\"configVersion\":3,\"scale\":1.0}", v3);
         check(v3.scale == 1.0, "已经是 v3 的配置不该再迁移: " + v3.scale);
 
-        // 1.2.2：下限 0.10（原来 0.50）；1.4.6 起血条 / 文字各自映射，alpha 合法区间仍是 26~255。
+        // 下限 0.10（原来 0.50）；血条 / 文字各自映射，alpha 合法区间仍是 26~255。
         for (double op = 0.05; op <= 1.2; op += 0.05) {
             HudConfig.Cfg t = new HudConfig.Cfg();
             t.barOpacity = op;
@@ -637,7 +637,7 @@ public final class SelfCheck {
         check(rowText(noBlue, 0).equals("❤50/50"), "不存在的类型不该显示: " + rowText(noBlue, 0));
         o.cycleKind = HeartCounts.SOUL;
 
-        // 拆不出心数（percentOnly）→ 1.20.7 起显示百分比数字；已知当前/上限但拆不出心数 → 当前/最大。
+        // 拆不出心数（percentOnly）→ 显示百分比数字；已知当前/上限但拆不出心数 → 当前/最大。
         HudLayout.Result fallback = run("回退", new Data("只有百分比", 73, 100, true, 0,
                 new int[]{0, 0, 0, 0, 0, 0, 0}), o);
         check(join(fallback).equals("❤ 73%"), "只有百分比时应显示 ❤ 73%: " + join(fallback));
@@ -650,7 +650,7 @@ public final class SelfCheck {
                 new int[]{0, 0, 0, 0, 0, 0, 0}), noHearts);
         check(join(numbers).equals("❤ 160/100"), "关掉心数应退回「❤ 当前/上限」: " + join(numbers));
 
-        // 1.20.0：护甲在最上面一行，🛡 与元素护甲之间**两个空格**。
+        // 护甲在最上面一行，🛡 与元素护甲之间**两个空格**。
         HudLayout.Options withArmor = new HudLayout.Options();
         withArmor.showBar = false;
         withArmor.cycleKind = HeartCounts.SOUL;
@@ -728,7 +728,7 @@ public final class SelfCheck {
         // 玩家排版下，红心与轮换心的顺序固定：红心在前。
         check(rowText(teamHearts, 1).startsWith("❤60/150"), "红心永远在最前面");
 
-        // 1.16.3 起：队友**只画心与血条**，护甲段一律不画 —— 即使 payload 带了 defence / 元素护甲。
+        // 队友**只画心与血条**，护甲段一律不画 —— 即使 payload 带了 defence / 元素护甲。
         HudLayout.Options teamNoArmor = new HudLayout.Options();
         teamNoArmor.showHearts = true;
         teamNoArmor.showArmor = false;
@@ -768,7 +768,7 @@ public final class SelfCheck {
         check(join(armored).contains(EnemyData.ARMOR_ICONS[1] + "5"), "元素护甲段缺失: " + join(armored));
     }
 
-    // ── 4b. 元素护甲翻页（1.17.0） ──
+    // ── 4b. 元素护甲翻页 ──
 
     private static void armourPaging() {
         // 🔥3 ☃1 ☠2 ☀4 ⚓6 = 5 项 → 2 + 2 + 1 三页
@@ -843,7 +843,7 @@ public final class SelfCheck {
         check(clamped.contains("\u26936"), "页号越界应夹到最后一页: " + clamped);
     }
 
-    // ── 4c. 心类轮换（1.20.0） ──
+    // ── 4c. 心类轮换 ──
 
     private static void heartCycling() {
         HeartCounts enemy = HeartCounts.of(60, 40, 30, 20, 2);   // 魂/黑/蓝/碎 四种
@@ -880,7 +880,7 @@ public final class SelfCheck {
         check(HeartCycle.pick(two, false, ms * 2, 0) == HeartCounts.SOUL, "两步循环回到魂");
     }
 
-    // ── 4d. 大数值缩写（1.17.0） ──
+    // ── 4d. 大数值缩写 ──
 
     private static void bigNumbers() {
         check(HudLayout.num(0).equals("0"), "num(0)");
@@ -919,7 +919,7 @@ public final class SelfCheck {
         check(text.contains("999.9K/999.9K"), "大数值缩写格式: " + text);
         check(text.length() < 60, "缩写后整行不该太长: " + text.length() + " -> " + text);
 
-        // 1.2.2：玩家头顶的心数**不缩写**（魂/黑/蓝/碎/粉都照原样写）
+        // 玩家头顶的心数**不缩写**（魂/黑/蓝/碎/粉都照原样写）
         HudLayout.Options p2 = new HudLayout.Options();
         p2.showArmor = false;
         p2.showBar = false;
@@ -930,7 +930,7 @@ public final class SelfCheck {
         check(pt.contains("12.3K") && pt.contains("10K"), "玩家心数也要缩写: " + pt);
         check(!pt.contains("12345") && !pt.contains("10000"), "玩家心数不该出现原样大数: " + pt);
 
-        // 1.2.2：红 / 魂 / 黑 / 蓝 用 ❤；1.4.7：碎 / 粉用地图资源包的裂心字形 U+E026（颜色区分）。
+        // 红 / 魂 / 黑 / 蓝 用 ❤；碎 / 粉用地图资源包的裂心字形 U+E026（颜色区分）。
         for (int i = 0; i <= HeartCounts.BLUE; i++) {
             check(HeartCounts.ICONS[i].equals("\u2764"), "第 " + i + " 类心应使用 ❤");
         }
@@ -945,7 +945,7 @@ public final class SelfCheck {
         check(HeartCounts.icon(HeartCounts.PINK).equals("\uE026"), "有资源包时粉心用裂心字形");
         HeartCounts.setCrackedGlyphAvailable(false);
 
-        // 1.4.6：不透明度拆成「血条」与「文字」两条，各自 0.10 ~ 1.00，越界夹回。
+        // 不透明度拆成「血条」与「文字」两条，各自 0.10 ~ 1.00，越界夹回。
         HudConfig.Cfg low = new HudConfig.Cfg();
         low.barOpacity = 0.05;
         low.textOpacity = 0.02;
@@ -963,7 +963,7 @@ public final class SelfCheck {
         check(kept.barOpacity == 0.4 && kept.textOpacity == 0.9,
                 "夹取范围内的值应原样保留: " + kept.barOpacity + "/" + kept.textOpacity);
 
-        // 1.2.2：真盔甲不参与翻页，常驻在 🛡 防御后面
+        // 真盔甲不参与翻页，常驻在 🛡 防御后面
         int[] onlyTrue = new int[EnemyData.ARMOR_OBJECTIVES.length];
         onlyTrue[EnemyData.TRUE_ARMOR_INDEX] = 20;
         check(HudLayout.armourPageCount(onlyTrue) == 0, "真盔甲不该占翻页名额");
@@ -974,7 +974,7 @@ public final class SelfCheck {
         String trueTop = join(HudLayout.compute(100, 100, false, 0, onlyTrue,
                 HeartCounts.forMob(100, 100), p3, SelfCheck::width));
         check(trueTop.contains("20"), "只有真盔甲时也应显示: " + trueTop);
-        // 1.4.7：没有 🛡 防御、只有真·防御时，行首不能带空格
+        // 没有 🛡 防御、只有真·防御时，行首不能带空格
         check(!trueTop.startsWith(" "), "没有防御时护甲行不该以空格开头: [" + trueTop + "]");
         // 有防御时，真·防御前面仍要有分隔空格
         String defTrue = join(HudLayout.compute(100, 100, false, 7, onlyTrue,
@@ -1112,7 +1112,7 @@ public final class SelfCheck {
                 "MIN_VALUE 粉心不该溢出为负");
         check(HeartCounts.unknown().get(HeartCounts.PINK) == HeartCounts.UNKNOWN, "未知粉心哨兵值");
 
-        // 1.4.4：单包上限 32 → 64 条（玩家优先），协议版本跟着升到 2；
+        // 单包上限 32 → 64 条（玩家优先），协议版本跟着升到 2；
         // 旧客户端（v1）收到 v2 会整包忽略（ClientMobHealthCache.accept），安全降级。
         check(MobHealthPayload.MAX_ENTRIES == 64, "单包上限应为 64 条: " + MobHealthPayload.MAX_ENTRIES);
         check(MobHealthPayload.CURRENT_VERSION == 4, "协议版本应为 3: " + MobHealthPayload.CURRENT_VERSION);
@@ -1135,7 +1135,7 @@ public final class SelfCheck {
         check(ClientMobHealthCache.cap(three, 999).size() == 3, "筛选数量超大时应全保留（服务端只推了 3 条）");
         check(ClientMobHealthCache.cap(java.util.List.of(), 5).isEmpty(), "空包截断后仍为空");
 
-        // 1.5.1：payload 的 AllHearts 缺失时（新刷的怪还没被 tag=CTTAll 补算），客户端用百分比兜底 ——
+        // payload 的 AllHearts 缺失时（新刷的怪还没被 tag=CTTAll 补算），客户端用百分比兜底 ——
         // 显示「❤ 73%」+ 百分比条，而不是「0/上限」+ 空条。
         EnemyData.Snapshot pctOnly = EnemyData.percentOnly(73, 3,
                 new int[]{1, 0, 0, 0, 0, 0, 0});
@@ -1148,7 +1148,7 @@ public final class SelfCheck {
         check(EnemyData.percentOnly(-5, 0, new int[7]).percent == 0, "percentOnly 负值应夹到 0");
         check(EnemyData.percentOnly(150, 0, new int[7]).percent == 100, "percentOnly 超 100 应夹到 100");
 
-        // 1.5.2：残血时血条至少 1 px（整数分数下 1/325 = 0.3%，乘条宽 round 后会是 0）
+        // 残血时血条至少 1 px（整数分数下 1/325 = 0.3%，乘条宽 round 后会是 0）
         check(HudLayout.fillPixels(75, 0.0f) == 0, "比例 0 不应有填充");
         check(HudLayout.fillPixels(75, -1.0f) == 0, "负比例不应有填充");
         check(HudLayout.fillPixels(75, 1.0f) == 75, "满血应填满");
@@ -1157,7 +1157,7 @@ public final class SelfCheck {
                 "1/325 应至少 1 px: " + HudLayout.fillPixels(75, 1.0f / 325.0f));
         check(HudLayout.fillPixels(0, 1.0f) == 0, "宽度 0 不应有填充");
 
-        // 1.5.3：NPC 抑制列表 —— 服务端说「别画」的实体，客户端只隐藏、不画
+        // NPC 抑制列表 —— 服务端说「别画」的实体，客户端只隐藏、不画
         ClientMobHealthCache.reset();
         java.util.UUID npcId = java.util.UUID.randomUUID();
         ClientMobHealthCache.accept(new MobHealthPayload(MobHealthPayload.CURRENT_VERSION,
@@ -1169,7 +1169,7 @@ public final class SelfCheck {
         ClientMobHealthCache.reset();
         check(!ClientMobHealthCache.isSuppressed(npcId), "reset 后抑制表应清空");
 
-        // 1.5.9：Psy 只按**翻译键**判定（去掉末尾不可见字符 U+E007 后精确比较）
+        // Psy 只按**翻译键**判定（去掉末尾不可见字符 U+E007 后精确比较）
         check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Psy")),
                 "键名 Psy 应被隐藏");
         check(HudTarget.hidesByName(net.minecraft.network.chat.Component.translatable("Psy\uE007")),
@@ -1190,7 +1190,7 @@ public final class SelfCheck {
                 "字面量 Psy 不该被隐藏");
         check(!HudTarget.hidesByName(null), "null 名字不该被隐藏");
 
-        // 1.5.5：同名分身组统一显示 —— 组内取最低百分比（分身 100、真身掉血后更低）
+        // 同名分身组统一显示 —— 组内取最低百分比（分身 100、真身掉血后更低）
         check(EnemyData.minPercent(-1, 80) == 80, "只有一侧有值时取那一侧");
         check(EnemyData.minPercent(80, -1) == 80, "只有一侧有值时取那一侧（反序）");
         check(EnemyData.minPercent(80, 100) == 80, "应取较低的 80");
@@ -1414,7 +1414,7 @@ public final class SelfCheck {
         }
     }
 
-    // ── 自身属性面板（1.20.3：/trigger ViewStats 抓取 + 布局） ──
+    // ── 自身属性面板（/trigger ViewStats 抓取 + 布局） ──
 
     private static void selfStatsAndPanel() {
         // ① 心形 + 颜色 → 心类
@@ -1446,7 +1446,7 @@ public final class SelfCheck {
                 && SelfStats.CAPTURE_HARD_MS > SelfStats.CAPTURE_TIMEOUT_MS,
                 "采集超时应大于 0 且硬上限大于它");
 
-        // ③.5 1.20.39：进存档 / 进服后先安静 3 s
+        // ③.5 进存档 / 进服后先安静 3 s
         check(SelfStats.JOIN_GRACE_MS > 0 && SelfStats.JOIN_GRACE_TICKS > 0,
                 "静默时长与实体 tick 门槛都应大于 0");
         check(SelfStats.JOIN_GRACE_MS >= 1_000L, "静默时长不该小于 1 s");
@@ -1505,7 +1505,7 @@ public final class SelfCheck {
                         .withStyle(s -> s.withColor(net.minecraft.network.chat.TextColor.fromRgb(SelfStats.YELLOW))));
         int[] h2 = SelfStats.heartsOf(multi);
         check(h2[2] == 40, "端到端：魂心应解析为 40，实际 " + h2[2]);
-        // 1.4.6：地图的「❤%」是治疗百分比（HealPercent / ExtraHealing），不能当成红心数 ——
+        // 地图的「❤%」是治疗百分比（HealPercent / ExtraHealing），不能当成红心数 ——
         // 以前红 ❤% 会把红心数覆盖成治疗百分比（实测 164 → 10）。
         var healPct = net.minecraft.network.chat.Component.empty()
                 .append(net.minecraft.network.chat.Component.literal("10")
@@ -1572,7 +1572,7 @@ public final class SelfCheck {
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
-    /** 1.20.5：按单个属性分类 / 提示行过滤 / 可滚动过滤列表 / 缩放不透明度。 */
+    /** 按单个属性分类 / 提示行过滤 / 可滚动过滤列表 / 缩放不透明度。 */
     private static void selfStatsFineKinds() {
         var hint = net.minecraft.network.chat.Component.translatable("Misc_View_Stats_1");
         check(SelfStats.classify(SelfStats.analyze(hint)) == SelfStatsKind.HINT,
@@ -1656,7 +1656,7 @@ public final class SelfCheck {
         check(glyphKind("\uE026", SelfStats.LIGHT_PURPLE) == SelfStatsKind.HEART_PINK,
                 "私有区字形 + 亮紫应归为粉心");
 
-        // 过滤表：细类、分节、粗类展开、非法值（1.20.31：属性 / 状态效果 / 其它；1.20.32 游戏时间与难度骷髅移到「其它」）
+        // 过滤表：细类、分节、粗类展开、非法值（属性 / 状态效果 / 其它；1.20.32 游戏时间与难度骷髅移到「其它」）
         check(SelfStatsKind.FILTERABLE.length == 96,
                 "可过滤项应为 96 项（1.2.11 新增 8 个「乘算前」原始值），实际 " + SelfStatsKind.FILTERABLE.length);
         check(SelfStatsKind.section(SelfStatsKind.Group.ATTRIBUTE).length == 64, "「属性」一节应有 64 项");
@@ -1715,7 +1715,7 @@ public final class SelfCheck {
                 "其它一节第一行应是 游戏时间 + 难度骷髅");
         check(rows.get(55).left() == SelfStatsKind.GRASS && rows.get(55).right() == SelfStatsKind.MISC,
                 "其它一节第二行应是 草方块 + 未识别行");
-        // 1.3.1：属性细分（心型 / 倍率 / 护甲 / 杂项）
+        // 属性细分（心型 / 倍率 / 护甲 / 杂项）
         check(SelfStatsKind.HEART_RED.sub() == SelfStatsKind.Sub.HEART, "红心应归心型");
         check(SelfStatsKind.HP_NEG.sub() == SelfStatsKind.Sub.HEART, "负心应归心型");
         check(SelfStatsKind.HEART_SOUL.sub() == SelfStatsKind.Sub.HEART, "魂心应归心型");
@@ -1774,7 +1774,7 @@ public final class SelfCheck {
         check(defaults.selfStatsMode == 2, "默认显示方式应为 HUD + 容器界面（v1.0.0 起）");
         check(defaults.selfStatsHidden.isEmpty(), "默认不隐藏任何属性");
 
-        // 1.2.0：盾牌默认位置是否跟随主手（shieldAutoMirror）
+        // 盾牌默认位置是否跟随主手（shieldAutoMirror）
         check(defaults.shieldAutoMirror, "盾牌默认位置默认跟随主手镜像");
         HudConfig.Cfg mirrorOn = new HudConfig.Cfg();
         check(ShieldIndicatorHud.offhandOnLeft(mirrorOn, net.minecraft.world.entity.HumanoidArm.RIGHT),
@@ -1790,7 +1790,7 @@ public final class SelfCheck {
         check(ShieldIndicatorHud.defaultX(false, 400, 24) == 400 / 2 + 109 - 12,
                 "副手在右时 x 应镜像到另一侧");
 
-        // 1.2.1：显示值不再夹到 MaxHP（蓝心 / 魂心可以超过上限）
+        // 显示值不再夹到 MaxHP（蓝心 / 魂心可以超过上限）
         EnemyData.Snapshot over = EnemyData.exact(300, 200, 1.0f, 0, null, null);
         check(over.hp == 300, "AllHearts 300 / MaxHP 200 时显示值应保留 300");
         check(over.maxHp == 200, "上限仍应是 MaxHP");
@@ -1799,7 +1799,7 @@ public final class SelfCheck {
         check(under.hp == 124 && under.maxHp == 200, "普通血量应原样保留");
         check(under.percent == 62, "124/200 应算出 62%");
 
-        // 1.2.1：队伍条认领 —— 完整玩家名绝不走「包含匹配」（NIVEI vs NIVEIV）
+        // 队伍条认领 —— 完整玩家名绝不走「包含匹配」（NIVEI vs NIVEIV）
         check(!BossBarTracker.allowLooseMatch(true, 1), "已知全名时不允许宽松匹配");
         check(BossBarTracker.allowLooseMatch(false, 1), "未知名字且唯一候选时允许宽松匹配");
         check(!BossBarTracker.allowLooseMatch(false, 2), "未知名字但有多个候选时不允许宽松匹配");
@@ -1864,7 +1864,7 @@ public final class SelfCheck {
     }
 
     /**
-     * 1.20.23：聊天不再被误吞 + 游戏时间冻住时不上屏 + 拖动夹取。
+     * 聊天不再被误吞 + 游戏时间冻住时不上屏 + 拖动夹取。
      *
      * <p>「属性行」的判据换成地图 tellraw 的真实形态：带 {@code Misc_View_Stats_*} 键，
      * 或者「数字 + 图形」。原来那种「数字开头 / 两个字以内就算」会把玩家的
@@ -1913,7 +1913,7 @@ public final class SelfCheck {
         check(SelfStatsPanel.fitInScreen(100, 200, 800) == 100, "屏内应保持");
         check(SelfStatsPanel.fitInScreen(300, 2_000, 800) == 0, "面板比屏幕还宽时贴 0");
 
-        // 1.20.28：拖动界面「只许拖、不许点」
+        // 拖动界面「只许拖、不许点」
         int[] box = {100, 100, 40, 60};
         check(SelfStatsPanel.grabHit(box, 4, 100, 100), "左上角内侧应能抓住");
         check(SelfStatsPanel.grabHit(box, 4, 140, 160), "右下角内侧应能抓住");
@@ -1932,7 +1932,7 @@ public final class SelfCheck {
     }
 
     /**
-     * 1.20.31：游戏时间真的上面板 + 草方块那条不再被丢掉。
+     * 游戏时间真的上面板 + 草方块那条不再被丢掉。
      *
      * <p>以前计时行只当「这一趟到此结束」的信号，收完就扔，所以面板上永远看不到游戏时间；
      * 草方块那条（一个绿色 {@code □}）既没有翻译键也没有数字，连「像不像属性行」都过不了，
@@ -1987,7 +1987,7 @@ public final class SelfCheck {
     }
 
     /**
-     * 1.20.32：滚动条可以点/拖。
+     * 滚动条可以点/拖。
      *
      * <p>以前滚动条只是画出来，点它没反应。这里锁住几何：滑块高度按「视口 ÷ 内容」、
      * 偏移按 {@code scroll / maxScroll} 映射、反解是它的逆运算；命中判定带 ±3 px 容差
@@ -2047,13 +2047,13 @@ public final class SelfCheck {
     }
 
     /**
-     * 1.20.33 / 1.20.34：局部设置不许影响全局设置。
+     * 1.20.33 / 局部设置不许影响全局设置。
      *
      * <p>1.20.33 修掉的三处「串台」：① 队友血条跟着敌人的 {@code showBar} 走；
      * ② 实体设置页的滑块在 {@code rebuildWidgets()} 时回弹到建表时的旧值；
      * ③ 「回到初始位置」对容器面板用了 HUD 的默认 y。</p>
      *
-     * <p>1.20.34：「显示血条」升级成<strong>整块开关</strong> —— 敌人关掉后血条 + 上方心数/护甲
+     * <p>「显示血条」升级成<strong>整块开关</strong> —— 敌人关掉后血条 + 上方心数/护甲
      * 全不画（布局为空），队友则由 {@code showTeammates} 整块管。</p>
      */
     private static void scopedSettings() {
@@ -2070,7 +2070,7 @@ public final class SelfCheck {
         cfg.showBar = true;
         check(HudWorldRenderer.options(cfg, false).showBar, "打开后敌人血条应回来");
 
-        // 1.4.3：玩家（队友 + 自己）统一用玩家排版 —— 只有各类心型 + 条，不含护甲段；
+        // 玩家（队友 + 自己）统一用玩家排版 —— 只有各类心型 + 条，不含护甲段；
         // 长度 / 缩放 / 整块开关都跟「玩家」设置走，不再借敌人的 showBar / barWidth / scale。
         HudLayout.Options playerOpts = HudWorldRenderer.options(cfg, true);
         check(playerOpts.playerStyle, "玩家应使用玩家排版（两排心）");
@@ -2111,13 +2111,13 @@ public final class SelfCheck {
                 "面板/实体设置不该动盾牌默认值");
         HudConfig.reset();
 
-        // ④ 「回到初始位置」四套都回到「屏幕高 ÷ 3」（1.20.42 起容器那两套也一样）
+        // ④ 「回到初始位置」四套都回到「屏幕高 ÷ 3」（容器那两套也一样）
         check(HudConfig.defaultPanelY(720) == 240, "默认 y = 屏幕高 ÷ 3");
         check(HudConfig.defaultPanelY(360) == 120, "屏幕矮一半 → 默认 y 也跟着减半");
     }
 
     /**
-     * 1.20.40：面板 / 盾牌的位置是**相对位置**。
+     * 面板 / 盾牌的位置是**相对位置**。
      *
      * <p>以前存的是绝对 GUI 像素，窗口大小或 GUI 缩放一变，同一个数字就落到屏幕的另一处
      * （「窗口一变就错位」）。现在坐标连同「量它的那套 GUI 尺寸」一起存
@@ -2191,7 +2191,7 @@ public final class SelfCheck {
         HudConfig.normalize(bad);
         check(bad.layoutGuiW == 0 && bad.layoutGuiH == 0, "半套基准也当归零");
 
-        // ⑦ 1.20.41：面板默认位置 = x 4 / y 屏幕高 ÷ 3（左侧偏上），并且随窗口走
+        // ⑦ 面板默认位置 = x 4 / y 屏幕高 ÷ 3（左侧偏上），并且随窗口走
         check(HudConfig.defaultPanelY(720) == 240, "720 高 → 默认 y 240");
         check(HudConfig.defaultPanelY(360) == 120, "360 高 → 默认 y 120");
         check(HudConfig.defaultPanelY(361) == 120, "361 高 → 四舍五入到 120");
@@ -2253,7 +2253,7 @@ public final class SelfCheck {
     }
 
     /**
-     * 1.20.22：滚动区的上下限与裁剪。
+     * 滚动区的上下限与裁剪。
      *
      * <p>「下限超出屏幕」的根因是内容控件由 {@code Screen} 自动绘制、没有裁剪；
      * 现在内容只在 {@code [top, bottom)} 里画。这里锁住可视区数学：

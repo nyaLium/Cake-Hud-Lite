@@ -195,10 +195,10 @@ public final class BossBarTracker {
     /**
      * 认领打分（越大越优先）。
      *
-     * <p>1.20.9 起：百分比吻合是**硬门槛**（{@link #acceptable}），门槛内再按
+     * <p>百分比吻合是**硬门槛**（{@link #acceptable}），门槛内再按
      * 精确吻合 &gt; 差 ≤2 &gt; 差 ≤容差 排序。</p>
      *
-     * <p>1.20.10 起：同一档里先看<b>与玩家的距离</b>（越近越优先），再给上一帧的绑定一个
+     * <p>同一档里先看<b>与玩家的距离</b>（越近越优先），再给上一帧的绑定一个
      * {@link #STICKY_BONUS} 的粘性奖励。数据包 {@code targetting_enemy.mcfunction} 的选法是
      * 「在随机一名 CTT 玩家里取离他最近的 E」，所以距离是很强的先验；粘性奖励只够抵消
      * 2 格内的抖动，超过就让更近的那只接手，避免「数字一直挂在远处那只同名怪身上」。</p>
@@ -372,7 +372,7 @@ public final class BossBarTracker {
     /**
      * 宽松（包含关系）匹配是否可以被接受。
      *
-     * <p>1.2.1：队伍条里的名字是**完整玩家名**（数据包 {@code @a} 选择器渲染出来的就是玩家名），
+     * <p>队伍条里的名字是**完整玩家名**（数据包 {@code @a} 选择器渲染出来的就是玩家名），
      * 所以只要这条名字已经能精确对到某位真实玩家（自己 / 视野内 / Tab 名单），就<b>绝不允许</b>
      * 再用包含关系去认别的实体 —— 否则 {@code NIVEI} 会认领到 {@code NIVEIV} 头上
      * （前者是后者的前缀），队友头顶就会显示成别人的血量。
@@ -486,7 +486,7 @@ public final class BossBarTracker {
 
         List<Player> candidates = new ArrayList<>();
         for (Entity entity : mc.level.entitiesForRendering()) {
-            // 1.3.2：队伍条（spectator_bossbar）的名册是 @a[scores={BossbarID=1001..1010}]，
+            // 队伍条（spectator_bossbar）的名册是 @a[scores={BossbarID=1001..1010}]，
             // **包含自己**；所以候选里也要有自己（调试模式画自己时就能直接查到条目）。
             if (entity instanceof Player player && player.isAlive()) {
                 candidates.add(player);
@@ -499,7 +499,7 @@ public final class BossBarTracker {
         for (TeamBarTitle.Entry entry : entries) {
             Player best = nearestExact(candidates, used, entry.name, self);
             if (best == null) {
-                // 1.2.1：只有「不是任何玩家全名、且唯一候选」时才放宽到包含匹配。
+                // 只有「不是任何玩家全名、且唯一候选」时才放宽到包含匹配。
                 boolean known = knowsPlayerName(mc, entry.name);
                 if (allowLooseMatch(known, looseMatchCount(mc, entry.name))) {
                     best = nearestLoose(candidates, used, entry.name, self);

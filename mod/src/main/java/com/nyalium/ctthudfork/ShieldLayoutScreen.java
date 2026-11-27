@@ -10,16 +10,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 /**
- * 「移动盾牌指示器」界面（1.20.20）：和属性面板一样拖动定位。
+ * 「移动盾牌指示器」界面：和属性面板一样拖动定位。
  *
- * <p>1.20.23：拖动方式改成上游 Cake-Hud 那种<b>绝对定位</b> —— 按下时记
+ * <p>拖动方式改成上游 Cake-Hud 那种<b>绝对定位</b> —— 按下时记
  * 「鼠标 ↔ 指示器左上角」的偏移，移动时直接 {@code 鼠标位置 - 偏移}，
  * 不累加每帧增量（增量在某些输入后端是 0，累加式会「拖不动」）。
- * 1.20.28 起只在指示器上按住并拖动才移动，点一下空白处不会挪位置。另外支持方向键微调（4 px，Shift 16 px）。</p>
+ * 只在指示器上按住并拖动才移动，点一下空白处不会挪位置。另外支持方向键微调（4 px，Shift 16 px）。</p>
  *
- * <p>1.2.0：「初始位置是否自动调整」（{@code shieldAutoMirror}）挪到本界面；
- * 只影响未移动过的默认位置。1.4.8 起布局为：底行「回到初始位置」在左、「返回」居中，
- * 该开关放在「回到初始位置」正上方；1.4.9 起三个按钮同宽（按最长标签算），上下一列对齐。</p>
+ * <p>「初始位置是否自动调整」（{@code shieldAutoMirror}）挪到本界面；
+ * 只影响未移动过的默认位置。布局为：底行「回到初始位置」在左、「返回」居中，
+ * 该开关放在「回到初始位置」正上方；三个按钮同宽（按最长标签算），上下一列对齐。</p>
  *
  * <p>预览用 {@code meter_0.png}，按当前 {@code shieldScale} 与 {@code shieldOpacity} 画；
  * 坐标存 {@code shieldX/shieldY}（GUI 像素，左上角；{@code -1} = 跟随副手槽的默认位置，见
@@ -40,7 +40,7 @@ public final class ShieldLayoutScreen extends Screen {
     private double dragOffsetY;
     /** 面板外这么多像素以内也算抓住（指示器只有 24×60，给它一点余量）。 */
     private static final int GRAB_MARGIN = 4;
-    /** 按下后要移动这么多像素才算拖动（1.20.28：点一下不再挪位置）。 */
+    /** 按下后要移动这么多像素才算拖动（点一下不再挪位置）。 */
     private static final int DRAG_THRESHOLD = 2;
     /** 按下点（GUI 坐标）与「已经真正拖动」标记。 */
     private double pressX;
@@ -57,7 +57,7 @@ public final class ShieldLayoutScreen extends Screen {
         int bottomY = this.height - ROW_HEIGHT - 8;
         HudConfig.Cfg cfg = HudConfig.get();
 
-        // 1.4.9：三个按钮**同宽**（按最长的标签算，再夹进屏幕），视觉上成一整块：
+        // 三个按钮**同宽**（按最长的标签算，再夹进屏幕），视觉上成一整块：
         //   [ 初始位置是否自动调整 ]   ← 与「回到初始位置」同宽同列
         //   [ 回到初始位置 ]  [  返回  ]
         Component mirrorLabel = Component.translatable("ctt_hud_fork.config.shieldAutoMirror");
@@ -79,7 +79,7 @@ public final class ShieldLayoutScreen extends Screen {
         addRenderableWidget(Button.builder(backLabel, b -> back())
                 .bounds(backX, bottomY, buttonWidth, ROW_HEIGHT).build());
 
-        // 初始位置是否自动调整：shieldAutoMirror（1.2.0；1.4.8 起在「回到初始位置」上方）
+        // 初始位置是否自动调整：shieldAutoMirror（1.2.0；在「回到初始位置」上方）
         CycleButton<Boolean> mirror = CycleButton.onOffBuilder(cfg.shieldAutoMirror)
                 .create(resetX, bottomY - ROW_HEIGHT - 4, buttonWidth, ROW_HEIGHT, mirrorLabel,
                         (b, v) -> HudConfig.get().shieldAutoMirror = v);
@@ -102,7 +102,7 @@ public final class ShieldLayoutScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFFFF);
-        // 操作提示（1.20.29）：只拖不点 + 方向键微调
+        // 操作提示：只拖不点 + 方向键微调
         graphics.centeredText(this.font, Component.translatable("ctt_hud_fork.config.selfStatsMove.dragHint"),
                 this.width / 2, 36, 0xFFFFD060);
 
@@ -130,7 +130,7 @@ public final class ShieldLayoutScreen extends Screen {
     private int[] position(HudConfig.Cfg cfg) {
         int w = ShieldIndicatorHud.scaledWidth(cfg.shieldScale);
         int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
-        // 1.20.40：配置里存的是「相对位置」，这里换算到本界面的 GUI 尺寸。
+        // 配置里存的是「相对位置」，这里换算到本界面的 GUI 尺寸。
         int[] stored = HudConfig.shieldPosition(this.width, this.height);
         int x = stored[0];
         int y = stored[1];
@@ -156,7 +156,7 @@ public final class ShieldLayoutScreen extends Screen {
         int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
         int[] pos = position(cfg);
         double[] gui = toGui(event);
-        // 1.20.28：只允许在指示器（含 4 px 余量）上按下开始抓；点空白处不再挪位置。
+        // 只允许在指示器（含 4 px 余量）上按下开始抓；点空白处不再挪位置。
         if (!SelfStatsPanel.grabHit(new int[]{pos[0], pos[1], w, h}, GRAB_MARGIN, gui[0], gui[1])) return false;
         this.dragOffsetX = gui[0] - pos[0];
         this.dragOffsetY = gui[1] - pos[1];
@@ -217,7 +217,7 @@ public final class ShieldLayoutScreen extends Screen {
         HudConfig.Cfg cfg = HudConfig.get();
         int w = ShieldIndicatorHud.scaledWidth(cfg.shieldScale);
         int h = ShieldIndicatorHud.scaledHeight(cfg.shieldScale);
-        // 1.20.40：连同「量它的 GUI 尺寸」一起写，之后窗口变化按比例换算。
+        // 连同「量它的 GUI 尺寸」一起写，之后窗口变化按比例换算。
         HudConfig.setShieldPosition(ShieldIndicatorHud.clampInto(x, w, this.width),
                 ShieldIndicatorHud.clampInto(y, h, this.height), this.width, this.height);
     }

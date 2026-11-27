@@ -46,7 +46,7 @@ public final class EnemyData {
     };
     /** 蓝 🛡 Defence 的颜色。 */
     public static final int DEFENCE_COLOR = 0x5555FF;
-    /** 真盔甲在 {@link #ARMOR_OBJECTIVES} / {@link #ARMOR_ICONS} 里的下标（1.2.2：不参与翻页）。 */
+    /** 真盔甲在 {@link #ARMOR_OBJECTIVES} / {@link #ARMOR_ICONS} 里的下标（不参与翻页）。 */
     public static final int TRUE_ARMOR_INDEX = 4;
 
     private EnemyData() {}
@@ -58,7 +58,12 @@ public final class EnemyData {
         /** {@code MaxHP}（红心上限）。 */
         public final int maxHp;
         /** true = 只有百分比（读到的是 HealthPercent），画 "73%" 而不是 "73/120"。 */
-        public final boolean percentOnly;
+        /**
+     * {@code true} = 这份快照<b>只有百分比</b>（地图只给了 {@code HealthPercent}，没有绝对值）。
+     *
+     * <p>与癫狂无关：癫狂不会改变绘制方式，这里只用于「数据本身只有百分比」的场合。</p>
+     */
+    public final boolean percentOnly;
         public final int percent;
         /** 护甲（{@code 🛡 防御}，数据包 {@code Defence}；0 = 没有）。 */
     public final int defence;
@@ -109,7 +114,7 @@ public final class EnemyData {
             System.arraycopy(armor, 0, fixed, 0, Math.min(armor.length, fixed.length));
         }
         int safeMax = Math.max(1, maxHp);
-        // 1.2.1：**不再把 hp 夹到 maxHp**。数据包的队伍条写的是 AllHearts/MaxHP，
+        // **不再把 hp 夹到 maxHp**。数据包的队伍条写的是 AllHearts/MaxHP，
         // 蓝心 / 魂心可以突破红心上限（AllHearts > MaxHP），夹了就会显示成「红心上限/上限」，
         // 与 Boss 栏对不上。只把百分比夹到 0~100，血量本身原样保留。
         int safeHp = Math.max(0, hp);
@@ -118,7 +123,7 @@ public final class EnemyData {
     }
 
     /**
-     * 1.5.5：合并两个百分比（{@code -1} = 没有）。用于「同名分身组」统一显示。
+     * 合并两个百分比（{@code -1} = 没有）。用于「同名分身组」统一显示。
      *
      * <p>分身与真身同名同外观，任何数值差都会暴露真身；纯客户端取组内**最低**百分比：
      * 分身固定 100%，真身掉血后百分比更低，于是整组都显示真身那个值。</p>
@@ -130,7 +135,7 @@ public final class EnemyData {
     }
 
     /**
-     * 1.5.1：只有百分比时的读数（payload 里 {@code AllHearts} 缺失 / 为 0 时的兜底）。
+     * 只有百分比时的读数（payload 里 {@code AllHearts} 缺失 / 为 0 时的兜底）。
      *
      * <p>地图每 tick 先 {@code scoreboard players reset @e AllHearts}，只给 {@code tag=CTTAll}
      * 重算；新刷的怪在 tag 补上之前 AllHearts 是空的，但 {@code RedHearts / MaxHP / HealthPercent}
@@ -245,7 +250,7 @@ public final class EnemyData {
         }
 
         // 绝对值通道没打通：退回 below_name 的百分比（每只怪都有）。
-        // 1.5.2：**0 也是合法分数**——红心 1 / 上限 325 的整数除法就是 0%，
+        // **0 也是合法分数**——红心 1 / 上限 325 的整数除法就是 0%，
         // 以前用 `p > 0` 判定「没有数据」，于是残血怪整块 HUD 直接消失。
         int p = healthPercentOf(sb, entity);
         if (p >= 0) {
@@ -264,7 +269,7 @@ public final class EnemyData {
      */
     public static boolean hasData(Scoreboard sb, Entity entity) {
         if (sb == null || entity == null) return false;
-        // 1.5.2：判据从「值 > 0」改成「这条分数存在」——0 是合法值
+        // 判据从「值 > 0」改成「这条分数存在」——0 是合法值
         // （1 点红心 / 325 上限整数除就是 0%，按旧判据会让残血怪的 HUD 整块消失）。
         return hasScore(sb, "AllHearts", entity)
                 || hasScore(sb, "RedHearts", entity)

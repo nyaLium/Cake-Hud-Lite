@@ -59,7 +59,7 @@ public final class CttHudForkServer implements ModInitializer {
 
     /** 数据包里的 objective 名（与数据包一致）。 */
     private static final String O_ALL = "AllHearts";
-    /** 1.5.1：AllHearts 缺失时退回 RedHearts（地图每 tick 先 reset AllHearts，只给 tag=CTTAll 重算）。 */
+    /** AllHearts 缺失时退回 RedHearts（地图每 tick 先 reset AllHearts，只给 tag=CTTAll 重算）。 */
     private static final String O_RED = "RedHearts";
     private static final String O_MAX_HP = "MaxHP";
     private static final String O_SOUL = "SoulHearts";
@@ -76,7 +76,7 @@ public final class CttHudForkServer implements ModInitializer {
 
     /** 每名玩家上次实际发出去的内容 + 时间（差量判定）。 */
     private static final Map<UUID, Plan> LAST_SENT = new HashMap<>();
-    /** 1.6.2：每个玩家上一次告知的「调试标签」状态（只在变化时发包）。 */
+    /** 每个玩家上一次告知的「调试标签」状态（只在变化时发包）。 */
     private static final Map<UUID, Boolean> DEBUG_TAG_SENT = new HashMap<>();
     private static final Map<UUID, Long> LAST_SENT_MS = new HashMap<>();
 
@@ -88,7 +88,7 @@ public final class CttHudForkServer implements ModInitializer {
         // 注意 Fabric API 6.x 的方法名：clientboundPlay() / serverboundPlay()
         // （旧版叫 playS2C() / playC2S()，这里按当前 API 来）。
         PayloadTypeRegistry.clientboundPlay().register(MobHealthPayload.TYPE, MobHealthPayload.CODEC);
-        // 1.6.2：调试标签通道（实体 tag 是纯服务端数据，客户端读不到，只能由这里告知）。
+        // 调试标签通道（实体 tag 是纯服务端数据，客户端读不到，只能由这里告知）。
         PayloadTypeRegistry.clientboundPlay().register(DebugTagPayload.TYPE, DebugTagPayload.CODEC);
         ServerTickEvents.END_SERVER_TICK.register(CttHudForkServer::onEndServerTick);
     }
@@ -110,7 +110,7 @@ public final class CttHudForkServer implements ModInitializer {
             Plan plan = collect(scoreboard, player);
             UUID id = player.getUUID();
 
-            // 1.6.2：调试标签 —— 只在状态变化时发一次（一字节，随血量包同一个 4 Hz 循环）。
+            // 调试标签 —— 只在状态变化时发一次（一字节，随血量包同一个 4 Hz 循环）。
             if (ServerPlayNetworking.canSend(player, DebugTagPayload.TYPE)) {
                 boolean hasTag = player.entityTags().contains(DebugTagPayload.DEBUG_TAG);
                 Boolean was = DEBUG_TAG_SENT.get(id);
@@ -150,7 +150,7 @@ public final class CttHudForkServer implements ModInitializer {
     /** 取这名玩家周围的 CTT 实体：**玩家（含自己）优先，其余按距离**，最多 MAX_ENTRIES 条。 */
     private static Plan collect(Scoreboard scoreboard, ServerPlayer player) {
         AABB box = player.getBoundingBox().inflate(RADIUS);
-        // 1.4.2：getEntities(player, box) **排除**了 source 实体本身，
+        // getEntities(player, box) **排除**了 source 实体本身，
         // 所以「自己」永远不会出现在 nearby 里 —— 必须先手动加进来，
         // 否则 showSelf 在双端也拿不到自己的 payload（只有百分比）。
         List<Entity> nearby = new ArrayList<>(player.level().getEntities(player, box));
@@ -166,14 +166,14 @@ public final class CttHudForkServer implements ModInitializer {
             if (entity instanceof ArmorStand) continue;
             if (!entity.isAlive() || entity.isRemoved()) continue;
             // 玩家也推：队友那一行同样需要四色心 / 碎心 / 粉心（队伍条只有 AllHearts/MaxHP）。
-            // 1.3.2：**自己**也推一份 —— 调试模式（debug）会在自己头顶画条，
+            // **自己**也推一份 —— 调试模式（debug）会在自己头顶画条，
             // 装服务端时就能用上精确的四色心，而不是只有百分比。
             // 死亡 / 观战：CTT 里死掉的玩家就是旁观模式，客户端一律不画，推了也没人用。
             if (entity instanceof Player other && other.isSpectator()) continue;
             if (!isCttMob(scoreboard, entity)) continue;
-            // 1.5.3：NPC（tag=NPC，如大厅/塔里的对话角色）有 RedHearts/MaxHP/HealthPercent 分数，
+            // NPC（tag=NPC，如大厅/塔里的对话角色）有 RedHearts/MaxHP/HealthPercent 分数，
             // 但它们是布景、不是敌人。客户端看不到 tag，所以放进「抑制列表」让客户端别画。
-            // 1.5.4：同名分身 Boss（Psy：真身 tag=Psy / 分身 tag=PsyClone）也一并抑制 ——
+            // 同名分身 Boss（Psy：真身 tag=Psy / 分身 tag=PsyClone）也一并抑制 ——
             // 它们名字与外观完全一样，画血条等于告诉玩家哪个是真身。
             if (isHiddenIdentity(entity)) {
                 npcs.add(entity);
@@ -183,12 +183,12 @@ public final class CttHudForkServer implements ModInitializer {
         }
         if (mobs.isEmpty() && npcs.isEmpty()) return new Plan(List.of(), List.of());
 
-        // 1.4.4：玩家优先 —— 先排玩家（含自己，距离 0），再排怪；同组内按距离。
+        // 玩家优先 —— 先排玩家（含自己，距离 0），再排怪；同组内按距离。
         // 以前纯按距离，怪多的时候远处的队友会被挤掉 → 那一格退回「当前/上限」。
         mobs.sort(Comparator
                 .comparingInt((Entity e) -> e instanceof Player ? 0 : 1)
                 .thenComparingDouble(e -> e.distanceToSqr(px, py, pz)));
-        // 1.5.5：Psy 的分身（tag=PsyClone）与真身（tag=Psy）同名同外观 —— 分身一律**复制真身的读数**，
+        // Psy 的分身（tag=PsyClone）与真身（tag=Psy）同名同外观 —— 分身一律**复制真身的读数**，
         // 于是所有 Psy 头顶显示完全一样，玩家没法靠血条认出真身。
         Entity psy = null;
         for (Entity entity : nearby) {
@@ -212,7 +212,7 @@ public final class CttHudForkServer implements ModInitializer {
         return new Plan(List.copyOf(out), List.copyOf(hidden));
     }
 
-    /** 1.5.3：不该出现在 HUD 里的实体（布景 NPC）。 */
+    /** 不该出现在 HUD 里的实体（布景 NPC）。 */
     private static boolean isHiddenIdentity(Entity entity) {
         return entity.entityTags().contains("NPC");
     }
@@ -223,10 +223,10 @@ public final class CttHudForkServer implements ModInitializer {
             armour[i] = score(scoreboard, EnemyData.ARMOR_OBJECTIVES[i], entity);
         }
         boolean targetted = entity.entityTags().contains("Targetting");
-        // 1.5.11：结构化姓名（保留 translate 键与样式），客户端做 Psy 识别 / 悬浮显示都不再依赖实体名。
+        // 结构化姓名（保留 translate 键与样式），客户端做 Psy 识别 / 悬浮显示都不再依赖实体名。
         net.minecraft.network.chat.Component nameText = entity.getCustomName() != null
                 ? entity.getCustomName() : entity.getDisplayName();
-        // 1.5.1：与客户端 EnemyData.read 同口径 —— AllHearts 读不到（地图先 reset、这一 tick 还没给
+        // 与客户端 EnemyData.read 同口径 —— AllHearts 读不到（地图先 reset、这一 tick 还没给
         // CTTAll 补上）时退回 RedHearts；否则存活怪会显示成「0/上限」、条也是空的。
         int all = score(scoreboard, O_ALL, entity);
         if (all <= 0) all = score(scoreboard, O_RED, entity);

@@ -6,7 +6,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 /**
- * S2C（1.6.2）：服务端告诉这个玩家「你身上有没有 {@value #DEBUG_TAG} 标签」。
+ * S2C：服务端告诉这个玩家「你身上有没有 {@value #DEBUG_TAG} 标签」。
  *
  * <h2>为什么必须由服务端告知</h2>
  * <p>实体 tag（{@code /tag add}）是<b>纯服务端</b>数据，原版协议<b>从不</b>把它同步给客户端 ——

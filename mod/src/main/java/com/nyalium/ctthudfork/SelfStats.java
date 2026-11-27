@@ -24,7 +24,7 @@ import java.util.Set;
  *       把心数解析出来（{@link #heartCounts()}）。</li>
  * </ol>
  *
- * <h2>1.20.4：分类 + 双缓冲 + 过滤</h2>
+ * <h2>分类 + 双缓冲 + 过滤</h2>
  * <ul>
  *   <li><b>分类</b>：每行按地图翻译键 / 心形字形归到 {@link SelfStatsKind}，
  *       配置里可以让某一类不上屏（例如只看红心、不看🗡攻速）；</li>
@@ -35,7 +35,7 @@ import java.util.Set;
  *       所以刷新时面板不会先清空再慢慢长出来（之前那一下「闪烁」就是这么来的）。</li>
  * </ul>
  *
- * <h2>1.20.39：进存档后先安静 3 s</h2>
+ * <h2>进存档后先安静 3 s</h2>
  * <p>世界刚载入时（玩家卡在「加载地形」、区块还在生成）就去问 {@code ViewStats}，服务端要隔好几秒
  * 才回；而一趟采集 {@value #CAPTURE_TIMEOUT_MS} ms 就超时收尾了，迟到的这批会被当成
  * <b>玩家手动触发</b>（1.20.24 的约定：手动触发照常显示）→ 整屏刷进聊天栏。
@@ -59,7 +59,7 @@ public final class SelfStats {
     private static final int MAX_LINES = 64;
 
     /**
-     * 1.20.39：进存档 / 进服后的静默时长（毫秒）—— 这之前**不自动发** {@code /trigger ViewStats}。
+     * 进存档 / 进服后的静默时长（毫秒）—— 这之前**不自动发** {@code /trigger ViewStats}。
      *
      * <p>世界刚载入时玩家还卡在「加载地形」、区块还在生成，这时候问，服务端要隔好几秒才回；
      * 而一趟采集 {@value #CAPTURE_TIMEOUT_MS} ms 就按 {@link #settleIfTimedOut} 超时收尾了，
@@ -69,7 +69,7 @@ public final class SelfStats {
     static final long JOIN_GRACE_MS = 3000L;
 
     /**
-     * 1.20.39：静默窗口的第二个条件 —— 本人实体至少要过这么多 tick（世界真的在跑）。
+     * 静默窗口的第二个条件 —— 本人实体至少要过这么多 tick（世界真的在跑）。
      *
      * <p>只看「进世界后 3 s」在慢机上可能还不够：加载没完就又是同一批迟到输出。
      * 20 tick ≈ 1 s，实体没在 tick 就说明还在载入。</p>
@@ -108,13 +108,13 @@ public final class SelfStats {
     /** 这一趟开始的时间（毫秒），用于超时收尾。 */
     private static long captureStartMs;
     /**
-     * 1.20.39：静默窗口的结束时刻（ms）。这之前不发 trigger，聊天里来的 ViewStats 输出也不显示。
+     * 静默窗口的结束时刻（ms）。这之前不发 trigger，聊天里来的 ViewStats 输出也不显示。
      *
      * <p>由 {@link #onWorldJoined(long)} 置位；{@link #reset()} 清 0。</p>
      */
     private static long quietUntilMs;
 
-    // ── 1.20.23：游戏时间没走 → 数据是「冻住的」，面板不上屏 ──
+    // ── 游戏时间没走 → 数据是「冻住的」，面板不上屏 ──
 
     /** 「时间冻住」判定：两次采样至少隔这么久（ms），免得 1 s 刷新时撞到同一秒被误判。 */
     static final long TIME_STALE_MIN_GAP_MS = 1500L;
@@ -168,7 +168,7 @@ public final class SelfStats {
     // ── 触发 ──
 
     /**
-     * 1.20.39：进入存档 / 服务器时调用（{@code ClientPlayConnectionEvents.JOIN}）。
+     * 进入存档 / 服务器时调用（{@code ClientPlayConnectionEvents.JOIN}）。
      *
      * <p>清掉上一服的残留，并把「第一次自动触发」推到 {@value #JOIN_GRACE_MS} ms 之后 ——
      * 那一下世界还在载入，问了也只会得到一批迟到输出（见 {@link #JOIN_GRACE_MS}）。</p>
@@ -220,9 +220,9 @@ public final class SelfStats {
         int seconds = effectiveSeconds(mc);
         if (seconds <= 0) return;                       // ≤0 = 关闭自动刷新
         if (now < nextTriggerMs) return;
-        // 1.20.39：刚进存档/进服先安静一会儿（世界还在载入时问了只会收到一批迟到输出）。
+        // 刚进存档/进服先安静一会儿（世界还在载入时问了只会收到一批迟到输出）。
         if (joinQuiet(now, mc)) return;
-        // 1.20.8：大厅/菜单里**不发命令**。地图只在开局后 setdisplay below_name HealthPercent
+        // 大厅/菜单里**不发命令**。地图只在开局后 setdisplay below_name HealthPercent
         // 并 enable ViewStats；没开局时触发只会收到一行「无法触发该计分项」。
         if (!inGame(mc)) {
             // 回到大厅：上一局的数字不该继续挂着。
@@ -256,7 +256,7 @@ public final class SelfStats {
     /**
      * 实际生效的刷新间隔（秒）。
      *
-     * <p>1.20.13：在别人开的服务器上强制 {@value #FORCED_SERVER_SECONDS} 秒；
+     * <p>在别人开的服务器上强制 {@value #FORCED_SERVER_SECONDS} 秒；
      * <b>只影响运行时，不写回配置</b>（单机存档继续用你设置的值）。</p>
      */
     public static int effectiveSeconds(net.minecraft.client.Minecraft mc) {
@@ -307,14 +307,14 @@ public final class SelfStats {
     /**
      * 被拒绝后安静一会儿，避免继续往聊天栏丢提示。
      *
-     * <p>1.20.11：60 s → 10 s。拒绝提示本身已被 {@link ChatTriggerFilter} 吞掉，
+     * <p>60 s → 10 s。拒绝提示本身已被 {@link ChatTriggerFilter} 吞掉，
      * 10 s 一次的重试成本可以忽略；好处是开局后最多等 10 s 面板就能重新出数，
      * 而不是「上一局的数据挂一分钟」。</p>
      */
     private static final long DENIED_BACKOFF_MS = 10_000L;
 
     /**
-     * 开始一趟采集（1.20.24 起对齐上游 {@code StatsData} 的做法）。
+     * 开始一趟采集（对齐上游 {@code StatsData} 的做法）。
      *
      * @param now  当前毫秒
      * @param auto {@code true} = 本模组自己发的 {@code /trigger ViewStats}：这一趟的输出要
@@ -370,7 +370,7 @@ public final class SelfStats {
     }
 
     /**
-     * 1.20.23：判断游戏时间有没有在走。
+     * 判断游戏时间有没有在走。
      *
      * <p>地图的计时行（{@code Misc_View_Stats_78}）在没开局 / 结束后是冻住的；这种时候属性面板
      * 还挂着上一批数字会误导，所以直接不画。两次采样至少隔 {@link #TIME_STALE_MIN_GAP_MS}
@@ -476,7 +476,7 @@ public final class SelfStats {
             return hide;
         }
 
-        // 1.20.39：还在进世界的静默窗口里 —— 我们自己还没问过，这一批只可能是
+        // 还在进世界的静默窗口里 —— 我们自己还没问过，这一批只可能是
         // 「上一趟迟到的」或「地图补发的」，一律不进聊天栏，也不收进面板。
         if (nowMs <= quietUntilMs && (isTriggerAck(flat) || isViewStatsTitle(message)
                 || looksLikeViewStatsPayload(flat, analyze(message)))) {
@@ -500,7 +500,7 @@ public final class SelfStats {
         SelfStatsCatalog.Analyzed a = analyze(message);
 
         // 计时行 = 这一趟结束（上游同样用它当收尾信号），顺手记下来判「时间冻住」。
-        // 1.20.31：这一行本身也上面板（以前只当收尾信号、白扔掉，所以面板上从来见不到游戏时间）。
+        // 这一行本身也上面板（以前只当收尾信号、白扔掉，所以面板上从来见不到游戏时间）。
         if (a.keys.contains(SelfStatsCatalog.TIME_KEY) || isGameTimeLine(flat)) {
             boolean hide = selfTriggered;
             pendingTimeText = flat;
@@ -513,7 +513,7 @@ public final class SelfStats {
         }
 
         SelfStatsKind kind = classify(a);
-        // 1.20.31：草方块那条（一行绿色 □，没有键也没有数字）也属于本模组的内容，
+        // 草方块那条（一行绿色 □，没有键也没有数字）也属于本模组的内容，
         // 以前它连「像不像属性行」这一关都过不了，被整行丢掉。
         boolean ours = isViewStatsLine(flat) || a.hasKey() || a.unresolvedKey
                 || statGlyphLine(flat) || kind == SelfStatsKind.GRASS;
@@ -674,7 +674,7 @@ public final class SelfStats {
     }
 
     /**
-     * 这一行像不像 ViewStats 的输出（1.20.39：静默窗口里判「这是不是那批属性行」用）。
+     * 这一行像不像 ViewStats 的输出（静默窗口里判「这是不是那批属性行」用）。
      *
      * <p>比 {@link #isViewStatsLine(String)} 宽：装了资源包时翻译键已经变成中文/英文，
      * 所以「提示行 / 计时行 / 未解析键 / 数字 + 图形 / 草方块」都算。</p>
@@ -720,7 +720,7 @@ public final class SelfStats {
         for (int i = 0; i < flat.length(); i++) {
             char ch = flat.charAt(i);
             if (!SelfStatsCatalog.isHeartGlyph(ch)) continue;
-            // 1.4.6：地图里除了六类心，还有「❤%」这种**治疗百分比**行
+            // 地图里除了六类心，还有「❤%」这种**治疗百分比**行
             // （view_stats.mcfunction 的 HealPercent / ExtraHealing，红 ❤% 也是红心色）。
             // 只认「心形是本行最后一个非空白字符」的行，否则治疗百分比会把红心数覆盖掉
             // （实测 164 → 10）。

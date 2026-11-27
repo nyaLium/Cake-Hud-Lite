@@ -24,7 +24,7 @@ import java.util.List;
  *   <li>同样的绘制代码给「调整位置…」界面做预览用（{@link #draw}）。</li>
  * </ul>
  *
- * <p>1.20.40：位置从「绝对 GUI 像素」改成<b>相对位置</b> —— 配置里存的是量在
+ * <p>位置从「绝对 GUI 像素」改成<b>相对位置</b> —— 配置里存的是量在
  * {@code layoutGuiW × layoutGuiH} 那套 GUI 下的坐标，这里按当前 {@code guiWidth/guiHeight}
  * 换算（{@link HudConfig#panel(int, boolean, int, int)}），窗口大小或 GUI 缩放变化时不会错位。</p>
  */
@@ -41,20 +41,18 @@ final class SelfStatsPanel implements HudElement {
         if (mc == null || mc.player == null) return;
         HudConfig.Cfg cfg = HudConfig.get();
         if (!cfg.enabled || !cfg.showSelfStats) return;
-        // 两个状态分开写：它们的效果不同，只是恰好都让面板不显示。
-        // 1.2.4 诅咒：整个 UI 都隐藏（实体血条另见 HudTarget / HudWorldRenderer）。
-        if (CurseDetector.isActive(mc)) return;
-        // 1.2.10 癫狂：只隐藏面板，实体血条/信息照常可见。
-        if (BerserkDetector.isActive(mc)) return;
-        // 1.20.14：「在容器界面显示」模式下 HUD 上不画，改由 ContainerPanelMixin 画在容器界面上。
+        // 统一闸门：未知诅咒（整个 UI）与癫狂（只有面板）都让属性面板消失；
+        // 实体血条两者的处理不同，见 HudRenderGate。
+        if (HudRenderGate.suppressPanel(mc)) return;
+        // 「在容器界面显示」模式下 HUD 上不画，改由 ContainerPanelMixin 画在容器界面上。
         if (!HudConfig.hudMode()) return;
         if (!SelfStats.visible()) return;
         List<Component> lines = SelfStats.lines();
         if (lines.isEmpty()) return;
-        // 1.20.40：位置按当前 GUI 尺寸换算（存的是「相对位置」，窗口一变不会错位）。
+        // 位置按当前 GUI 尺寸换算（存的是「相对位置」，窗口一变不会错位）。
         HudConfig.Panel panel = HudConfig.panel(HudConfig.get().selfStatsMode, false,
                 g.guiWidth(), g.guiHeight());
-        // 1.20.32：面板文字阴影有自己的开关，不再跟着实体血条的 textShadow。
+        // 面板文字阴影有自己的开关，不再跟着实体血条的 textShadow。
         draw(g, mc.font, lines, panel, cfg.selfStatsTextShadow);
     }
 
@@ -64,9 +62,8 @@ final class SelfStatsPanel implements HudElement {
         if (mc == null || mc.player == null) return;
         HudConfig.Cfg cfg = HudConfig.get();
         if (!cfg.enabled || !cfg.showSelfStats) return;
-        // 容器面板同样分开写：诅咒（整个 UI）与癫狂（只有面板）。
-        if (CurseDetector.isActive(mc)) return;
-        if (BerserkDetector.isActive(mc)) return;
+        // 容器面板同样走统一闸门。
+        if (HudRenderGate.suppressPanel(mc)) return;
         if (!HudConfig.containerMode()) return;
         if (!SelfStats.visible()) return;
         List<Component> lines = SelfStats.lines();
@@ -74,8 +71,8 @@ final class SelfStatsPanel implements HudElement {
         HudConfig.Panel panel = HudConfig.panel(HudConfig.get().selfStatsMode, true,
                 g.guiWidth(), g.guiHeight());
         draw(g, mc.font, lines, panel, cfg.selfStatsTextShadow);
-        // 1.20.15：光标停在某一行上时，显示这一行的官方 hover（和原版 ViewStats 聊天里一样）。
-        int index = lineAt(mc.font, lines, panel, mouseX, mouseY);
+        // 光标停在某一行上时，显示这一行的官方 hover（和原版 ViewStats 聊天里一样）。
+        int index = lineAt(mc.font, lines, panel, mouseX, mouseY, g.guiWidth(), g.guiHeight());
         if (index >= 0) {
             Component hover = SelfStats.hoverAt(index);
             if (hover != null) {
@@ -86,15 +83,10 @@ final class SelfStatsPanel implements HudElement {
 
     /** 屏幕坐标 → 命中的行下标（没有命中返回 -1）。 */
     static int lineAt(Font font, List<Component> lines, HudConfig.Panel panel,
-                      double mouseX, double mouseY) {
+                      double mouseX, double mouseY, int guiW, int guiH) {
         if (font == null || lines == null || lines.isEmpty() || panel == null) return -1;
         int cols = Math.max(1, Math.min(3, panel.columns));
         int rows = rows(lines.size(), cols);
-        double lx = (mouseX - panel.x);
-        double ly = (mouseY - panel.y);
-        if (lx < 0 || ly < 0) return -1;
-        int r = (int) (ly / ROW_HEIGHT);
-        if (r >= rows) return -1;
 
         int[] widths = new int[cols];
         for (int i = 0; i < lines.size(); i++) {
@@ -104,6 +96,17 @@ final class SelfStatsPanel implements HudElement {
             if (w > widths[c]) widths[c] = w;
         }
         int[] offsets = columnOffsets(widths, COLUMN_GAP);
+
+        // 与 draw() 用同一个「夹进屏幕后」的原点，否则悬停高亮会和实际绘制错位。
+        int totalWidth = offsets[cols - 1] + Math.max(0, widths[cols - 1]);
+        double originX = fitInScreen(panel.x, totalWidth, guiW);
+        double originY = fitInScreen(panel.y, Math.max(1, rows) * ROW_HEIGHT, guiH);
+        double lx = (mouseX - originX);
+        double ly = (mouseY - originY);
+        if (lx < 0 || ly < 0) return -1;
+        int r = (int) (ly / ROW_HEIGHT);
+        if (r >= rows) return -1;
+
         for (int c = 0; c < cols; c++) {
             int start = c * rows;
             if (start >= lines.size()) break;
@@ -135,8 +138,14 @@ final class SelfStatsPanel implements HudElement {
         int alpha = (int) Math.round(255.0 * Math.max(0.0, Math.min(1.0, panel.opacity)));
         int color = (alpha << 24) | 0xFFFFFF;
 
+        // 绘制时再夹一次屏幕 —— 换窗口 / 改 GUI Scale / 容器界面尺寸不同时，
+        // 换算出来的坐标仍可能把面板顶出屏幕（上游 HealthBarRenderer 也是这么做的）。
+        int totalWidth = offsets[cols - 1] + Math.max(0, widths[cols - 1]);
+        int totalHeight = Math.max(1, rows) * ROW_HEIGHT;
+        int originX = fitInScreen(panel.x, totalWidth, g.guiWidth());
+        int originY = fitInScreen(panel.y, totalHeight, g.guiHeight());
         g.pose().pushMatrix();
-        g.pose().translate((float) Math.max(0, panel.x), (float) Math.max(0, panel.y));
+        g.pose().translate((float) originX, (float) originY);
         for (int i = 0; i < lines.size(); i++) {
             int c = columnOf(i, rows);
             int r = i - c * rows;
@@ -181,13 +190,13 @@ final class SelfStatsPanel implements HudElement {
         return new int[]{x, y, total, Math.max(0, rowCount) * ROW_HEIGHT};
     }
 
-    /** 把面板坐标夹到屏幕内（1.20.23 起：整块可见）。 */
+    /** 把面板坐标夹到屏幕内（整块可见）。 */
     static int fitInScreen(int pos, int size, int screen) {
         return Math.max(0, Math.min(Math.max(0, screen - Math.max(1, size)), pos));
     }
 
     /**
-     * 抓取判定（1.20.28）：点落在面板外 {@code margin} px 以内才算抓住。
+     * 抓取判定：点落在面板外 {@code margin} px 以内才算抓住。
      *
      * <p>拖动界面只认这个判定——点空白处不再改动位置，避免误触把面板/指示器挪走。</p>
      */
@@ -198,7 +207,7 @@ final class SelfStatsPanel implements HudElement {
                 && y >= bounds[1] - m && y <= bounds[1] + bounds[3] + m;
     }
 
-    /** 拖动阈值（1.20.28）：按下后位移不到 {@code threshold} px 就当成「点了一下」，不写位置。 */
+    /** 拖动阈值：按下后位移不到 {@code threshold} px 就当成「点了一下」，不写位置。 */
     static boolean dragExceeds(double dx, double dy, int threshold) {
         double t = Math.max(1, threshold);
         return dx * dx + dy * dy >= t * t;

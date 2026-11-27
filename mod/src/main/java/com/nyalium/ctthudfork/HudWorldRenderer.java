@@ -71,18 +71,19 @@ public final class HudWorldRenderer {
         HudConfig.Cfg cfg = HudConfig.get();
         if (!cfg.enabled) return;
         // 诅咒：与地图设定一致，整个 UI 隐藏（不提供开关）。
-        if (CurseDetector.isActive(mc)) return;
-        // 1.4.0：旁观者（含自己）不画任何玩家血条。
+        if (HudRenderGate.suppressAll(mc)) return;
+        // 旁观者（含自己）不画任何玩家血条。
         if (entity instanceof Player spectator && spectator.isSpectator()) return;
-        // 1.4.0：自己的血条由「玩家 → 显示自己的血条」控制（默认关），癫狂期间不画。
+        // 自己的血条由「玩家 → 显示自己的血条」控制（默认关），癫狂期间不画。
+        // 只作用于「自己」这一条：else 分支（敌人 / 队友）不受癫狂影响。
         boolean self = entity == mc.player;
         if (self) {
             if (!cfg.showSelf) return;
-            if (BerserkDetector.isActive(mc)) return;
+            if (HudRenderGate.suppressSelfBar(mc)) return;
         } else {
             // 只画本 Mod 接管的实体：数据包管控的敌人 / 队伍条里的队友。
             if (!HudTarget.managed(mc, entity)) return;
-            // 1.5.3：NPC 等「接管但不画」的实体直接跳过（分数仍会被摘掉）。
+            // NPC 等「接管但不画」的实体直接跳过（分数仍会被摘掉）。
             if (ClientMobHealthCache.isSuppressed(entity.getUUID())) return;
             // 距离 / 被墙挡住 / 被其它实体挡住 —— 保留为「少提交一点」的额外剔除，
             // 真正的遮挡由深度测试负责。
@@ -92,7 +93,7 @@ public final class HudWorldRenderer {
         boolean teammate = entity instanceof Player;
         EnemyData.Snapshot data = resolveData(mc, entity, teammate, self);
         if (data == null) {
-            // 1.6.1：数据断帧兜底 —— 地图每 tick 先 reset 分数再重算，客户端偶尔会有一帧
+            // 数据断帧兜底 —— 地图每 tick 先 reset 分数再重算，客户端偶尔会有一帧
             // 读不到任何数据；以前这会让整组 HUD 闪一下，这里沿用 250 ms 内的上一次快照。
             data = stickySnapshot(entity);
             if (data == null) return;
@@ -100,7 +101,7 @@ public final class HudWorldRenderer {
             rememberSnapshot(entity, data);
         }
 
-        // 1.4.3：玩家（队友与自己）一律走「玩家」那套 —— 只有各类心型 + 绿条，没有护甲段。
+        // 玩家（队友与自己）一律走「玩家」那套 —— 只有各类心型 + 绿条，没有护甲段。
         // 自己传 true，顺带让血条长度 / 缩放 / 整块开关跟着「玩家」设置走，
         // 而不是借用敌人那套（以前自己走的是 options(cfg, false)）。
         HudLayout.Options options = options(cfg, teammate || self);
@@ -109,7 +110,7 @@ public final class HudWorldRenderer {
         options.armourPage = ArmourCycle.page(data.armor, now, entity.getId());
         // 心数行只显示红心 + 一种其它心，按时间轮换（玩家只在魂/黑之间换）。
         options.cycleKind = HeartCycle.pick(data.hearts, teammate, now, entity.getId());
-        // 1.6.0：血量条长度随当前血量百分比自动调整（100% = 上限、0% = 下限）。
+        // 血量条长度随当前血量百分比自动调整（100% = 上限、0% = 下限）。
         if (cfg.autoBarLength) {
             options.barWidth = autoBarWidth(cfg, data.ratio);
         }
@@ -126,7 +127,7 @@ public final class HudWorldRenderer {
         // 绘制时再走无深度通道，方块也就切不掉它。
         boolean noDepth = cfg.barNoSeeThrough;
         if (noDepth && HudTarget.occludedByBlocks(mc, entity)) return;
-        // 1.20.13：HUD 用**全亮**光照，不再取实体所在方块的光照 ——
+        // HUD 用**全亮**光照，不再取实体所在方块的光照 ——
         // 以前在暗处/阴影里文字和血条会跟着变暗（甚至全黑），读不清。原版名牌也是全亮。
         final int light = 0xF000F0;   // LightTexture.FULL_BRIGHT：方块光 15 + 天空光 15
 
@@ -148,7 +149,7 @@ public final class HudWorldRenderer {
         // ② 文字行：自己用 submitText 提交。
         //    原版 submitNameTag 把颜色写死成不透明白、缩放写死 0.025，导致「不透明度」和
         //    「缩放」对文字完全无效；自己提交后两者都生效（背景框仍按原版 y-1 ~ y+9 画）。
-        // 1.4.6：文字与血条的不透明度分开；1.4.7：敌人 / 玩家再各一套。
+        // 文字与血条的不透明度分开；敌人 / 玩家再各一套。
         double textOpacity = teammate ? cfg.teamTextOpacity : cfg.textOpacity;
         int alpha = (int) Math.round(255.0 * textOpacity);
         int bgAlpha = (int) Math.round(0x40 * textOpacity);   // 原版名牌底色 ≈ 25% 黑
@@ -183,7 +184,7 @@ public final class HudWorldRenderer {
                                    boolean noDepth) {
         float s = (float) scale;
         int color = (alpha << 24) | 0xFFFFFF;
-        // 原版透视副本的文字 alpha ≈ 128（0.5），背景 ≈ 64（0.25）。
+        // 原版透视副本的文字 alpha ≈ 128，背景 ≈ 64。
         int seeColor = (Math.max(0, alpha * 128 / 255) << 24) | 0xFFFFFF;
         int background = bgAlpha << 24;
         pose.pushPose();
@@ -257,14 +258,14 @@ public final class HudWorldRenderer {
                                                  boolean self) {
         UUID id = entity.getUUID();
 
-        // 1.5.6：同名分身组（Psy 等）**整组统一取数**，必须在 per-entity payload 之前判定 ——
+        // 同名分身组（Psy 等）**整组统一取数**，必须在 per-entity payload 之前判定 ——
         // 否则一旦某些分身有 payload、某些没有（旧服务端 / 客户端 payloadLimit 截断 / 真身刚好在扫描半径外），
         // 同一组里就会一半显示「x/y」一半显示「xx%」，这本身就暴露了谁是谁。
         if (HudTarget.hidesHud(entity)) {
             return hiddenGroupSnapshot(mc, entity);
         }
 
-        // 服务端选装组件优先（1.20.35 起正常没有开关；1.4.5 的调试功能「优先使用服务端数据」
+        // 服务端选装组件优先（正常没有开关；1.4.5 的调试功能「优先使用服务端数据」
         // 可以临时关掉它，强制走下面的纯客户端回退，方便在双端环境里对比两条链路）。
         // 玩家和怪一样有 uuid/hp/四色心/碎心/粉心，队友那一行因此也能画心数。
         // 服务端没装本 Mod 时 ClientMobHealthCache 里没有条目（或 5 s 后失鲜），自然回落到客户端通道。
@@ -272,7 +273,7 @@ public final class HudWorldRenderer {
                 ? ClientMobHealthCache.lookup(id)
                 : null;
         if (pushed != null) {
-            // 1.5.1：payload 里 AllHearts 缺失（新刷的怪还没被 tag=CTTAll 补算）时，
+            // payload 里 AllHearts 缺失（新刷的怪还没被 tag=CTTAll 补算）时，
             // 旧服务端会推 hp=0；这时用 below_name 的 HealthPercent 画百分比，
             // 不要显示成「0/上限」+ 空条。新服务端已经退回 RedHearts，正常不会走到这里。
             if (pushed.hp() <= 0) {
@@ -299,14 +300,14 @@ public final class HudWorldRenderer {
         }
 
         if (self) {
-            // 1.4.0：自己 —— 个人状态条优先，最后百分比。
+            // 自己 —— 个人状态条优先，最后百分比。
             // 双端且没关「优先使用服务端数据」时，上面的 payload 分支已经带着自己返回了
-            // （1.4.2 起服务端会把自己也推一份），这里只是纯客户端 / 调试关掉服务端数据时的回退。
+            // （服务端会把自己也推一份），这里只是纯客户端 / 调试关掉服务端数据时的回退。
             // 血条进度统一用 below_name 的 HealthPercent（魂心/黑心/蓝心不该把条撑满）。
             int percent = percentWithSticky(mc, entity);
             BossBarTracker.Bar selfBar = BossBarTracker.selfBar(mc);
             if (selfBar != null) {
-                // 1.4.1：纯客户端没有 payload 时，心数用属性面板解析出来的那一份
+                // 纯客户端没有 payload 时，心数用属性面板解析出来的那一份
                 // （/trigger ViewStats 的心数行），这样自己的条和面板口径一致。
                 HeartCounts hearts = panelHearts();
                 float ratio = percent >= 0
@@ -323,7 +324,7 @@ public final class HudWorldRenderer {
             refresh(mc);
             TeamBarTitle.Entry entry = teamEntries.get(id);
             if (entry != null) {
-                // 1.2.2：纯客户端时 below_name 的 HealthPercent 就是「红心 ÷ MaxHP」的百分比
+                // 纯客户端时 below_name 的 HealthPercent 就是「红心 ÷ MaxHP」的百分比
                 // （数据包 health.mcfunction 对所有参战玩家都算），比队伍条的 AllHearts/MaxHP
                 // 更贴近血条本意（蓝心/魂心不该撑满绿条）。有百分比就用它填进度，
                 // 文字仍按队伍条的 当前/上限 显示。
@@ -351,7 +352,7 @@ public final class HudWorldRenderer {
             int[] slots = ArmourCache.snapshot(id);
             int[] elements = new int[EnemyData.ARMOR_OBJECTIVES.length];
             System.arraycopy(slots, 1, elements, 0, elements.length);
-            // 1.4.0：条进度优先用 below_name 的百分比 —— bossbar 的 progress 是按「当前心类」
+            // 条进度优先用 below_name 的百分比 —— bossbar 的 progress 是按「当前心类」
             // 重新从满格算的，直接拿它填条会「瞬间变满再回退」。百分比读不到才退回去。
             int percent = percentWithSticky(mc, entity);
             float ratio = percent >= 0
@@ -365,7 +366,7 @@ public final class HudWorldRenderer {
     }
 
     /**
-     * 1.5.5 / 1.5.6：「同名分身组」的**整组共同读数**（缓存 50 ms）。
+     * 1.5.5 / 「同名分身组」的**整组共同读数**（缓存 50 ms）。
      *
      * <p>取数顺序：</p>
      * <ol>
@@ -501,7 +502,7 @@ public final class HudWorldRenderer {
         BossBarTexture.Tint tint = teammate
                 ? BossBarTexture.Tint.GREEN
                 : BossBarTexture.tintFor(data.kind);
-        // 1.4.6：血条用自己的不透明度；1.4.7：敌人 / 玩家各一套（玩家默认同 0.65）。
+        // 血条用自己的不透明度；敌人 / 玩家各一套（玩家默认同 0.65）。
         double barOpacity = teammate ? cfg.teamBarOpacity : cfg.barOpacity;
         int alpha = (int) Math.round(255.0 * barOpacity);
         int color = BossBarTexture.argb(0xFFFFFF, alpha);
@@ -510,7 +511,7 @@ public final class HudWorldRenderer {
         float y0 = layout.barTop;
         float y1 = layout.barTop + HudLayout.BAR_HEIGHT;
         float width = layout.barWidth;
-        // 1.5.2：改成纯函数，残血（比例小到乘完 <1 px）时至少画 1 px。
+        // 改成纯函数，残血（比例小到乘完 <1 px）时至少画 1 px。
         float fill = HudLayout.fillPixels(layout.barWidth, data.ratio);
 
         pose.pushPose();
@@ -533,7 +534,7 @@ public final class HudWorldRenderer {
 
         RenderType background = RenderTypes.text(BossBarTexture.backgroundTexture(tint));
         RenderType progress = RenderTypes.text(BossBarTexture.progressTexture(tint));
-        // 1.20.9：血条也补一层「透视副本」，和文字一致 —— 被天花板/方块挡住时不会整条消失，
+        // 血条也补一层「透视副本」，和文字一致 —— 被天花板/方块挡住时不会整条消失，
         // 只会变成半透明的一条（以前只有文字有这层，条会被直接裁掉）。
         RenderType seeBackground = RenderTypes.textSeeThrough(BossBarTexture.backgroundTexture(tint));
         RenderType seeProgress = RenderTypes.textSeeThrough(BossBarTexture.progressTexture(tint));
@@ -615,7 +616,7 @@ public final class HudWorldRenderer {
      * 把配置翻译成一套布局选项（敌人 / 玩家共用这一个入口，1.3.4 合并）。
      *
      * <h2>敌人（{@code player = false}）</h2>
-     * <p>{@code showBar} 是**整块**开关（1.20.34）：关掉后血条与上方的心数 / 护甲文字一起不画，
+     * <p>{@code showBar} 是**整块**开关：关掉后血条与上方的心数 / 护甲文字一起不画，
      * 四个 flag 全跟着它走，{@link HudLayout#compute} 得到空结果，渲染直接返回 —— 只剩原版名字。</p>
      *
      * <h2>玩家（{@code player = true}：队友与「显示自己的血条」下的自己）</h2>
@@ -623,18 +624,18 @@ public final class HudWorldRenderer {
      * {@code showHearts = true}：装了服务端组件时玩家也有四色心 / 碎心 / 粉心，
      * 拿不到心数（服务端没装）时 {@link HudLayout} 自动退回「当前/最大」。</p>
      *
-     * <p>{@code showArmor = false}（1.16.3 起队友、1.4.3 起自己）：玩家**只画各类心型与血条**，
+     * <p>{@code showArmor = false}（队友、自己）：玩家**只画各类心型与血条**，
      * 不画护甲段 —— payload 里的 defence / armour 照旧收下（敌人数据结构不用改），只是不给
      * 玩家排版用。</p>
      *
-     * <p>1.20.34：整块由 {@code showTeammates} / {@code showSelf} 管（关掉时不会走到这里），
+     * <p>整块由 {@code showTeammates} / {@code showSelf} 管（关掉时不会走到这里），
      * 所以能画的时候血条一定画 —— 也就是说这里的 {@code showBar} <b>不吃</b> {@code cfg.showBar}
      * （那是「敌人」的整块开关，不能连带把玩家也关掉）。</p>
      *
      * <p>{@code playerStyle} 也在这里设：它恒等于 {@code player}，
      * 放在调用点容易被漏掉。</p>
      */
-    /** 1.6.1：最近一次成功解析的快照（断帧时兜底用）。 */
+    /** 最近一次成功解析的快照（断帧时兜底用）。 */
     private static final java.util.Map<UUID, EnemyData.Snapshot> LAST_SNAPSHOT = new java.util.HashMap<>();
     private static final java.util.Map<UUID, Long> LAST_SNAPSHOT_AT = new java.util.HashMap<>();
     /** 快照粘性：250 ms（刚好盖住「reset → 重算」的窗口，又不会把旧数据留太久）。 */

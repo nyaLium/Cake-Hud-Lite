@@ -40,7 +40,7 @@ final class SelfStatsCatalog {
     static final String TIME_KEY = KEY_PREFIX + "78";
     /** 键 → 分类（键与属性一一对应，见地图 view_stats.mcfunction）。 */
     private static final java.util.Map<String, SelfStatsKind> KEY_KINDS = buildKeyKinds();
-    /** hover 键 {@code view_stats_N} → 分类（1.2.11：属性行优先用这个认）。 */
+    /** hover 键 {@code view_stats_N} → 分类（属性行优先用这个认）。 */
     private static final java.util.Map<String, SelfStatsKind> HOVER_KINDS = buildHoverKinds();
 
     /** hover 键 → 分类（供自检）。 */
@@ -58,7 +58,7 @@ final class SelfStatsCatalog {
         /**
          * 图标上的 hover 翻译键（{@code view_stats_N}）。
          *
-         * <p>1.2.11：数据包给每个属性图标都挂了 {@code hover_event.show_text -> view_stats_N}，
+         * <p>数据包给每个属性图标都挂了 {@code hover_event.show_text -> view_stats_N}，
          * 这是**每个属性唯一且稳定**的标识（比「字形 + 颜色」可靠得多）。</p>
          */
         final Set<String> hoverKeys = new LinkedHashSet<>();
@@ -85,7 +85,7 @@ final class SelfStatsCatalog {
             int rgb = style.getColor() != null ? style.getColor().getValue() : 0xFFFFFF;
             a.flat.append(text);
             for (int i = 0; i < text.length(); i++) a.colors.add(rgb);
-            // 1.2.11：把图标 hover 里的 view_stats_N 也收集起来（属性身份的唯一锚点）。
+            // 把图标 hover 里的 view_stats_N 也收集起来（属性身份的唯一锚点）。
             if (style.getHoverEvent() instanceof net.minecraft.network.chat.HoverEvent.ShowText show) {
                 collectHoverKeys(show.value(), a);
             }
@@ -173,7 +173,7 @@ final class SelfStatsCatalog {
     /**
      * 地图 ViewStats 里「数字 + 图形」那一类行（{@code ["",{score},{text:"🗡",hover}]} 的形态）。
      *
-     * <p>1.20.23：把原来「数字开头就算」和「两个字以内就算」两条宽规则换成这条 ——
+     * <p>把原来「数字开头就算」和「两个字以内就算」两条宽规则换成这条 ——
      * 地图 134 条 tellraw 里，除了带 {@code Misc_View_Stats_*} 翻译键的，剩下的全都是
      * 「数字 + 下面这些图形之一」，既不会漏，也不会把玩家的「123」「ok」当成属性行。</p>
      */
@@ -229,7 +229,7 @@ final class SelfStatsCatalog {
         for (String key : a.keys) {
             if (TIME_KEY.equals(key)) return SelfStatsKind.TIMER;
         }
-        // 1.2.11：先按 hover 键（view_stats_N）认 —— 每个属性一个键，精确且不依赖颜色。
+        // 先按 hover 键（view_stats_N）认 —— 每个属性一个键，精确且不依赖颜色。
         for (String key : a.hoverKeys) {
             SelfStatsKind kind = HOVER_KINDS.get(key);
             if (kind != null) return kind;
@@ -369,13 +369,13 @@ final class SelfStatsCatalog {
 
     private static java.util.Map<String, SelfStatsKind> buildKeyKinds() {
         java.util.Map<String, SelfStatsKind> m = new java.util.HashMap<>();
-        // 状态效果：Misc_View_Stats_49 … 76（纯文本，一行一个；1.20.31 起一条一项）
+        // 状态效果：Misc_View_Stats_49 … 76（纯文本，一行一个；一条一项）
         for (int i = 49; i <= 76; i++) {
             SelfStatsKind kind = SelfStatsKind.status(i);
             if (kind != null) m.put(KEY_PREFIX + i, kind);
         }
         // 倍率 / 基础值：地图的键号分两套（旧 4/8/10/12/16/18/20/25/33/40，新 83/87/90/93/101/104/107/115/122/124），
-        // 1.2.11 起**原始值（乘算前）单独成类**，不再并进「倍率」。
+        // **原始值（乘算前）单独成类**，不再并进「倍率」。
         m.put(KEY_PREFIX + "4", SelfStatsKind.HP_AMP);
         m.put(KEY_PREFIX + "83", SelfStatsKind.HP_AMP);
         m.put(KEY_PREFIX + "5", SelfStatsKind.HP_RAW);

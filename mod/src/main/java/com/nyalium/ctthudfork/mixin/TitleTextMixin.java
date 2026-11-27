@@ -1,34 +1,47 @@
 package com.nyalium.ctthudfork.mixin;
 
 import com.nyalium.ctthudfork.HudConfig;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Hud;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * 1.6.1：{@code /title} 的<b>标题</b>与<b>副标题</b>可以整体位移、并各自调整文本不透明度。
+ * {@code /title} 的<b>标题</b>与<b>副标题</b>可以整体位移、并各自调整文本不透明度。
  *
  * <p>只挂 {@code Hud.extractTitle} —— 那是原版画「title / subtitle」的唯一入口；
  * <b>actionbar 不走这里</b>（{@code extractOverlayMessage}），所以本功能天然排除 actionbar。</p>
  *
- * <h2>实现</h2>
+ * <h2>原版结构</h2>
+ * <pre>
+ * pose.translate(guiW/2, guiH/2);        // 原点挪到屏幕中心
+ *   pose.pushMatrix(); pose.scale(4, 4);  // 标题：local 坐标 × 4
+ *   textWithBackdrop(font, title, -w/2, -10, w, color);
+ *   pose.popMatrix();
+ *   pose.pushMatrix(); pose.scale(2, 2);  // 副标题：local 坐标 × 2
+ *   textWithBackdrop(font, subtitle, -w/2, 5, sw, color);
+ *   pose.popMatrix();
+ * </pre>
+ *
+ * <h2>怎么叠加我们自己的变换</h2>
+ * <p>两个 item 唯一的区分点就是这两次 {@code textWithBackdrop}（{@code ordinal} 0 / 1），
+ * 所以每个 {@code @Redirect} 里在调用前后各 push / pop 一次矩阵，叠加：</p>
+ * <pre>
+ * T(位移 / 该 item 的原版倍数) · T(文字中心) · S(我们的缩放) · T(-文字中心)
+ * </pre>
+ * <p>两点细节：</p>
  * <ul>
- *   <li><b>位置</b>：{@code @Inject} 在 HEAD 推一层矩阵并 translate，RETURN 再 pop。
- *       原版进方法后自己会 translate 到屏幕中心、再按 4x / 2x 缩放画字，我们的外层平移
- *       因此是「整块标题」的 GUI 像素位移（正 = 右下）。方法里所有 return 都会经过 RETURN，
- *       压栈不会失衡。</li>
- *   <li><b>不透明度</b>：原版两处 {@code textWithBackdrop(font, text, x, y, w, color)} 用的是
- *       同一个 {@code ARGB.white(alpha)} 颜色（带淡入淡出），所以用两个 {@code @Redirect}
- *       （{@code ordinal = 0} 标题 / {@code ordinal = 1} 副标题）把颜色里的 alpha 乘上去 ——
- *       不影响原版的淡入淡出节奏，只是在这个基础上再乘一个系数。</li>
+ *   <li><b>位移要除以原版倍数</b>：进来时 pose 已经带了 {@code scale(4)} / {@code scale(2)}，
+ *       在这个坐标系里 1 单位不再等于 1 GUI 像素，所以 GUI 像素的位移要先除掉该倍数
+ *       （{@link #TITLE_POSE_SCALE} / {@link #SUBTITLE_POSE_SCALE}）。</li>
+ *   <li><b>位移要在缩放之外</b>：矩阵是「后写的先作用于顶点」，把位移写在最前面，
+ *       它就不会被我们自己的缩放系数再放大一次 —— 缩放改变的是字号，位移始终是屏幕像素。</li>
  * </ul>
+ * <p>缩放原点取文字盒的中心（{@code x + width/2, y + }），于是放大 / 缩小时文字仍然居中，
+ * 不会往某一侧歪。位移与不透明度都是对原版淡入淡出的最终结果再叠加，不影响原版节奏。</p>
  */
 @Mixin(Hud.class)
 public abstract class TitleTextMixin {
@@ -42,45 +55,65 @@ public abstract class TitleTextMixin {
             "Lnet/minecraft/client/gui/GuiGraphicsExtractor;textWithBackdrop("
                     + "Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;IIII)V";
 
-    @Inject(method = EXTRACT_TITLE, at = @At("HEAD"))
-    private void cttHudFork$titleOffsetPush(GuiGraphicsExtractor graphics, DeltaTracker delta,
-                                            CallbackInfo ci) {
-        graphics.pose().pushMatrix();
-        // 位移按窗口比例换算（配置里存的是参考 GUI 尺寸下的像素），
-        // 这样改窗口大小 / GUI Scale 时标题的相对位置不变，不会被顶出屏幕。
-        int[] offset = HudConfig.titleOffset(graphics.guiWidth(), graphics.guiHeight());
-        if (offset[0] != 0 || offset[1] != 0) {
-            graphics.pose().translate((float) offset[0], (float) offset[1]);
-        }
-    }
+    /** 原版标题前面的 {@code scale(4, 4)}：local 1 单位 = 4 GUI 像素。 */
+    private static final float TITLE_POSE_SCALE = 4.0F;
+    /** 原版副标题前面的 {@code scale(2, 2)}。 */
+    private static final float SUBTITLE_POSE_SCALE = 2.0F;
+    /** 文字盒中心相对 {@code y} 的偏移（字体行高 9 的一半）。 */
+    private static final float TEXT_CENTER_Y = 4.5F;
 
-    @Inject(method = EXTRACT_TITLE, at = @At("RETURN"))
-    private void cttHudFork$titleOffsetPop(GuiGraphicsExtractor graphics, DeltaTracker delta,
-                                           CallbackInfo ci) {
-        graphics.pose().popMatrix();
-    }
-
-    /** 标题：ordinal = 0（原版里第一处 textWithBackdrop 就是 title）。 */
+    /** 标题：{@code ordinal = 0}（原版第一处 {@code textWithBackdrop}）。 */
     @Redirect(method = EXTRACT_TITLE, at = @At(value = "INVOKE", target = TEXT_WITH_BACKDROP, ordinal = 0))
-    private void cttHudFork$titleOpacity(GuiGraphicsExtractor graphics, Font font, Component text,
-                                         int x, int y, int width, int argb) {
-        graphics.textWithBackdrop(font, text, x, y, width,
-                applyOpacity(argb, HudConfig.get().titleOpacity));
+    private void cttHudFork$title(GuiGraphicsExtractor graphics, Font font, Component text,
+                                  int x, int y, int width, int argb) {
+        HudConfig.Cfg cfg = HudConfig.get();
+        int[] offset = HudConfig.titleOffset(graphics.guiWidth(), graphics.guiHeight());
+        drawItem(graphics, font, text, x, y, width, argb,
+                TITLE_POSE_SCALE, offset, cfg.titleOpacity, cfg.titleScale);
     }
 
-    /** 副标题：ordinal = 1。 */
+    /** 副标题：{@code ordinal = 1}。 */
     @Redirect(method = EXTRACT_TITLE, at = @At(value = "INVOKE", target = TEXT_WITH_BACKDROP, ordinal = 1))
-    private void cttHudFork$subtitleOpacity(GuiGraphicsExtractor graphics, Font font, Component text,
-                                            int x, int y, int width, int argb) {
-        graphics.textWithBackdrop(font, text, x, y, width,
-                applyOpacity(argb, HudConfig.get().subtitleOpacity));
+    private void cttHudFork$subtitle(GuiGraphicsExtractor graphics, Font font, Component text,
+                                     int x, int y, int width, int argb) {
+        HudConfig.Cfg cfg = HudConfig.get();
+        int[] offset = HudConfig.subtitleOffset(graphics.guiWidth(), graphics.guiHeight());
+        drawItem(graphics, font, text, x, y, width, argb,
+                SUBTITLE_POSE_SCALE, offset, cfg.subtitleOpacity, cfg.subtitleScale);
+    }
+
+    private static void drawItem(GuiGraphicsExtractor graphics, Font font, Component text,
+                                 int x, int y, int width, int argb,
+                                 float poseScale, int[] offset, double opacity, double scale) {
+        float factor = poseScale <= 0.0F ? 1.0F : poseScale;
+        float zoom = (float) clamp(scale, 0.25, 4.0);
+        float centerX = x + width / 2.0F;
+        float centerY = y + TEXT_CENTER_Y;
+
+        graphics.pose().pushMatrix();
+        // 位移：GUI 像素 → 当前 item 的 local 单位；写在最外层，不受 zoom 影响
+        if (offset[0] != 0 || offset[1] != 0) {
+            graphics.pose().translate(offset[0] / factor, offset[1] / factor);
+        }
+        // 缩放：绕文字盒中心
+        if (zoom != 1.0F) {
+            graphics.pose().translate(centerX, centerY);
+            graphics.pose().scale(zoom, zoom);
+            graphics.pose().translate(-centerX, -centerY);
+        }
+
+        graphics.textWithBackdrop(font, text, x, y, width, applyOpacity(argb, opacity));
+        graphics.pose().popMatrix();
     }
 
     /** 把颜色里已有的 alpha（原版淡入淡出算出来的）再乘一个系数。 */
     private static int applyOpacity(int argb, double opacity) {
-        double o = Double.isNaN(opacity) ? 1.0 : Math.max(0.0, Math.min(1.0, opacity));
-        int base = (argb >>> 24) & 0xFF;
-        int alpha = (int) Math.round(base * o);
+        int alpha = (int) Math.round(((argb >>> 24) & 0xFF) * clamp(opacity, 0.0, 1.0));
         return (alpha << 24) | (argb & 0x00FFFFFF);
+    }
+
+    private static double clamp(double value, double lo, double hi) {
+        if (Double.isNaN(value)) return 1.0;
+        return Math.max(lo, Math.min(hi, value));
     }
 }

@@ -11,8 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 「显示内容过滤…」界面（旧名「内容过滤」；1.20.6 起双列按钮 + 滚动；<b>1.20.31 起分三节</b>；
- * 1.20.32 滚动条可点可拖；1.0.0 起入口文案改成「显示内容过滤…」）。
+ * 「显示内容过滤…」界面（旧名「内容过滤」；双列按钮 + 滚动；<b>分三节</b>；
+ * 1.20.32 滚动条可点可拖；入口文案改成「显示内容过滤…」）。
  *
  * <p>以前是「一大串属性 + 状态效果 + 其它」平铺：状态效果 28 条挤在一个按钮里、
  * 「其它」把草方块和认不出的行混在一起，太粗。现在按
@@ -33,7 +33,7 @@ import java.util.List;
  * </pre>
  *
  * <p>列表项仍是真正的 {@link Button}（原版按钮纹理 = 有边框、有悬停高亮、可聚焦）：
- * 一屏放不下就滚轮翻行，右侧滚动条可用鼠标点/拖（1.20.32）。标题行不占按钮位、不可点。</p>
+ * 一屏放不下就滚轮翻行，右侧滚动条可用鼠标点/拖。标题行不占按钮位、不可点。</p>
  *
  * <p>布局与滚动的数学都是纯函数（{@link #buildRows} / {@link #visibleRows} /
  * {@link #maxScroll} / {@link #clampScroll} / {@link #scrollByWheel}），滚动条几何在
@@ -116,7 +116,7 @@ public final class SelfStatsFilterScreen extends Screen {
                 appendItems(out, members);
                 continue;
             }
-            // 1.3.1：「属性」按细分再插标题（属性 / 心型 / 倍率 / 护甲 / 杂项）。
+            // 「属性」按细分再插标题（属性 / 心型 / 倍率 / 护甲 / 杂项）。
             for (SelfStatsKind.Sub sub : SelfStatsKind.Sub.values()) {
                 java.util.List<SelfStatsKind> part = new ArrayList<>();
                 for (SelfStatsKind kind : members) {
@@ -251,7 +251,7 @@ public final class SelfStatsFilterScreen extends Screen {
         graphics.centeredText(this.font, Component.translatable("ctt_hud_fork.config.title"),
                 this.width / 2, 10, 0xFFFFFFFF);
         graphics.centeredText(this.font, this.title, this.width / 2, 24, 0xFFFFD060);
-        // 1.20.24：计数与「滚轮/点击」提示合成一行，给列表多腾一行高度。
+        // 计数与「滚轮/点击」提示合成一行，给列表多腾一行高度。
         Component countLine = Component.translatable("ctt_hud_fork.config.selfStatsFilter.count",
                         SelfStatsKind.FILTERABLE.length, this.hidden.size())
                 .copy().append("  ·  ")
@@ -273,7 +273,7 @@ public final class SelfStatsFilterScreen extends Screen {
         drawScrollbar(graphics, mouseX, mouseY);
     }
 
-    // ── 滚动条（1.20.32：可点可拖，绘制与命中判定共用一套几何） ──
+    // ── 滚动条（可点可拖，绘制与命中判定共用一套几何） ──
 
     /** 滚动条那一列的 x。 */
     private int trackLeft() {
@@ -305,7 +305,7 @@ public final class SelfStatsFilterScreen extends Screen {
         int track = trackHeight();
         if (track <= 0 || maxScroll() <= 0) return;
         int x = trackLeft();
-        // 光标停在条上 / 正在拖时提亮（1.20.33），让人知道这条能抓
+        // 光标停在条上 / 正在拖时提亮，让人知道这条能抓
         boolean hot = this.barDragging || (hitsBar(mouseX, mouseY));
         graphics.fill(x, TOP, x + SCROLLBAR_WIDTH, TOP + track, hot ? 0x40000000 : 0x30000000);
         int thumb = thumbHeight();
@@ -347,7 +347,7 @@ public final class SelfStatsFilterScreen extends Screen {
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
-    // ── 滚动条：可点可拖（1.20.32） ──
+    // ── 滚动条：可点可拖 ──
 
     /** 是否正在拖滑块。 */
     private boolean barDragging;
@@ -402,7 +402,7 @@ public final class SelfStatsFilterScreen extends Screen {
         MutableComponent mark = Component.literal(shown ? "\u2714 " : "\u2718 ")
                 .withStyle(style -> style.withColor(shown
                         ? TextColor.fromRgb(0x55FF55) : TextColor.fromRgb(0xFF5555)));
-        // 1.20.16：内置翻译已改为官方中文（取自地图资源包），不再走 hover。
+        // 内置翻译已改为官方中文（取自地图资源包），不再走 hover。
         MutableComponent name = Component.translatable("ctt_hud_fork.config.kind." + kind.id)
                 .withStyle(style -> style.withColor(shown
                         ? TextColor.fromRgb(0xFFFFFF) : TextColor.fromRgb(0x8A8A8A)));

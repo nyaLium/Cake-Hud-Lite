@@ -5,10 +5,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 
 /**
- * 「某一类 Boss 栏文本 = 某种状态」的通用探测器（1.3.3）。
+ * 「某一类 Boss 栏文本 = 某种状态」的通用探测器。
  *
  * <h2>为什么合并</h2>
- * <p>诅咒与癫狂原来的两个探测类逐行同构：都是 100 ms 探测一次、命中后保持一段时间、
+ * <p>诅咒与癫狂共用同一套探测实现：都是 100 ms 探测一次、命中后保持一段时间、
  * 组件树里找翻译键。合并的只有这层<b>探测</b>；两者<b>命中后做什么</b>仍写在各自的调用点：</p>
  * <ul>
  *   <li><b>诅咒</b>：隐藏一切（实体 HUD + 属性面板 HUD/容器）；</li>
@@ -83,7 +83,7 @@ final class BossBarKeyDetector {
 
     private boolean probe(Minecraft mc) {
         if (mc == null || mc.player == null) return false;
-        // 1.3.5：统一走 BossBarTracker 的取条入口（同一个反射点，只此一处）。
+        // 统一走 BossBarTracker 的取条入口（同一个反射点，只此一处）。
         for (var bar : BossBarTracker.bossBars(mc).values()) {
             if (bar != null && marks(bar.getName())) return true;
         }

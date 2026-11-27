@@ -4,15 +4,12 @@
   "package": "com.nyalium.ctthudfork.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
-    "BitmapProviderGlyphMixin",
     "BossBarHudRenderMixin",
     "BossHealthOverlayAccessor",
     "ContainerPanelMixin",
-    "GlyphStitcherMixin",
     "NameTagHudMixin",
     "NameTagScoreMixin",
-    "TitleTextMixin",
-    "TrueTypeGlyphProviderGlyphMixin"
+    "TitleTextMixin"
   ],
   "injectors": {
     "defaultRequire": 1

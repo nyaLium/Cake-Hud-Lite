@@ -49,7 +49,7 @@ public final class HudTarget {
     private static long memoStamp = 0L;
 
     /**
-     * 1.5.9：Boss 的身份名（数据包里的 custom name 键）。
+     * Boss 的身份名（数据包里的 custom name 键）。
      *
      * <p>地图给 Psy 的皮肤/分身用的是「{@code Psy} + N 个 {@code U+E007}」这类键
      * （{@code U+E007} 是地图字体里的不可见字符），翻译后都显示「鸟叔」；
@@ -85,7 +85,7 @@ public final class HudTarget {
     static boolean hidesHud(Entity entity) {
         if (entity == null) return false;
         if (hidesByName(entity.getCustomName())) return true;
-        // 1.5.11：服务端下发的结构化名字（translate 键原样）也能命中 —— 双端时更可靠。
+        // 服务端下发的结构化名字（translate 键原样）也能命中 —— 双端时更可靠。
         MobHealthPayload.Entry pushed = ClientMobHealthCache.lookup(entity.getUUID());
         return pushed != null && hidesByName(pushed.nameText());
     }
@@ -101,13 +101,17 @@ public final class HudTarget {
     /**
      * 「UI 允许显示」的总闸：未知诅咒（整个 UI）与癫狂（实体血条）都关它。
      *
-     * <p>1.2.6：癫狂不再是「完全不画」—— 见 {@link HudWorldRenderer}，此时改画百分比条，
-     * 但仍不接管名字 / 不摘原版 {@code below_name} 分数（百分比要留给玩家看）。</p>
+     * <p><b>癫狂不在这里</b>：癫狂只做两件事 —— 隐藏自身属性面板（{@link SelfStatsPanel}）
+     * 与不画「自己」那条血条（{@link HudWorldRenderer}）——<b>敌人与队友的头顶血条完全照常</b>，
+     * 玩家在癫狂期间照样要能判断敌人血量。</p>
+     *
+     * <p>注意区分：{@code EnemyData.percentOnly} / {@code HudLayout} 的 percentOnly 分支是
+     * 「数据只给了 {@code HealthPercent}」时的渲染方式，与癫狂无关。</p>
      */
     static boolean uiAllowed(Minecraft mc) {
         if (mc == null) return false;
-        // 1.2.10：癫狂不再挡实体 HUD（只隐藏自身属性面板，见 SelfStatsPanel）。
-        return !CurseDetector.isActive(mc);
+        // 癫狂不再挡实体 HUD（只隐藏自身属性面板，见 SelfStatsPanel）。
+        return !HudRenderGate.suppressAll(mc);
     }
 
     /** 不看诅咒 / 癫狂、只看「这只实体归不归本 Mod 管」。 */
@@ -129,10 +133,10 @@ public final class HudTarget {
             // 就说明他在这局里 = 队友；没有就不管（大厅里的其他玩家）。
             return EnemyData.healthPercentOf(mc.level.getScoreboard(), player) >= 0;
         }
-        // 1.5.3：服务端明确要求抑制的实体（NPC）也算「接管」——接管只为了把原版 below_name
+        // 服务端明确要求抑制的实体（NPC）也算「接管」——接管只为了把原版 below_name
         // 分数摘掉，渲染端会跳过它（见 HudWorldRenderer）。这样大厅 NPC 不再顶着血条/数字。
         if (ClientMobHealthCache.isSuppressed(entity.getUUID())) return true;
-        // 1.5.4：同名分身 Boss（Psy 等）同样「接管但不画」，否则原版 below_name 的
+        // 同名分身 Boss（Psy 等）同样「接管但不画」，否则原版 below_name 的
         // 百分比也会把真身暴露出来。
         if (hidesHud(entity)) return true;
         // 有数据才算「数据包管控的敌人」——这一条也排除了掉落物、船、画等。
@@ -140,7 +144,7 @@ public final class HudTarget {
             MANAGED_RECENT.put(entity, System.currentTimeMillis());
             return true;
         }
-        // 1.6.1：地图每 tick 会先 `scoreboard players reset @e AllHearts` 再逐只重算，
+        // 地图每 tick 会先 `scoreboard players reset @e AllHearts` 再逐只重算，
         // 客户端恰好在这两个包之间取样时会读到「没有分数」；以前这会让整组 HUD 闪一下。
         // 这里给 500 ms 的粘性：刚被接管过的实体，短暂读不到分数也继续算「接管」。
         Long at = MANAGED_RECENT.get(entity);
@@ -234,7 +238,7 @@ public final class HudTarget {
      * 判定打在<b>碰撞箱</b>上而不是头顶那个悬空的 HUD 挂点 —— 挂点比头顶还高半格，
      * 拿它当判据的话头顶有天花板就会整组消失。</p>
      *
-     * <p>1.6.1：判定结果带<b>防抖</b>（见 {@link #settle}）。实体刚好压在方块边缘时，
+     * <p>判定结果带<b>防抖</b>（见 {@link #settle}）。实体刚好压在方块边缘时，
      * 相机每帧动一点点就会让射线在「通 / 挡」之间来回跳，直接用原始结果会让血条闪烁。</p>
      *
      * @return true = 被挡住（不该显示）
@@ -275,7 +279,7 @@ public final class HudTarget {
     private static long settlePruneAt = 0L;
 
     /**
-     * 遮挡防抖（1.6.1）：修「实体快要被不透明方块遮住时血条闪烁」。
+     * 遮挡防抖：修「实体快要被不透明方块遮住时血条闪烁」。
      *
      * <p>根因：实体位置是 20 Hz 的整数 tick，相机是每帧连续的，再加上射线只取有限几个采样点，
      * 于是在「刚好压在方块边缘」的视角下，射线会一帧通、一帧挡地跳。直接按原始结果开关 UI，
@@ -320,7 +324,7 @@ public final class HudTarget {
 
     private static boolean computeOccluded(Minecraft mc, Entity entity) {
         Vec3 camPos = cameraPos(mc);
-        // 1.6.1：用**插值后**的碰撞箱（和画面上看到的位置一致），而不是 20 Hz 的整数 tick 位置。
+        // 用**插值后**的碰撞箱（和画面上看到的位置一致），而不是 20 Hz 的整数 tick 位置。
         // 否则实体每 tick 才跳一次、相机每帧都在动，射线会在方块边缘出现「整块 20 Hz 抖动」。
         AABB box = entity.getBoundingBox();
         float partial = 0.0f;

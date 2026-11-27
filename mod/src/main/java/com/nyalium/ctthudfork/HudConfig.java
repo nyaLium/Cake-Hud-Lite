@@ -10,7 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * 配置文件 {@code config/ctt-hud-fork.json}（1.20.6 起改名；旧文件 {@code ctt-enemy-hud.json} 只在迁移时读一次）。
+ * 配置文件 {@code config/ctt-hud-fork.json}（改名；旧文件 {@code ctt-enemy-hud.json} 只在迁移时读一次）。
  *
  * <p>三条写入路径：① 首次启动写默认值；② Mod Menu 里改完点「完成」写回；
  * ③ 直接在磁盘上手改，游戏每 2 秒检查一次修改时间并热加载。</p>
@@ -47,21 +47,21 @@ public final class HudConfig {
          * <p>1.4.6 从 {@code opacity} 拆出来，默认 <b>1.00</b>（文字保持清晰）。</p>
          */
         public double textOpacity = 1.00;
-        /** 1.4.7：**玩家**（含自己）血条的不透明度，默认 0.65。 */
+        /** **玩家**（含自己）血条的不透明度，默认 0.65。 */
         public double teamBarOpacity = 0.65;
-        /** 1.4.7：**玩家**（含自己）头顶文字的不透明度，默认 1.00。 */
+        /** **玩家**（含自己）头顶文字的不透明度，默认 1.00。 */
         public double teamTextOpacity = 1.00;
         /**
          * 实体血条（名字 / 心数 / 护甲）是否带文字阴影。
          *
-         * <p>1.20.32 起默认<b>关闭</b>，并且只作用于头顶血条 —— 属性面板另有
+         * <p>默认<b>关闭</b>，并且只作用于头顶血条 —— 属性面板另有
          * {@link #selfStatsTextShadow}（以前两者共用这一个字段，改实体血条会连带改面板）。</p>
          */
         public boolean textShadow = false;
         /**
          * 敌人头顶 HUD 的总开关（界面文案「显示血条」）。
          *
-         * <p>1.20.34 起关闭时<b>整块都不画</b>：血条 + 上方的心数 / 护甲文字一起消失，
+         * <p>关闭时<b>整块都不画</b>：血条 + 上方的心数 / 护甲文字一起消失，
          * 只剩原版名字（以前只关血条、心数和护甲还挂着）。</p>
          */
         public boolean showBar = true;
@@ -72,7 +72,7 @@ public final class HudConfig {
         /** 隐藏上方 Boss 栏里「最近敌人的信息」那一条（头顶已经画过了）。 */
         public boolean hideEnemyBossBar = true;
         /**
-         * 队友头顶 HUD 的总开关（界面文案同样是「显示血条」，1.20.34 起统一）。
+         * 队友头顶 HUD 的总开关（界面文案同样是「显示血条」，统一）。
          *
          * <p>关闭时队友整块不画：血条 + 心数文字都消失（{@link HudTarget#managed} 直接返回 false），
          * 只剩原版名字。自己永远不显示。</p>
@@ -92,7 +92,7 @@ public final class HudConfig {
         public double maxDistance = 48.0;
         /** 血条长度（原版名牌像素），50 ~ 150，默认 75。 */
         public double barWidth = 75.0;
-        /** 整组 UI 的额外缩放，0.75 ~ 1.50，0.9 = 默认（1.19.0 起）。 */
+        /** 整组 UI 的额外缩放，0.75 ~ 1.50，0.9 = 默认。 */
         public double scale = 0.9;
         /**
          * 1.4.5 调试功能：**优先使用服务端数据**（服务端组件推来的 payload）。
@@ -109,37 +109,29 @@ public final class HudConfig {
          * 范围 1 ~ {@link MobHealthPayload#MAX_ENTRIES}（调大也不会超过服务端实际推的条数）。</p>
          */
         public int payloadLimit = MobHealthPayload.MAX_ENTRIES;
-        // ── 1.6.1：/title 的标题 / 副标题（不含 actionbar） ──
+        // ── /title 的标题 / 副标题（不含 actionbar） ──
 
         /** 标题文本不透明度（0.10 ~ 1.00，默认 1.00）：只乘在原版淡入淡出的 alpha 上。 */
-        public double titleOpacity = 1.00;
+        public double titleOpacity = 0.60;
         /** 副标题文本不透明度（0.10 ~ 1.00，默认 1.00）。 */
-        public double subtitleOpacity = 1.00;
+        public double subtitleOpacity = 0.60;
         /** 标题 + 副标题整块的水平位移（GUI 像素，正 = 右）。 */
         public int titleOffsetX = 0;
-        /** 标题 + 副标题整块的垂直位移（GUI 像素，正 = 下）。 */
-        public int titleOffsetY = 0;
+        /** 标题垂直位移（GUI 像素，正 = 下；默认上移 135，让出 HUD 的位置）。 */
+        public int titleOffsetY = -135;
+        /** 副标题水平位移（GUI 像素，正 = 右）。 */
+        public int subtitleOffsetX = 0;
+        /** 副标题垂直位移（GUI 像素，正 = 下；默认与标题一起上移 135）。 */
+        public int subtitleOffsetY = -135;
+        /** 标题缩放（在原版 4x 基础上再乘这个系数， ~ ，默认 ，绕文字中心缩放）。 */
+        public double titleScale = 1.00;
+        /** 副标题缩放（在原版 2x 基础上再乘这个系数，默认 ，绕文字中心缩放）。 */
+        public double subtitleScale = 1.00;
 
-        // ── 1.6.2：杂项 ──
+        // ── 杂项 ──
 
-        /**
-         * 杂项：<b>粗体渲染优化</b>（默认开）。
-         *
-         * <p>原版每个粗体字形都要画两遍（第二遍右移 1 像素），顶点数与四边形数量翻倍。
-         * 打开后按 {@link #boldMode} 处理：膨胀模式改为「一张更粗的字形只画一遍」，
-         * 偏移模式保留双画但第二遍的距离可调。只对位图字体生效，其它字体自动沿用原版；
-         * 关掉 = 完全原版。实现见 {@link BoldDilation}。</p>
-         */
-        public boolean boldOptimize = true;
-
-        /** 粗体模式：0 = 膨胀（默认，粗体只画一遍）/ 1 = 偏移（保留双画，仅调距离）。 */
-        public int boldMode = 0;
-        /** 膨胀强度（0 ~ 0.5，默认 0.25 像素）：仅膨胀模式生效。 */
-        public double boldDilation = 0.25;
-        /** 偏移距离（0 ~ 1.0，默认 0.35 像素）：仅偏移模式生效。 */
-        public double boldOffset = 0.35;
-        /**
-         * 1.6.0 调试功能：**常显敌人名称**（默认开）。
+                /**
+         * 调试功能：**常显敌人名称**（默认开）。
          *
          * <p>原版只在自己愿意的时候（近处 / 准星正对着）才填 {@code state.nameTag}，
          * 这里把名字补上，之后仍然由<b>原版</b> {@code submitNameTag} 绘制 ——
@@ -171,23 +163,23 @@ public final class HudConfig {
         /** 自动长度：满血时的条长（布局像素），默认与默认条长 75 一致。 */
         public double autoBarMaxWidth = 75.0;
         /**
-         * 自身属性面板（1.20.3）。纯客户端：定时 {@code /trigger ViewStats}，
+         * 自身属性面板。纯客户端：定时 {@code /trigger ViewStats}，
          * 抓地图回的那些属性行画成面板，不依赖服务端组件。
          */
         public boolean showSelfStats = true;
-        /** 属性面板自动刷新间隔（秒），1~5（1.0.0 起不再有「立即」档）；进他人服务器时强制 3 s（不改这里）。 */
+        /** 属性面板自动刷新间隔（秒），1~5（不再有「立即」档）；进他人服务器时强制 3 s（不改这里）。 */
         public int selfStatsSeconds = 3;
         /** 属性面板列数，1 ~ 3。 */
         public int selfStatsColumns = 2;
         /** 属性面板左上角屏幕坐标（GUI 像素，量在 {@link #layoutGuiW}/{@link #layoutGuiH} 这套尺寸下）。 */
         public int selfStatsX = 4;
         /**
-         * 1.20.41：{@code -1} = **动态默认位置**「x=4、y = 屏幕高 ÷ {@value #DEFAULT_Y_DENOM}」
+         * {@code -1} = **动态默认位置**「x=4、y = 屏幕高 ÷ {@value #DEFAULT_Y_DENOM}」
          * （左侧偏上），窗口大小变了也跟着走；拖动后这里存实际像素。
          */
         public int selfStatsY = DEFAULT_Y_SENTINEL;
         /**
-         * 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，2 = HUD + 容器都显示（1.20.16）。
+         * 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，2 = HUD + 容器都显示。
          * 每种上下文（HUD / 容器）各有一套位置·列数·不透明度。v1.0.0 起默认 2（HUD + 容器界面）。
          */
         public int selfStatsMode = 2;
@@ -207,7 +199,7 @@ public final class HudConfig {
         public int bothColumns = 2;
         /** 模式 2 HUD 那套的不透明度（0.20~1.00）。 */
         public double bothOpacity = 1.0;
-        /** 模式 2 在容器界面上的那一套配置（1.20.18 起独立）。 */
+        /** 模式 2 在容器界面上的那一套配置（独立）。 */
         public int bothContainerX = 4;
         /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}）。 */
         public int bothContainerY = DEFAULT_Y_SENTINEL;
@@ -215,10 +207,10 @@ public final class HudConfig {
         public int bothContainerColumns = 2;
         /** 模式 2 容器那套的不透明度（0.20~1.00）。 */
         public double bothContainerOpacity = 1.0;
-        /** 属性面板不透明度，0.20 ~ 1.00（1.20.4 起可调；1.0.0 起界面文案叫「不透明度」）。 */
+        /** 属性面板不透明度，0.20 ~ 1.00（可调；界面文案叫「不透明度」）。 */
         public double selfStatsOpacity = 1.0;
         /**
-         * 属性面板文字阴影（1.20.32 起独立）。
+         * 属性面板文字阴影（独立）。
          *
          * <p>以前面板跟着 {@link #textShadow}（实体血条那个）走，改一边会连带改另一边；现在分开，
          * 默认<b>开启</b> —— 和升级前的观感一致（那时候 {@code textShadow} 默认 true）。
@@ -230,7 +222,7 @@ public final class HudConfig {
          * 默认（全部职业共用）时要隐藏的内容类，取值见 {@link SelfStatsKind#id}。
          *
          * <p>例如 {@code ["heart_red", "hp_neg"]} = 红心与负生命那几行不上面板。
-         * 1.20.5 起过滤粒度是<b>单个属性</b>；旧版本写的粗类（{@code health}/{@code attack}…）
+         * 过滤粒度是<b>单个属性</b>；旧版本写的粗类（{@code health}/{@code attack}…）
          * 会在读取时自动展开成对应的一串细类。</p>
          */
         public java.util.List<String> selfStatsHidden = new java.util.ArrayList<>();
@@ -244,9 +236,9 @@ public final class HudConfig {
         public int shieldX = -1;
         /** 同 {@link #shieldX}；两个都为 -1 时才走「跟随副手槽」的默认位置。 */
         public int shieldY = -1;
-        /** 缩放倍率（1.0 = 纹理原尺寸 34×86；1.20.22 起允许 0.5~1.5 的小数倍；1.20.26 起默认 0.7）。 */
+        /** 缩放倍率（1.0 = 纹理原尺寸 34×86；允许 0.5~1.5 的小数倍；默认 0.7）。 */
         public double shieldScale = 0.7;
-        /** 不透明度 0.1~1.0（1.20.26 起默认 0.75；1.20.32 起默认 0.65；界面文案「不透明度」）。 */
+        /** 不透明度 0.1~1.0（默认 0.75；默认 0.65；界面文案「不透明度」）。 */
         public double shieldOpacity = 0.65;
         /**
          * 默认位置是否**跟着主手镜像**（1.2.0 新增，默认开）。
@@ -260,7 +252,7 @@ public final class HudConfig {
         public boolean shieldAutoMirror = true;
 
         /**
-         * 1.20.40：这些「像素坐标」是量在多大的 GUI 上的（{@code 0} = 还不知道）。
+         * 这些「像素坐标」是量在多大的 GUI 上的（{@code 0} = 还不知道）。
          *
          * <p>面板 / 盾牌的位置以前是**绝对 GUI 像素**，窗口或 GUI 缩放一变，同一个像素数就落到
          * 屏幕的另一处相对位置（「窗口一变就错位」）。现在把坐标连同「量它的那套 GUI 尺寸」一起存，
@@ -307,7 +299,7 @@ public final class HudConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final org.slf4j.Logger LOGGER =
             org.slf4j.LoggerFactory.getLogger("ctt-hud/config");
-    /** 配置文件（1.20.6 起改名为 {@code ctt-hud-fork.json}）。 */
+    /** 配置文件（改名为 {@code ctt-hud-fork.json}）。 */
     public static final String FILE_NAME = "ctt-hud-fork.json";
     /** 旧文件名：只在迁移时读一次。 */
     public static final String LEGACY_FILE_NAME = "ctt-enemy-hud.json";
@@ -316,7 +308,7 @@ public final class HudConfig {
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
     public static final int CURRENT_VERSION = 23;
 
-    /** 1.20.41：面板「默认位置」的哨兵值（{@code -1} = 用动态默认，见 {@link #defaultPanelY}）。 */
+    /** 面板「默认位置」的哨兵值（{@code -1} = 用动态默认，见 {@link #defaultPanelY}）。 */
     public static final int DEFAULT_Y_SENTINEL = -1;
     /** 面板默认位置的左边距（GUI 像素）。 */
     public static final int DEFAULT_X = 4;
@@ -333,14 +325,14 @@ public final class HudConfig {
         return Math.max(0, Math.round((float) guiH / DEFAULT_Y_DENOM));
     }
 
-    /** 盾牌指示器的缩放范围（倍）。1.20.22 起是小数倍，纹理整张等比缩放。 */
+    /** 盾牌指示器的缩放范围（倍）。是小数倍，纹理整张等比缩放。 */
     public static final double SHIELD_SCALE_MIN = 0.5;
     public static final double SHIELD_SCALE_MAX = 1.5;
-    /** 旧版默认血条长度（1.18.0 起默认改成 75）。 */
+    /** 旧版默认血条长度（默认改成 75）。 */
     private static final double LEGACY_BAR_WIDTH = 100.0;
-    /** 旧版默认缩放（1.19.0 起默认改成 0.9）。 */
+    /** 旧版默认缩放（默认改成 0.9）。 */
     private static final double LEGACY_SCALE = 1.0;
-    /** 1.19.0 起的默认缩放。 */
+    /** 的默认缩放。 */
     private static final double DEFAULT_SCALE = 0.9;
 
     private static Cfg cfg = new Cfg();
@@ -365,7 +357,7 @@ public final class HudConfig {
     public static void load() {
         try {
             file = FabricLoader.getInstance().getConfigDir().resolve(FILE_NAME);
-            // 1.20.6 起改名：老文件名 → 新文件名（复制一份，旧文件保留，玩家设置不丢）
+            // 改名：老文件名 → 新文件名（复制一份，旧文件保留，玩家设置不丢）
             Path legacy = FabricLoader.getInstance().getConfigDir().resolve(LEGACY_FILE_NAME);
             if (!Files.exists(file) && Files.exists(legacy)) {
                 Files.createDirectories(file.getParent());
@@ -408,7 +400,7 @@ public final class HudConfig {
     }
 
     /**
-     * 当前显示方式 + 上下文对应的布局，位置按当前 GUI 尺寸换算（1.20.40）。
+     * 当前显示方式 + 上下文对应的布局，位置按当前 GUI 尺寸换算。
      *
      * @param guiW 当前 GUI 宽；{@code <=0} = 不换算（只取列数 / 不透明度这类与位置无关的字段时可用）
      * @param guiH 当前 GUI 高
@@ -417,7 +409,7 @@ public final class HudConfig {
         Cfg c = withLayoutRef(get(), guiW, guiH);
         int x = resolveX(rawX(c, mode, container), c.layoutGuiW, guiW);
         int y = resolveY(rawY(c, mode, container), c.layoutGuiH, guiH);
-        // 1.4.1：列数 / 不透明度是**全局**设置（selfStatsColumns / selfStatsOpacity），
+        // 列数 / 不透明度是**全局**设置（selfStatsColumns / selfStatsOpacity），
         // 只有位置（x/y）按显示方式区分。
         return new Panel(x, y, c.selfStatsColumns, c.selfStatsOpacity);
     }
@@ -470,7 +462,7 @@ public final class HudConfig {
         }
     }
 
-    // ── 1.20.40：位置按「记录尺寸 → 当前尺寸」换算，变成相对位置 ──
+    // ── 位置按「记录尺寸 → 当前尺寸」换算，变成相对位置 ──
 
     /**
      * 纯函数：把「{@code storedGui} 这套尺寸下量的坐标」换算到 {@code guiNow}（selfCheck 直接打）。
@@ -505,7 +497,7 @@ public final class HudConfig {
     }
 
     /**
-     * 把「记录尺寸」改到 {@code guiW × guiH}，并先把已存的坐标换算过去（1.20.40）。
+     * 把「记录尺寸」改到 {@code guiW × guiH}，并先把已存的坐标换算过去。
      *
      * <p>拖动时调用：新坐标是在当前 GUI 下量的，之前存的那几套（其它显示方式的、盾牌的）
      * 必须先按旧比例换算到新尺寸下，否则会被当成「也是在这个尺寸下量的」而整体偏掉。</p>
@@ -537,11 +529,22 @@ public final class HudConfig {
      * 不会因为窗口变小就被顶出屏幕外（1.6.1 修正：之前是绝对像素）。
      */
     public static int[] titleOffset(int guiW, int guiH) {
+        Cfg c = get();
+        return itemOffset(c.titleOffsetX, c.titleOffsetY, guiW, guiH);
+    }
+
+    /** 「标题设置」里<b>副标题</b>的位移（当前 GUI 尺寸下，同样按窗口比例换算）。 */
+    public static int[] subtitleOffset(int guiW, int guiH) {
+        Cfg c = get();
+        return itemOffset(c.subtitleOffsetX, c.subtitleOffsetY, guiW, guiH);
+    }
+
+    private static int[] itemOffset(int offsetX, int offsetY, int guiW, int guiH) {
+        if (offsetX == 0 && offsetY == 0) return new int[]{0, 0};
         Cfg c = withLayoutRef(get(), guiW, guiH);
-        if (c.titleOffsetX == 0 && c.titleOffsetY == 0) return new int[]{0, 0};
         return new int[]{
-                scalePos(c.titleOffsetX, c.layoutGuiW, guiW),
-                scalePos(c.titleOffsetY, c.layoutGuiH, guiH)
+                scalePos(offsetX, c.layoutGuiW, guiW),
+                scalePos(offsetY, c.layoutGuiH, guiH)
         };
     }
 
@@ -664,7 +667,7 @@ public final class HudConfig {
     }
 
     /**
-     * 老配置文件升级到 {@link #CURRENT_VERSION}（1.3.6 起表驱动）。
+     * 老配置文件升级到 {@link #CURRENT_VERSION}（表驱动）。
      *
      * <h2>为什么改成表</h2>
      * <p>以前每条规则都是一个 {@code if (version < N) { if (字段 == 旧默认) 字段 = 新默认; }}，
@@ -723,7 +726,7 @@ public final class HudConfig {
             cfg.shieldY = -1;
         }
         if (version < 11) {
-            // 1.20.22：盾牌缩放从「整数倍 1~4」改成「0.5~1.5 小数倍」。
+            // 盾牌缩放从「整数倍 1~4」改成「0.5~1.5 小数倍」。
             // 越界值在 normalize() 里统一夹取，这里只保证版本号被写上。
             cfg.shieldScale = Math.max(SHIELD_SCALE_MIN, Math.min(SHIELD_SCALE_MAX, cfg.shieldScale));
         }
@@ -753,7 +756,7 @@ public final class HudConfig {
 
     /** 所有「旧默认值 → 新默认值」规则，**必须按版本升序**（同一版本内按原代码顺序）。 */
     private static final java.util.List<Rule> RULES = java.util.List.of(
-            // v2：血条长度默认 100 → 75（1.18.0）
+            // v2：血条长度默认 100 → 75
             new Rule(2, c -> c.barWidth, (c, v) -> c.barWidth = v,
                     LEGACY_BAR_WIDTH, HudLayout.BAR_WIDTH_DEFAULT),
             new Rule(2, c -> c.teamBarWidth, (c, v) -> c.teamBarWidth = v,
@@ -774,7 +777,7 @@ public final class HudConfig {
             new Rule(21, c -> c.bothContainerY, (c, v) -> c.bothContainerY = (int) v, 20, DEFAULT_Y_SENTINEL),
             // v22：面板显示方式默认 0（仅 HUD）→ 2（HUD + 容器）
             new Rule(22, c -> c.selfStatsMode, (c, v) -> c.selfStatsMode = (int) v, 0, 2)
-            // 1.4.6：原来的单一 opacity 拆成 barOpacity / textOpacity，不再迁移旧值
+            // 原来的单一 opacity 拆成 barOpacity / textOpacity，不再迁移旧值
             // （新字段默认 条 0.65 / 文字 1.00，旧文件里的 "opacity" 键读到也不认）。
     );
 
@@ -823,7 +826,7 @@ public final class HudConfig {
         c.bothContainerY = d.bothContainerY;
     }
 
-    /** 重置「调试功能」这一页的设置（1.4.5）。 */
+    /** 重置「调试功能」这一页的设置。 */
     static void resetDebug() {
         Cfg d = new Cfg();
         Cfg c = get();
@@ -851,7 +854,7 @@ public final class HudConfig {
         c.shieldAutoMirror = d.shieldAutoMirror;
     }
 
-    /** 重置「标题设置」这一页（1.6.1：/title 的位移与不透明度）。 */
+    /** 重置「标题设置」这一页（/title 的位移与不透明度）。 */
     static void resetTitle() {
         Cfg d = new Cfg();
         Cfg c = get();
@@ -859,25 +862,14 @@ public final class HudConfig {
         c.subtitleOpacity = d.subtitleOpacity;
         c.titleOffsetX = d.titleOffsetX;
         c.titleOffsetY = d.titleOffsetY;
+        c.subtitleOffsetX = d.subtitleOffsetX;
+        c.subtitleOffsetY = d.subtitleOffsetY;
+        c.titleScale = d.titleScale;
+        c.subtitleScale = d.subtitleScale;
     }
 
-    /** 重置「杂项」这一页（1.6.2）。 */
-    static void resetMisc() {
-        Cfg d = new Cfg();
-        Cfg c = get();
-        c.boldOptimize = d.boldOptimize;
-        resetBold();
-    }
 
-    /** 重置「杂项 → 粗体渲染」这一页（1.6.3）。 */
-    static void resetBold() {
-        Cfg d = new Cfg();
-        Cfg c = get();
-        c.boldOptimize = d.boldOptimize;
-        c.boldMode = d.boldMode;
-        c.boldDilation = d.boldDilation;
-        c.boldOffset = d.boldOffset;
-    }
+
 
     /**
      * 把任意（含非法 / 缺省 / NaN）配置夹到安全范围。
@@ -886,7 +878,7 @@ public final class HudConfig {
      */
     static Cfg normalize(Cfg read) {
         if (read == null) read = new Cfg();
-        // 1.4.6：血条与文字的不透明度分开；1.4.7：敌人 / 玩家再各一套（各自 0.10 ~ 1.00）
+        // 血条与文字的不透明度分开；敌人 / 玩家再各一套（各自 0.10 ~ 1.00）
         read.barOpacity = clamp(read.barOpacity, 0.1, 1.0);
         read.textOpacity = clamp(read.textOpacity, 0.1, 1.0);
         read.teamBarOpacity = clamp(read.teamBarOpacity, 0.1, 1.0);
@@ -910,15 +902,15 @@ public final class HudConfig {
             read.autoBarMinWidth = read.autoBarMaxWidth;
             read.autoBarMaxWidth = swap;
         }
-        // 自身属性面板（1.20.3）：间隔 0~600 s，列 1~3，坐标夹进屏幕范围
+        // 自身属性面板：间隔 0~600 s，列 1~3，坐标夹进屏幕范围
         read.selfStatsSeconds = (int) clamp(read.selfStatsSeconds, 1.0, 5.0);
         read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);
         read.selfStatsX = (int) clamp(read.selfStatsX, 0.0, 4000.0);
-        // 1.20.41：y = -1 是「动态默认位置」的哨兵，允许保留。
+        // y = -1 是「动态默认位置」的哨兵，允许保留。
         read.selfStatsY = (int) clamp(read.selfStatsY, -1.0, 4000.0);
-        // 1.20.4：不透明度、内容过滤（「文字大小」在 1.0.0 删掉，面板固定 1.0 倍）
+        // 不透明度、内容过滤（「文字大小」在 1.0.0 删掉，面板固定 1.0 倍）
         read.selfStatsOpacity = clamp(read.selfStatsOpacity, 0.2, 1.0);
-        // 1.20.14：显示方式（0=始终显示 HUD，1=在容器界面显示）+ 容器那一套配置
+        // 显示方式（0=始终显示 HUD，1=在容器界面显示）+ 容器那一套配置
         read.selfStatsMode = (int) clamp(read.selfStatsMode, 0.0, 2.0);
         read.containerColumns = (int) clamp(read.containerColumns, 1.0, 3.0);
         read.containerX = (int) clamp(read.containerX, 0.0, 4000.0);
@@ -933,10 +925,10 @@ public final class HudConfig {
         read.bothContainerY = (int) clamp(read.bothContainerY, -1.0, 4000.0);
         read.bothContainerOpacity = clamp(read.bothContainerOpacity, 0.2, 1.0);
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
-        // 盾牌指示器（1.20.20：可拖动定位 + 不透明度；1.20.22：缩放 0.5~1.5 小数倍）
+        // 盾牌指示器（可拖动定位 + 不透明度；缩放 0.5~1.5 小数倍）
         read.shieldX = (int) clamp(read.shieldX, -1.0, 4000.0);
         read.shieldY = (int) clamp(read.shieldY, -1.0, 4000.0);
-        // 1.20.40：位置换算的基准尺寸；0 = 还不知道（第一次绘制时补），非法值（负数/超大）同样按未知处理。
+        // 位置换算的基准尺寸；0 = 还不知道（第一次绘制时补），非法值（负数/超大）同样按未知处理。
         read.layoutGuiW = (int) clamp(read.layoutGuiW, 0.0, 10000.0);
         read.layoutGuiH = (int) clamp(read.layoutGuiH, 0.0, 10000.0);
         if (read.layoutGuiW == 0 || read.layoutGuiH == 0) {
@@ -945,17 +937,18 @@ public final class HudConfig {
         }
         read.shieldScale = clamp(read.shieldScale, SHIELD_SCALE_MIN, SHIELD_SCALE_MAX);
         read.shieldOpacity = clamp(read.shieldOpacity, 0.1, 1.0);
-        // 1.6.1：/title 的标题 / 副标题（不透明度 0.10 ~ 1.00，位移 ±4000 px）
-        read.titleOpacity = clamp(read.titleOpacity, 0.1, 1.0);
-        read.subtitleOpacity = clamp(read.subtitleOpacity, 0.1, 1.0);
+        // /title 的标题 / 副标题（不透明度  ~ ，位移 ±4000 px）
+        // 标题与副标题的位移 / 缩放各自独立（缩放  ~ ）
+        read.titleOpacity = round2(clamp(read.titleOpacity, 0.1, 1.0));
+        read.subtitleOpacity = round2(clamp(read.subtitleOpacity, 0.1, 1.0));
         read.titleOffsetX = (int) clamp(read.titleOffsetX, -4000.0, 4000.0);
         read.titleOffsetY = (int) clamp(read.titleOffsetY, -4000.0, 4000.0);
-        // 1.6.3：粗体渲染（模式 0/1，膨胀 0~0.5，偏移 0~1）
-        // 滑块步进是 0.05，顺便按 2 位小数取整，免得 json 里出现 0.35000000000000003
-        read.boldMode = (int) clamp(read.boldMode, 0.0, 1.0);
-        read.boldDilation = round2(clamp(read.boldDilation, 0.0, 0.5));
-        read.boldOffset = round2(clamp(read.boldOffset, 0.0, 1.0));
-        // 1.4.5 调试功能：筛选实体数量 1 ~ 单包上限
+        read.subtitleOffsetX = (int) clamp(read.subtitleOffsetX, -4000.0, 4000.0);
+        read.subtitleOffsetY = (int) clamp(read.subtitleOffsetY, -4000.0, 4000.0);
+        read.titleScale = round2(clamp(read.titleScale, 0.25, 4.0));
+        read.subtitleScale = round2(clamp(read.subtitleScale, 0.25, 4.0));
+        // 滑块步进是 ，顺便按 2 位小数取整，免得 json 里出现 
+        // 调试功能：筛选实体数量 1 ~ 单包上限
         read.payloadLimit = (int) clamp(read.payloadLimit, 1.0, MobHealthPayload.MAX_ENTRIES);
         return read;
     }
@@ -984,7 +977,7 @@ public final class HudConfig {
                 "size", "gravity", "towers_regen", "skulls", "bitches", "fishing", "bee", "ant",
                 "karma_light", "karma_neutral", "karma_dark", "karma_celestial",
                 "grass", "misc"});
-        // 1.20.31：状态效果从一条粗类拆成 28 条，旧配置里的 "status" 展开成全部 28 条。
+        // 状态效果从一条粗类拆成 28 条，旧配置里的 "status" 展开成全部 28 条。
         m.put("status", statusIds());
         return java.util.Map.copyOf(m);
     }

@@ -14,7 +14,7 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 
 /**
- * 「调试功能」（1.4.5）：把排查用的特殊开关集中到一页，正常游玩保持默认即可。
+ * 「调试功能」：把排查用的特殊开关集中到一页，正常游玩保持默认即可。
  *
  * <p>总界面的「调试模式」开关改成这个入口按钮；点进来是下面这张表。</p>
  *
@@ -73,7 +73,7 @@ public final class DebugSettingsScreen extends Screen {
      * 判定用的就是同一套），所以这里直接查 {@link Permissions#COMMANDS_GAMEMASTER}。
      * 单人游戏开了作弊时原版给的就是 4 级，一样通过。</p>
      *
-     * <p>1.6.2：除权限外，还要求玩家身上有 {@link DebugTagPayload#DEBUG_TAG} 标签。
+     * <p>除权限外，还要求玩家身上有 {@link DebugTagPayload#DEBUG_TAG} 标签。
      * 实体 tag 是纯服务端数据（原版协议不同步给客户端），所以这个状态由本 Mod 的服务端
      * 在变化时推过来（见 {@link DebugTagPayload}）。服务端没装本 Mod → 按「没有标签」处理。</p>
      */
@@ -98,7 +98,7 @@ public final class DebugSettingsScreen extends Screen {
         if (required != null && !mc.player.permissions().hasPermission(required)) {
             return Lock.PERMISSION;
         }
-        // 1.6.2：第二个条件 —— CTT-HUD-LITE-DEBUG 标签。
+        // 第二个条件 —— CTT-HUD-LITE-DEBUG 标签。
         if (!ClientMobHealthCache.debugTag()) return Lock.TAG;
         return Lock.NONE;
     }
@@ -110,7 +110,7 @@ public final class DebugSettingsScreen extends Screen {
         int y = TOP;
         HudConfig.Cfg cfg = HudConfig.get();
 
-        // 1.6.0：权限不够时整页不可调整，只留一个「返回」。
+        // 权限不够时整页不可调整，只留一个「返回」。
         if (!canAdjust()) {
             addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.back"), b -> back())
                     .bounds(this.width / 2 - 60, this.height - ROW_HEIGHT - 8, 120, ROW_HEIGHT).build());
@@ -137,7 +137,7 @@ public final class DebugSettingsScreen extends Screen {
         addRenderableWidget(limit);
         y += ROW_GAP;
 
-        // 1.4.7：原来在「血条设置 → 通用」里的三个隐藏开关，挪到调试功能页。
+        // 原来在「血条设置 → 通用」里的三个隐藏开关，挪到调试功能页。
         addRenderableWidget(CycleButton.onOffBuilder(cfg.hideBelowNameScore)
                 .create(x, y, width, ROW_HEIGHT,
                         Component.translatable("ctt_hud_fork.config.hideBelowNameScore"),
@@ -209,7 +209,7 @@ public final class DebugSettingsScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(this.font, this.title, this.width / 2, 24, 0xFFFFFFFF);
-        // 1.6.3：没有权限 / 没有标签时**不写任何原因**（入口已经灰掉，普通玩家不需要知道细节）。
+        // 没有权限 / 没有标签时**不写任何原因**（入口已经灰掉，普通玩家不需要知道细节）。
         if (!canAdjust()) return;
         graphics.centeredText(this.font, Component.translatable("ctt_hud_fork.config.debugHint"),
                 this.width / 2, 40, 0xFFA0A0A0);

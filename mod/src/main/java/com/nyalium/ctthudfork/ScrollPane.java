@@ -8,7 +8,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  * <p>可视区 = {@code [top, bottom)}；内容从 0 开始排。滚动量夹在
  * {@code [0, contentHeight - viewportHeight]}。滚动条画在右侧 4px 宽。</p>
  *
- * <h2>1.20.32：滚动条可用鼠标点/拖</h2>
+ * <h2>滚动条可用鼠标点/拖</h2>
  * <p>以前滚动条只是画出来给人看的，点它没反应。现在这里提供几何 + 命中判定 + 反解：
  * 点轨道任意位置把滑块跳过去（<b>以光标为中心</b>，按下不跳位），按住滑块拖动实时跟手。
  * 拖动状态（是否正在拖、抓取偏移）留在各个界面里 —— 因为界面滚动时会
@@ -68,7 +68,7 @@ final class ScrollPane {
     }
 
     /**
-     * 进入可视区裁剪（1.20.22）。
+     * 进入可视区裁剪。
      *
      * <p>内容控件不再交给 {@code Screen} 自动绘制，而是由界面自己在
      * {@code beginClip} / {@code endClip} 之间画 —— 这样滚到边界时最后一行被
@@ -91,7 +91,7 @@ final class ScrollPane {
         return Math.max(0, Math.min(maxScroll(), v));
     }
 
-    // ── 滚动条几何 / 命中（1.20.32） ──
+    // ── 滚动条几何 / 命中 ──
 
     /** 滚动条那一列的 x（调用方给一个「右侧锚点」）。 */
     int barX(int rightX) {
@@ -142,7 +142,7 @@ final class ScrollPane {
     /**
      * 画右侧滚动条（轨道 + 滑块）；没有可滚动内容时什么都不画。
      *
-     * <p>1.20.33：光标停在条上 / 正在拖时滑块提亮，告诉玩家「这条能抓」。</p>
+     * <p>光标停在条上 / 正在拖时滑块提亮，告诉玩家「这条能抓」。</p>
      */
     void drawScrollbar(GuiGraphicsExtractor g, int rightX, double mouseX, double mouseY, boolean dragging) {
         if (!scrollbarVisible()) return;

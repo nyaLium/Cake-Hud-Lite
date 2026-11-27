@@ -9,7 +9,7 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 
 /**
- * 「调整位置…」界面（旧名「移动面板」；1.20.4 起；1.20.23 改成上游 Cake-Hud 那种拖动方式）。
+ * 「调整位置…」界面（旧名「移动面板」；；1.20.23 改成上游 Cake-Hud 那种拖动方式）。
  *
  * <p>上游 {@code ConfigScreen.beginPreviewDrag/movePreviewDrag} 的做法：
  * <b>按下时记住「鼠标 ↔ 面板左上角」的偏移，移动时直接用鼠标绝对坐标减偏移定位</b>，
@@ -21,7 +21,7 @@ import java.util.List;
  *
  * <p>另外三条一起改：</p>
  * <ul>
- *   <li><b>只在面板上按下 + 真的拖动才移动</b>（1.20.28）：点一下空白处、或按下后手抖 1 px
+ *   <li><b>只在面板上按下 + 真的拖动才移动</b>：点一下空白处、或按下后手抖 1 px
  *       都不会改变坐标；想挪位置就按住面板拖；</li>
  *   <li><b>方向键微调</b>：←→↑↓ 每次 4 px，Shift 加速到 16 px（鼠标不好使时的兜底）；</li>
  *   <li><b>就地切换对象</b>：模式 2 下多一个「对象：HUD / 容器界面」按钮，
@@ -53,7 +53,7 @@ public final class SelfStatsLayoutScreen extends Screen {
         this.containerConfig = containerConfig;
     }
 
-    /** 当前模式的布局参数（跟随 {@link #containerConfig}；1.20.40 起按本界面 GUI 尺寸换算位置）。 */
+    /** 当前模式的布局参数（跟随 {@link #containerConfig}；按本界面 GUI 尺寸换算位置）。 */
     private HudConfig.Panel currentPanel() {
         return HudConfig.panel(HudConfig.get().selfStatsMode, this.containerConfig,
                 this.width, this.height);
@@ -84,7 +84,7 @@ public final class SelfStatsLayoutScreen extends Screen {
                         : "ctt_hud_fork.config.selfStatsTarget.hud"));
     }
 
-    /** 「回到初始位置」：只重置当前这一套（1.20.41 起回到「屏幕高 ÷ 3」，容器那套自 1.20.42 起一样）。 */
+    /** 「回到初始位置」：只重置当前这一套（回到「屏幕高 ÷ 3」，容器那套自 一样）。 */
     private void resetPosition() {
         HudConfig.resetPanelPosition(HudConfig.get().selfStatsMode, this.containerConfig);
         this.dragging = false;
@@ -97,7 +97,7 @@ public final class SelfStatsLayoutScreen extends Screen {
     }
 
     /**
-     * 对齐时不要模糊背景（1.20.27）。
+     * 对齐时不要模糊背景。
      *
      * <p>原版 {@code Screen.extractBackground} 会调 {@code blurBeforeThisStratum()} 把世界糊掉；
      * 拖动/对齐面板时玩家恰恰要靠真实画面判断位置，所以这里直接不画模糊层。
@@ -112,7 +112,7 @@ public final class SelfStatsLayoutScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         graphics.centeredText(this.font, this.title, this.width / 2, 20, 0xFFFFFFFF);
-        // 操作提示（1.20.29）：只拖不点 + 方向键微调
+        // 操作提示：只拖不点 + 方向键微调
         graphics.centeredText(this.font, Component.translatable("ctt_hud_fork.config.selfStatsMove.dragHint"),
                 this.width / 2, 36, 0xFFFFD060);
         int mode = HudConfig.get().selfStatsMode;
@@ -151,7 +151,7 @@ public final class SelfStatsLayoutScreen extends Screen {
 
     // ── 拖拽（26.3 的输入事件是 MouseButtonEvent） ──
     //
-    // 1.20.28：改成「必须真的拖」才移动 —— 只在面板上按下 → 拖动超过阈值才写位置；
+    // 改成「必须真的拖」才移动 —— 只在面板上按下 → 拖动超过阈值才写位置；
     // 点一下空白处或手抖 1 px 都不会改变坐标（之前是「整屏可抓 + 按下即吸附」，太容易误操作）。
 
     /** 面板外这么多像素以内也算抓住（盾牌指示器只有 24×60，给它一点余量）。 */
@@ -233,7 +233,7 @@ public final class SelfStatsLayoutScreen extends Screen {
                 bounds);
     }
 
-    /** 写位置 + 夹进屏幕（整块留在屏内，拖不出边界）；1.20.40 起连同当前 GUI 尺寸一起写。 */
+    /** 写位置 + 夹进屏幕（整块留在屏内，拖不出边界）；连同当前 GUI 尺寸一起写。 */
     private void moveTo(int x, int y, int[] bounds) {
         HudConfig.movePanel(HudConfig.get().selfStatsMode, this.containerConfig,
                 SelfStatsPanel.fitInScreen(x, bounds[2], this.width),

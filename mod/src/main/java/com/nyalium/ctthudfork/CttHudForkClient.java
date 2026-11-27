@@ -18,11 +18,11 @@ import net.minecraft.resources.Identifier;
  * <p><b>客户端必装、服务端选装</b>：所有基础数据都从客户端可见的渠道取
  * （计分板展示槽、原版 Boss 栏标题 / 颜色 / 进度、实体、玩家列表），服务端<b>不需要</b>安装任何东西。
  * 服务端若额外装了本 Mod，会通过 {@link MobHealthPayload} 推来按 UUID 的权威数据，
- * 本端自动优先使用（写死，1.20.35 起没有开关）。</p>
+ * 本端自动优先使用（写死，没有开关）。</p>
  *
- * <p>1.20.3 起多了<b>自身属性面板</b>（{@link SelfStats}）：它同样纯客户端——
+ * <p>多了<b>自身属性面板</b>（{@link SelfStats}）：它同样纯客户端——
  * 定时 {@code /trigger ViewStats} 问地图，再把地图回的属性行画成面板。
- * 1.20.4 起面板支持显示内容过滤（旧名「内容过滤」）/ 调整位置（旧名「移动面板」），并可用 {@code F8} 直接打开设置。</p>
+ * 面板支持显示内容过滤（旧名「内容过滤」）/ 调整位置（旧名「移动面板」），并可用 {@code F8} 直接打开设置。</p>
  */
 public final class CttHudForkClient implements ClientModInitializer {
 
@@ -30,7 +30,7 @@ public final class CttHudForkClient implements ClientModInitializer {
     public static final String MOD_ID = "ctt-hud-fork";
 
     /**
-     * 按键分类（1.20.30 起单独一组）。
+     * 按键分类（单独一组）。
      *
      * <p>之前用 {@link KeyMapping.Category#MISC}：绑定确实注册了（{@code options.txt} 里能看到
      * {@code key_key.ctt_hud_fork.open_config}），但混在又长又杂的「杂项」里不好找。
@@ -77,7 +77,7 @@ public final class CttHudForkClient implements ClientModInitializer {
         });
         // 服务端选装组件：接收按 UUID 的怪物权威数据。
         ClientMobHealthCache.register();
-        // 1.20.39：进存档 / 进服先安静 3 s 再问 ViewStats（世界还在载入时问了只会得到一批迟到输出，
+        // 进存档 / 进服先安静 3 s 再问 ViewStats（世界还在载入时问了只会得到一批迟到输出，
         // 反而整屏刷进聊天栏）。
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             BerserkDetector.reset();

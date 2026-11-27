@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
 /**
- * 「未知诅咒」（Curse of the Unknown）客户端探测 —— 1.3.3 起是
+ * 「未知诅咒」（Curse of the Unknown）客户端探测 —— 是
  * {@link BossBarKeyDetector} 的一个实例（探测逻辑与癫狂共用，<b>效果不共用</b>）。
  *
  * <h2>地图里是什么</h2>

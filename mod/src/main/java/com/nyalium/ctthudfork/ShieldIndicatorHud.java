@@ -19,21 +19,21 @@ import net.minecraft.world.item.component.CustomData;
  * 可损坏且耐久未满；耐久满（damage=0）不画。</p>
  *
  * <p>位置：{@code shieldX/Y} 是屏幕 GUI 坐标（左上角），量在 {@code layoutGuiW/H} 那套尺寸下；
- * 1.20.40 起按<b>相对位置</b>换算到当前 GUI（见 {@link HudConfig#shieldPosition}）。
+ * 按<b>相对位置</b>换算到当前 GUI（见 {@link HudConfig#shieldPosition}）。
  * 未设置（-1）时走
  * {@link #defaultX}/{@link #defaultY} 的<b>默认位置</b>：</p>
  * <ul>
  *   <li>水平：对准副手**物品格**的中心 —— 右手玩家副手在快捷栏左侧，即 {@code guiW/2 - 109}；
  *       左手玩家（{@code main_hand=left}）镜像到 {@code guiW/2 + 109}；
- *       是否镜像由 {@code shieldAutoMirror} 决定（1.2.0 起可在设置里关掉，关掉后固定按右手）；</li>
+ *       是否镜像由 {@code shieldAutoMirror} 决定（可在设置里关掉，关掉后固定按右手）；</li>
  *   <li>垂直：整条指示器的**底边**落在屏幕底部往上 76 px（{@code guiH - 76 - h}）。</li>
  * </ul>
  *
- * <p>1.20.22：缩放改成 {@code 0.5~1.5} 小数倍，并且是<b>真正的缩放</b> ——
+ * <p>缩放改成 {@code 0.5~1.5} 小数倍，并且是<b>真正的缩放</b> ——
  * 源区固定为整张纹理，目标框 {@code TEX_W*k × TEX_H*k}。</p>
  *
- * <p>1.20.26：纹理换成 34×86 的新四张（meter_0..3），默认缩放 0.7、默认不透明度 75%；
- * 1.20.32 起默认不透明度改为 65%。</p>
+ * <p>纹理换成 34×86 的新四张（meter_0..3），默认缩放 0.7、默认不透明度 75%；
+ * 默认不透明度改为 65%。</p>
  */
 final class ShieldIndicatorHud implements HudElement {
 
@@ -140,7 +140,7 @@ final class ShieldIndicatorHud implements HudElement {
         int w = scaledWidth(cfg.shieldScale);
         int h = scaledHeight(cfg.shieldScale);
 
-        // 1.20.40：位置是「相对位置」—— 配置里存的是量在 layoutGuiW/H 那套 GUI 下的像素，
+        // 位置是「相对位置」—— 配置里存的是量在 layoutGuiW/H 那套 GUI 下的像素，
         // 这里换算到当前尺寸，窗口/缩放变化时不会错位。
         int[] pos = HudConfig.shieldPosition(guiW, guiH);
         int x = pos[0];

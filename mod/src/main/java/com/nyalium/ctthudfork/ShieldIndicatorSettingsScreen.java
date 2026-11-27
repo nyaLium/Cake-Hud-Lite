@@ -12,7 +12,7 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 
 /**
- * 盾牌指示器设置（1.20.20：位置改为拖动定位 + 不透明度）。
+ * 盾牌指示器设置（位置改为拖动定位 + 不透明度）。
  *
  * <h2>行 ↔ 配置字段</h2>
  * <table>
@@ -84,7 +84,7 @@ public final class ShieldIndicatorSettingsScreen extends Screen {
 
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.resetSection"), b -> {
             HudConfig.resetShield();
-            this.init();
+            this.rebuildWidgets();
         }).bounds(this.width / 2 - 60 - 128, this.height - ROW_HEIGHT - 8, 120, ROW_HEIGHT).build());
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.back"), b -> back())
                 .bounds(this.width / 2 - 60, this.height - ROW_HEIGHT - 8, 120, ROW_HEIGHT).build());

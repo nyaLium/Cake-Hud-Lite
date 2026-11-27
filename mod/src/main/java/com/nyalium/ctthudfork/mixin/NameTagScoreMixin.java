@@ -57,7 +57,7 @@ public abstract class NameTagScoreMixin {
         }
 
         if (!cfg.hideBelowNameScore) return;
-        // 1.4.0：分数对**所有玩家**一律隐藏（含旁观、自己、非队友）；其它实体仍只摘接管的。
+        // 分数对**所有玩家**一律隐藏（含旁观、自己、非队友）；其它实体仍只摘接管的。
         if (entity instanceof net.minecraft.world.entity.player.Player
                 || HudTarget.managed(Minecraft.getInstance(), entity)) {
             state.scoreText = null;

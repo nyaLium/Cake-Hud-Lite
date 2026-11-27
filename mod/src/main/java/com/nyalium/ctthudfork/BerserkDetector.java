@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
 /**
- * 「癫狂（Berserk）」客户端探测 —— 1.3.3 起是 {@link BossBarKeyDetector} 的一个实例
+ * 「癫狂（Berserk）」客户端探测 —— 是 {@link BossBarKeyDetector} 的一个实例
  * （探测逻辑与诅咒共用，<b>效果不共用</b>）。
  *
  * <h2>地图里是什么</h2>
@@ -27,7 +27,7 @@ final class BerserkDetector {
     /** 癫狂专属 Boss 栏标题里的翻译键（p1..p10 共用这一个）。 */
     static final String KEY = "Misc_Bossbars_P10_Bossbar_11";
 
-    /** 癫狂状态的探测器实例（等值匹配、释放 0.25 s；1.4.0 由 0.5 s 缩短，恢复更快）。 */
+    /** 癫狂状态的探测器实例（等值匹配、释放 0.25 s，恢复更快）。 */
     static final BossBarKeyDetector STATE = new BossBarKeyDetector(KEY, false, 250L);
 
     private BerserkDetector() {}

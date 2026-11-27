@@ -16,7 +16,7 @@ import java.util.List;
  * </pre>
  * <p>分数一旦隐藏，那次上抬就不执行，名字自然落回 {@code y ∈ [0, 9]}。</p>
  *
- * <h2>固定排版（1.20.0 起）</h2>
+ * <h2>固定排版</h2>
  * <p>位置从下往上排，行数<b>不随内容宽度变化</b>：</p>
  * <pre>
  *   敌人：  护甲行（🛡 + 2 项元素护甲，🛡 与元素之间两个空格）
@@ -57,19 +57,19 @@ public final class HudLayout {
     /** 行距：往上一行抬这么多像素。必须 ≥ {@link #TEXT_BOX_HEIGHT}。 */
     public static final int ROW_STEP = TEXT_BOX_HEIGHT;
 
-    /** 血条长度的允许范围与默认值（原版名牌像素）。默认 75（1.18.0 起）。 */
+    /** 血条长度的允许范围与默认值（原版名牌像素）。默认 75。 */
     /** 血条长度下限（原版名牌像素）。 */
     public static final int BAR_WIDTH_MIN = 50;
     /** 血条长度上限。 */
     public static final int BAR_WIDTH_MAX = 150;
-    /** 血条长度默认值（1.18.0 起 75，旧默认 100 会被迁移改掉）。 */
+    /** 血条长度默认值（75，旧默认 100 会被迁移改掉）。 */
     public static final int BAR_WIDTH_DEFAULT = 75;
 
     /** 同一行内各段之间的间隔（各类心之间、元素护甲之间）。 */
     public static final String HEART_GAP = " ";
 
     /**
-     * 「护甲 ↔ 元素护甲」之间的间隔：**两个空格**（1.20.0 起）。
+     * 「护甲 ↔ 元素护甲」之间的间隔：**两个空格**。
      * 比心与心之间的一个空格更宽，玩家一眼能把防御值和元素护甲分开。
      */
     public static final String ARMOUR_GAP = "  ";
@@ -227,11 +227,11 @@ public final class HudLayout {
             if (defence != 0) {
                 top.add(new Line("\uD83D\uDEE1" + num(defence), EnemyData.DEFENCE_COLOR));
             }
-            // 1.2.2：真盔甲（TrueArmor）不再参与翻页，和 🛡 防御一样常驻。
+            // 真盔甲（TrueArmor）不再参与翻页，和 🛡 防御一样常驻。
             // 数据包里它是 ArmorDisplay 的一页（白 🛡），但它属于「护甲」类而不是元素抗性。
             int trueArmor = trueArmorValue(armor);
             if (trueArmor != 0) {
-                // 1.4.7：只有前面已经有内容（🛡 防御）时才补分隔空格 ——
+                // 只有前面已经有内容（🛡 防御）时才补分隔空格 ——
                 // 没有防御、只有真·防御/元素护甲时，行首不会再顶一个空格。
                 if (!top.isEmpty()) {
                     top.add(new Line(HEART_GAP, 0xFFFFFF));
@@ -258,7 +258,7 @@ public final class HudLayout {
         if (opt.showNumbers) {
             if (opt.showHearts && hearts != null && hearts.any()) {
                 if (opt.playerStyle) {
-                    // 1.2.3 起玩家固定两行、不再轮换：
+                    // 玩家固定两行、不再轮换：
                     //   上排：魂心 / 黑心 / 蓝心（有才写）
                     //   下排：红心 当前/上限 + 碎心或粉心（有才写）
                     addKinds(top, hearts,
@@ -281,13 +281,13 @@ public final class HudLayout {
             } else if (percentOnly) {
                 // 纯客户端只有 below_name 的 HealthPercent：拆不出各类心，但**至少把百分比数字画出来**
                 // —— 血条本来就是按这个百分比填的，带上数字才读得懂（队友无队伍条时同一条路径）。
-                // 1.2.8：HealthPercent 是「红心 ÷ MaxHP」，所以前面加一个红心图标（与心数行同款）。
+                // HealthPercent 是「红心 ÷ MaxHP」，所以前面加一个红心图标（与心数行同款）。
                 heartRow.add(new Line(HeartCounts.icon(HeartCounts.RED), HeartCounts.COLORS[HeartCounts.RED]));
                 heartRow.add(new Line(HEART_GAP, 0xFFFFFF));
                 heartRow.add(new Line(percentText(hp, maxHp), 0xFFFFFF));
             } else {
                 // 拆不出各类心（例如纯客户端队友只有 AllHearts/MaxHP）：退回「当前/最大」。
-                // 1.2.10：前面加红心（这是红心血量的口径），与 percentOnly / 心数行统一。
+                // 前面加红心（这是红心血量的口径），与 percentOnly / 心数行统一。
                 heartRow.add(new Line(HeartCounts.icon(HeartCounts.RED), HeartCounts.COLORS[HeartCounts.RED]));
                 heartRow.add(new Line(HEART_GAP, 0xFFFFFF));
                 heartRow.add(new Line(num(Math.max(0, hp)) + "/" + num(Math.max(0, maxHp)), 0xFFFFFF));
@@ -397,7 +397,7 @@ public final class HudLayout {
 
     // ── 大数值缩写 ──
 
-    /** 超过这个值开始用 K / M / B 缩写（1.2.2 起从 100000 降到 1000）。
+    /** 超过这个值开始用 K / M / B 缩写（从 100000 降到 1000）。
      *
      * <p>按需求「整数位必须 ≥ 1」：900 仍写 {@code 900}，不会变成 {@code 0.9K}；
      * 1000 才进 K。小数一位、**截断**（24999 → {@code 24.9K}）。</p> */
@@ -408,7 +408,7 @@ public final class HudLayout {
      *
      * <p>实测过：把心数写成 {@code 999999} 这种 6 位数时，一行五段会把文字拉出屏幕两侧
      * （centered 后被裁掉）。缩写把每段压到 5~6 个字符；小数**截断**而不是四舍五入，
-     * 所以宁可少报一点也不虚报。1.20.13 起后缀用大写（K/M/B），和常见游戏一致。</p>
+     * 所以宁可少报一点也不虚报。后缀用大写（K/M/B），和常见游戏一致。</p>
      */
     public static String num(int value) {
         long n = Math.abs((long) value);
@@ -422,7 +422,7 @@ public final class HudLayout {
     /**
      * 截断到 1 位小数（不四舍五入）。
      *
-     * <p>1.2.3：去掉「整数位 ≥ 100 就不带小数」的旧规则 —— 999999 现在写 {@code 999.9K}，
+     * <p>去掉「整数位 ≥ 100 就不带小数」的旧规则 —— 999999 现在写 {@code 999.9K}，
      * 不再是 {@code 999K}。整数位仍保证 ≥ 1（不会出现 {@code 0.9K}）。</p>
      */
     private static String scaled(long n, long unit) {
@@ -461,7 +461,7 @@ public final class HudLayout {
     /**
      * 血条要画多长（像素）：{@code ratio <= 0} 时 0，超小比例（残血）至少 **1 px**。
      *
-     * <p>1.5.2：地图的分数是整数，{@code 红心 1 / 上限 325} 算出来是 0.3%，乘条宽后
+     * <p>地图的分数是整数，{@code 红心 1 / 上限 325} 算出来是 0.3%，乘条宽后
      * {@code Math.round} 会变成 0 —— 看上去像「血条完全不渲染」。这里保证比例 &gt; 0 时
      * 至少留 1 px，让「还剩一点」看得出来。</p>
      */

@@ -17,12 +17,12 @@ import net.minecraft.network.chat.Component;
  *   │  属性面板设置…           │  ← 可滚动列表
  *   │  盾牌指示器设置…         │
  *   │  重置设置                │
- *   │  调试功能…               │  ← 1.4.5：调试模式 / 优先服务端数据 / 筛选实体数量
+ *   │  调试功能…               │  ← 调试模式 / 优先服务端数据 / 筛选实体数量
  *   └────────────────────────┘
  *          [ 完成 ]            ← 贴屏幕最底部
  * </pre>
  *
- * <p>一纵排布、从 {@code TOP} 起排列；总开关关闭时三个入口灰掉（1.20.19）。
+ * <p>一纵排布、从 {@code TOP} 起排列；总开关关闭时三个入口灰掉。
  * 子界面各有自己的「返回」；写盘只发生在总界面的「完成」（或 ESC）。</p>
  *
  * <p>「完成」= 归一化后写盘并关闭；总界面 ESC 等同「完成」。</p>
@@ -78,38 +78,22 @@ public final class HudConfigScreen extends Screen {
         addRenderableWidget(shield);
         y += ROW_GAP;
 
-        // 1.6.1：/title 的标题 / 副标题（位移 + 不透明度），不含 actionbar。
+        // /title 的标题 / 副标题（位移 + 不透明度），不含 actionbar。
         Button title = Button.builder(section("title"),
                         b -> this.minecraft.gui.setScreen(new TitleSettingsScreen(this)))
                 .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build();
         if (!cfg.enabled) title.active = false;
-        addRenderableWidget(title);
         y += ROW_GAP;
 
-        // 1.6.2：杂项（粗体渲染优化等）
-        Button misc = Button.builder(section("misc"),
-                        b -> this.minecraft.gui.setScreen(new MiscSettingsScreen(this)))
-                .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build();
-        if (!cfg.enabled) misc.active = false;
-        addRenderableWidget(misc);
-        y += ROW_GAP;
-
-        addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.reset"), b -> {
-            // 只改内存、不落盘：还要点「完成」才写盘。
-            HudConfig.reset();
-            this.rebuildWidgets();
-        }).bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build());
-        y += ROW_GAP;
-
-        // 1.4.5：原来是「调试模式」一行开关，现在改成入口按钮 → 调试功能页
+        // 原来是「调试模式」一行开关，现在改成入口按钮 → 调试功能页
         // （里面是 调试模式 / 优先使用服务端数据 / 筛选实体数量）。
-        // 1.6.0：调试设置需要权限（等级写死在 DebugSettingsScreen.REQUIRED_PERMISSION_LEVEL），
+        // 调试设置需要权限（等级写死在 DebugSettingsScreen.REQUIRED_PERMISSION_LEVEL），
         // 没有权限时这个入口直接灰掉，并在这里补一句提示。
         Button debug = Button.builder(Component.translatable("ctt_hud_fork.config.section.debug"),
                         b -> this.minecraft.gui.setScreen(new DebugSettingsScreen(this)))
                 .bounds(x, y, BUTTON_WIDTH, ROW_HEIGHT).build();
-        // 1.6.0：调试设置需要权限 + CTT-HUD-LITE-DEBUG 标签。
-        // 1.6.3：不满足条件就把入口**直接灰掉**，并且**不写任何提示文案**
+        // 调试设置需要权限 + CTT-HUD-LITE-DEBUG 标签。
+        // 不满足条件就把入口**直接灰掉**，并且**不写任何提示文案**
         // （调试设置是给维护者排查用的，普通玩家不该去改它）。
         if (!cfg.enabled || !DebugSettingsScreen.canAdjust()) debug.active = false;
         addRenderableWidget(debug);

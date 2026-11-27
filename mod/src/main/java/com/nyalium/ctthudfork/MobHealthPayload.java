@@ -54,13 +54,13 @@ public record MobHealthPayload(byte version, List<Entry> entries, List<UUID> sup
 
     /** 协议版本；客户端遇到更高版本会整包忽略，避免半懂不懂地解析。
      *
-     * <p>v2（1.4.4）：单包上限 32 → 64 条。旧客户端（v1）会整包忽略、退回
+     * <p>v2：单包上限 32 → 64 条。旧客户端（v1）会整包忽略、退回
      * 「Boss 栏 + HealthPercent」，不会按 32 条硬读剩下的字节。</p>
      *
-     * <p>v3（1.5.3）：新增 {@code suppressed}（要**抑制显示**的实体 UUID，主要是 NPC）。
+     * <p>v3：新增 {@code suppressed}（要**抑制显示**的实体 UUID，主要是 NPC）。
      * 旧客户端（v1/v2）遇到 v3 会整包忽略，退回纯客户端路径。</p>
      *
-     * <p>v4（1.5.11）：每条新增 {@code nameText}（结构化姓名，translate 键与样式原样保留），
+     * <p>v4：每条新增 {@code nameText}（结构化姓名，translate 键与样式原样保留），
      * 客户端不再依赖实体名做识别；旧客户端遇到 v4 整包忽略、退回纯客户端。</p> */
     public static final byte CURRENT_VERSION = 4;
 
