@@ -10,9 +10,9 @@
   ],
   "license": "MIT",
   "contact": {
-    "homepage": "https://github.com/nyaLium/Cake-Hud-Fork",
-    "sources": "https://github.com/nyaLium/Cake-Hud-Fork",
-    "issues": "https://github.com/nyaLium/Cake-Hud-Fork/issues"
+    "homepage": "https://github.com/nyaLium/Cake-Team_Towers-Hud-Lite",
+    "sources": "https://github.com/nyaLium/Cake-Team_Towers-Hud-Lite",
+    "issues": "https://github.com/nyaLium/Cake-Team_Towers-Hud-Lite/issues"
   },
   "icon": "assets/ctt-hud-fork/icon.png",
   "environment": "*",

@@ -40,7 +40,7 @@
 
 ## 下载
 
-jar 只在 **GitHub Releases** 里：<https://github.com/nyaLium/Cake-Hud-Lite/releases>
+jar 只在 **GitHub Releases** 里：<https://github.com/nyaLium/Cake-Team_Towers-Hud-Lite/releases>
 
 依赖：Fabric Loader ≥ 0.20.1、Fabric API、Java ≥ 25；Mod Menu 可选（装了就有设置入口）。
 

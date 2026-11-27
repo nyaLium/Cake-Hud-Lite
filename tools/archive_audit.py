@@ -33,7 +33,7 @@ elif os.path.basename(HERE) == 'tools':
 else:
     REPO = os.path.abspath(os.path.join(HERE, '..'))
 VERSIONS = os.path.join(REPO, 'versions')
-REPO_URL = 'https://github.com/nyaLium/Cake-Hud-Fork'
+REPO_URL = 'https://github.com/nyaLium/Cake-Team_Towers-Hud-Lite'
 
 # 已经发过 GitHub Release 的版本：`RELEASES.md` 只列这些；其余只算本地归档。
 # 发布新 Release 后，把版本号加进这个集合，再跑一次本脚本。
