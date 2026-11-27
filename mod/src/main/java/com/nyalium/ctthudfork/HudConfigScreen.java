@@ -98,22 +98,17 @@ public final class HudConfigScreen extends Screen {
         if (!cfg.enabled || !DebugSettingsScreen.canAdjust()) debug.active = false;
         addRenderableWidget(debug);
 
-        // 完成：永远贴屏幕最底部。
-        int doneY = Math.max(y + ROW_GAP, this.height - ROW_HEIGHT - 8);
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> done())
-                .bounds(x, doneY, BUTTON_WIDTH, ROW_HEIGHT).build());
-
-        // 底部：总重置（左）/ 完成（右）。调试功能与其它入口之间刻意留出间距。
+        // 底部：重置（左）/ 完成（右），两个按钮与上方入口同宽。
         int bottomY = Math.max(y + ROW_GAP, this.height - ROW_HEIGHT - 8);
+        int totalWidth = BUTTON_WIDTH * 2 + 8;
+        int leftX = this.width / 2 - totalWidth / 2;
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.resetAll"), b -> {
             HudConfig.reset();
             HudConfig.save();
             this.rebuildWidgets();
-        }).bounds(x, bottomY, BUTTON_WIDTH / 2 - 4, ROW_HEIGHT).build());
-        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> {
-            HudConfig.save();
-            this.minecraft.gui.setScreen(this.parent);
-        }).bounds(x + BUTTON_WIDTH / 2 + 4, bottomY, BUTTON_WIDTH / 2 - 4, ROW_HEIGHT).build());
+        }).bounds(leftX, bottomY, BUTTON_WIDTH, ROW_HEIGHT).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> done())
+                .bounds(leftX + BUTTON_WIDTH + 8, bottomY, BUTTON_WIDTH, ROW_HEIGHT).build());
     }
 
     /** 完成：写盘并关闭。 */
