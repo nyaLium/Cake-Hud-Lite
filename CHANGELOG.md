@@ -11,6 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
+| **1.6.5**（已发布） | 把**粗体渲染优化**与**告示牌荧光文本描边优化**移出到独立 mod （[Font Tweaks](https://github.com/nyaLium/Font-Tweaks)），本版回到纯 HUD；删除 `bold*` / `signGlow*` 六个配置字段与「杂项…」入口；修正底部按钮（完成与上方入口同宽同轴，重置在其左侧） | [Release](https://github.com/nyaLium/Cake-Hud-Fork/releases/tag/v1.6.5) |
 | **1.6.3**（已发布） | 杂项页 + **粗体渲染优化**：对位图与 TTF 字形做掩膜膨胀，粗体只画一遍（顶点数减半、四周对称加粗），另提供保留双画只调距离的「偏移」模式；调试页再加 `CTT-HUD-LITE-DEBUG` 标签门槛（服务端下发 `ctt-hud-fork:debug_tag`）；子设置页返回即落盘 | [Release](https://github.com/nyaLium/Cake-Hud-Fork/releases/tag/v1.6.3) |
 | **1.6.1**（已发布） | 调试页要求权限 2 级；常显敌人名称（默认开）；血条不可透视（透明建材 / 植物 / 流体不挡，冰 / 铜格栅 / 有厚度的一律挡住）；血量条长度随血量自动调整（上限 75）；`/title` 标题与副标题可位移、可分别调不透明度 | [Release](https://github.com/nyaLium/Cake-Hud-Fork/releases/tag/v1.6.1) |
 | **1.5.11**（本地调整，未发布） | 服务端通道对齐上游：**协议 v4**，每条新增结构化 `nameText`（`translate` 键与样式原样保留，客户端识别 Psy 不再只靠实体名）；**推送频率改为 5 tick = 4 Hz**；**扫描半径改为 128 格**。keepalive 与碎心读取逻辑保持原样 |

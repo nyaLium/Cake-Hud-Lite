@@ -4,7 +4,7 @@
 > [GitHub Release](https://github.com/nyaLium/Cake-Hud-Fork/releases) 形式发布，附件里有 `ctt-hud-fork-X.Y.Z.jar` 与 `-sources.jar`。
 > `versions/` 目录只在维护者本地保留（已被 `.gitignore` 排除）。
 
-> 本仓库**当前发布 v1.5.11、v1.6.1、v1.6.3**；更早的版本未在此发布。
+> 本仓库**当前发布 v1.5.11、v1.6.1、v1.6.3、v1.6.5**；更早的版本未在此发布。
 
 > 下载：<https://github.com/nyaLium/Cake-Hud-Fork/releases>
 
