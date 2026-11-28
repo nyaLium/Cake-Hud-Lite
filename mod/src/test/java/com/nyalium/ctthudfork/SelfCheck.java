@@ -28,6 +28,7 @@ public final class SelfCheck {
         curseKeys();
         teamBarTitles();
         selfStatsAndPanel();
+        viewStatsObjectiveNames();
         selfStatsFineKinds();
         percentOnlyText();
         lobbyTriggerGuard();
@@ -2281,6 +2282,85 @@ public final class SelfCheck {
         check(new ScrollPane(52, 300 - 56).bottom() == 244, "可视区下沿应为 高度 - 56");
         check(new ScrollPane(52, 200).viewportHeight() == 148
                 && new ScrollPane(52, 200).maxScroll() == 0, "内容为空时不该能滚");
+    }
+
+
+
+    /**
+     * 地图 {@code view_stats.mcfunction} 里出现过的全部计分板目标名都必须有分类。
+     *
+     * <p>名字是从当前地图（CakeTeamPack 3.4.5.4）里逐个抽出来的：少一个就说明「那一行只能靠
+     * 图标/颜色兜底」，等于下一次地图改图标就会掉 —— 所以这里直接钉死整张表。</p>
+     */
+    private static void viewStatsObjectiveNames() {
+        String[] objectives = {
+            "RedHearts",
+            "SoulHearts",
+            "BlackHearts",
+            "BlueHearts",
+            "CrackedHearts",
+            "PinkHearts",
+            "NegMaxHealth",
+            "ClassStat",
+            "ClassStatAmplifier",
+            "Strength",
+            "StrengthAmplifier",
+            "AttackSpeed",
+            "AttackSpeedAmplifier",
+            "AttackRange",
+            "StaminaSpeed",
+            "Archery",
+            "Defence",
+            "DefenceAmplifier",
+            "TrueArmor",
+            "TrueArmorAmplifier",
+            "Healing",
+            "HealingAmplifier",
+            "TowersRegen",
+            "HealPercent",
+            "ExtraHealing",
+            "TrueFireArmor",
+            "FireArmor",
+            "FireArmorAmplifier",
+            "WaterArmor",
+            "ElectricArmor",
+            "IceArmor",
+            "DarkArmor",
+            "LightArmor",
+            "MaxSpeed",
+            "SpeedAmplifier",
+            "Size",
+            "Gravity",
+            "ManaPower",
+            "ManaPowerAmplifier",
+            "ManaRechargeSpeed",
+            "Jump",
+            "DoubleJump",
+            "ActiveCharge",
+            "MaxActiveCharge",
+            "ActiveSpeed",
+            "Summoning",
+            "Fishing",
+            "BeePoints",
+            "AntPoints",
+            "Bitches",
+            "LightKarma",
+            "NeutralKarma",
+            "DarkKarma",
+            "CelestialKarma",
+            "CTT",
+        };
+        for (String objective : objectives) {
+            check(SelfStats.objectiveKind(objective) != null, "计分板目标名应有分类: " + objective);
+        }
+        check(SelfStats.objectiveKind("Jump") == SelfStatsKind.JUMP, "Jump 应归为跳跃");
+        check(SelfStats.objectiveKind("DoubleJump") == SelfStatsKind.DOUBLE_JUMP, "DoubleJump 应归为二段跳");
+        check(SelfStats.objectiveKind("MaxSpeed") == SelfStatsKind.MAX_SPEED, "MaxSpeed 应归为速度");
+        check(SelfStats.objectiveKind("DarkKarma") == SelfStatsKind.KARMA_DARK, "DarkKarma（没有 hover 键）应归为黑暗因果");
+        check(SelfStats.objectiveKind("CTT") == SelfStatsKind.SKULLS, "#Skulls CTT 应归为难度骷髅");
+        check(SelfStats.hasStatGlyph("3\u2708"), "带数字的 ✈ 行应算属性行");
+        check(SelfStats.hasStatGlyph("\u2708"), "没有数字（分数没摊平成文本）时也应算属性行");
+        check(!SelfStats.hasStatGlyph("hello"), "普通聊天不该算属性行");
     }
 
     private static void fail(String message) {

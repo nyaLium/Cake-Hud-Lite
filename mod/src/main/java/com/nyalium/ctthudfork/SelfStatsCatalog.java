@@ -2,6 +2,7 @@ package com.nyalium.ctthudfork;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.contents.ScoreContents;
 import net.minecraft.network.chat.contents.TranslatableContents;
 
 import java.util.ArrayList;
@@ -42,10 +43,17 @@ final class SelfStatsCatalog {
     private static final java.util.Map<String, SelfStatsKind> KEY_KINDS = buildKeyKinds();
     /** hover 键 {@code view_stats_N} → 分类（属性行优先用这个认）。 */
     private static final java.util.Map<String, SelfStatsKind> HOVER_KINDS = buildHoverKinds();
+    /** 计分板目标名 → 分类（数值行最稳的身份：与语言 / 颜色 / 图标都无关）。 */
+    private static final java.util.Map<String, SelfStatsKind> OBJECTIVE_KINDS = buildObjectiveKinds();
 
     /** hover 键 → 分类（供自检）。 */
     static SelfStatsKind hoverKind(String key) {
         return HOVER_KINDS.get(key);
+    }
+
+    /** 计分板目标名 → 分类（供自检）。 */
+    static SelfStatsKind objectiveKind(String objective) {
+        return OBJECTIVE_KINDS.get(objective);
     }
 
     // ── 解析（纯函数，selfCheck 直接打） ──
@@ -62,6 +70,15 @@ final class SelfStatsCatalog {
          * 这是**每个属性唯一且稳定**的标识（比「字形 + 颜色」可靠得多）。</p>
          */
         final Set<String> hoverKeys = new LinkedHashSet<>();
+        /**
+         * 这一行里出现过的<b>计分板目标名</b>（{@code {"score":{"objective":"Jump"}}}）。
+         *
+         * <p>数值行一定带目标名，而且它<b>与语言、颜色、图标都无关</b> —— 比 hover 键更稳：
+         * 地图有些行根本没有 hover 键（例如 {@code DarkKarma}），单靠键会落到兜底。</p>
+         */
+        final Set<String> objectives = new LinkedHashSet<>();
+        /** true = 这一行里有计分板分数（{@code visit} 摊平时分数不会变成文本）。 */
+        boolean hasScore;
         /** true = 有翻译键没被客户端解析出来（没装地图资源包时会这样）。 */
         boolean unresolvedKey;
 
@@ -92,7 +109,21 @@ final class SelfStatsCatalog {
             return Optional.empty();
         }, Style.EMPTY);
         collectKeys(message, a);
+        collectObjectives(message, a);
         return a;
+    }
+
+    /** 递归收集计分板目标名（分数行一定会带，且与语言无关）。 */
+    private static void collectObjectives(Component component, Analyzed a) {
+        if (component == null) return;
+        if (component.getContents() instanceof ScoreContents score) {
+            a.hasScore = true;
+            String objective = score.objective();
+            if (objective != null && !objective.isEmpty()) a.objectives.add(objective);
+        }
+        for (Component sibling : component.getSiblings()) {
+            collectObjectives(sibling, a);
+        }
     }
 
     /** 递归收集 hover 文本里的 {@code view_stats_N} 键。 */
@@ -232,6 +263,11 @@ final class SelfStatsCatalog {
         // 先按 hover 键（view_stats_N）认 —— 每个属性一个键，精确且不依赖颜色。
         for (String key : a.hoverKeys) {
             SelfStatsKind kind = HOVER_KINDS.get(key);
+            if (kind != null) return kind;
+        }
+        // 再看计分板目标名：数值行的「身份证」，与语言 / 颜色 / 图标都无关。
+        for (String objective : a.objectives) {
+            SelfStatsKind kind = OBJECTIVE_KINDS.get(objective);
             if (kind != null) return kind;
         }
         for (String key : a.keys) {
@@ -410,6 +446,104 @@ final class SelfStatsCatalog {
     }
 
     /** hover 键 {@code view_stats_1..54} → 分类（与地图 view_stats.mcfunction 一一对应）。 */
+    /**
+     * 计分板目标名 → 分类。
+     *
+     * <p>地图 {@code view_stats.mcfunction} 的数值行都是 {@code ["",{score:{objective:...}},{icon,hover}]}：
+     * <b>目标名一定在</b>，而 hover 键不一定（例如 {@code DarkKarma} 那两行就没有）。所以把
+     * 目标名当成第二层身份：比「图标 + 颜色」稳，也不受语言文件影响。</p>
+     *
+     * <p>这张表按<b>当前地图</b>（CakeTeamPack 的 {@code misc/view_stats.mcfunction}）逐个目标名核对过；
+     * 地图加了新属性而这里没跟上时，行不会消失，只会落到「未识别行」兜底 —— 再加一行即可。</p>
+     */
+    private static java.util.Map<String, SelfStatsKind> buildObjectiveKinds() {
+        java.util.Map<String, SelfStatsKind> m = new java.util.HashMap<>();
+        // 心
+        m.put("RedHearts", SelfStatsKind.HEART_RED);
+        m.put("SoulHearts", SelfStatsKind.HEART_SOUL);
+        m.put("BlackHearts", SelfStatsKind.HEART_BLACK);
+        m.put("BlueHearts", SelfStatsKind.HEART_BLUE);
+        m.put("CrackedHearts", SelfStatsKind.HEART_CRACKED);
+        m.put("PinkHearts", SelfStatsKind.HEART_PINK);
+        m.put("NegMaxHealth", SelfStatsKind.HP_NEG);
+        // 生命 / 治疗
+        m.put("MaxHPAmplifier", SelfStatsKind.HP_AMP);
+        m.put("MaxHPRaw", SelfStatsKind.HP_RAW);
+        m.put("Healing", SelfStatsKind.HEAL_RAW);
+        m.put("HealingAmplifier", SelfStatsKind.HEAL_AMP);
+        m.put("HealPercent", SelfStatsKind.HEAL_PERCENT);
+        m.put("ExtraHealing", SelfStatsKind.HEAL_EXTRA);
+        m.put("TowersRegen", SelfStatsKind.TOWERS_REGEN);
+        // 攻击
+        m.put("ClassStat", SelfStatsKind.CLASS_STAT);
+        m.put("ClassStatAmplifier", SelfStatsKind.CLASS_STAT_AMP);
+        m.put("ClassStatRaw", SelfStatsKind.CLASS_STAT_RAW);
+        m.put("Strength", SelfStatsKind.STRENGTH);
+        m.put("StrengthAmplifier", SelfStatsKind.STRENGTH_AMP);
+        m.put("StrengthRaw", SelfStatsKind.STRENGTH_RAW);
+        m.put("AttackSpeed", SelfStatsKind.ATTACK_SPEED);
+        m.put("AttackSpeedAmplifier", SelfStatsKind.ATTACK_SPEED_AMP);
+        m.put("AttackSpeedRaw", SelfStatsKind.ATTACK_SPEED_RAW);
+        m.put("AttackRange", SelfStatsKind.ATTACK_RANGE);
+        m.put("StaminaSpeed", SelfStatsKind.STAMINA);
+        m.put("Archery", SelfStatsKind.ARCHERY);
+        // 防御 / 护甲
+        m.put("Defence", SelfStatsKind.DEFENCE);
+        m.put("DefenceAmplifier", SelfStatsKind.DEFENCE_AMP);
+        m.put("DefenceRaw", SelfStatsKind.DEFENCE_RAW);
+        m.put("TrueArmor", SelfStatsKind.TRUE_ARMOR);
+        m.put("TrueArmorAmplifier", SelfStatsKind.TRUE_ARMOR_AMP);
+        m.put("TrueArmorRaw", SelfStatsKind.TRUE_ARMOR_RAW);
+        m.put("FireArmor", SelfStatsKind.FIRE_ARMOR);
+        m.put("FireArmorAmplifier", SelfStatsKind.FIRE_ARMOR_AMP);
+        m.put("FireArmorRaw", SelfStatsKind.FIRE_ARMOR_RAW);
+        m.put("TrueFireArmor", SelfStatsKind.TRUE_FIRE_ARMOR);
+        m.put("WaterArmor", SelfStatsKind.WATER_ARMOR);
+        m.put("ElectricArmor", SelfStatsKind.ELECTRIC_ARMOR);
+        m.put("IceArmor", SelfStatsKind.ICE_ARMOR);
+        m.put("DarkArmor", SelfStatsKind.DARK_ARMOR);
+        m.put("LightArmor", SelfStatsKind.LIGHT_ARMOR);
+        // 速度 / 跳跃 / 法力
+        m.put("MaxSpeed", SelfStatsKind.MAX_SPEED);
+        m.put("SpeedAmplifier", SelfStatsKind.SPEED_AMP);
+        m.put("SpeedRaw", SelfStatsKind.SPEED_RAW);
+        m.put("Jump", SelfStatsKind.JUMP);
+        m.put("DoubleJump", SelfStatsKind.DOUBLE_JUMP);
+        m.put("ManaPower", SelfStatsKind.MANA_POWER);
+        m.put("ManaPowerAmplifier", SelfStatsKind.MANA_AMP);
+        m.put("ManaPowerRaw", SelfStatsKind.MANA_POWER_RAW);
+        m.put("ManaRechargeSpeed", SelfStatsKind.MANA_RECHARGE);
+        // 其它属性
+        m.put("Size", SelfStatsKind.SIZE);
+        m.put("Gravity", SelfStatsKind.GRAVITY);
+        m.put("ActiveCharge", SelfStatsKind.ACTIVE_CHARGE);
+        m.put("MaxActiveCharge", SelfStatsKind.MAX_CHARGE);
+        m.put("ActiveSpeed", SelfStatsKind.ACTIVE_SPEED);
+        m.put("Summoning", SelfStatsKind.SUMMONING);
+        m.put("Fishing", SelfStatsKind.FISHING);
+        m.put("BeePoints", SelfStatsKind.BEE);
+        m.put("AntPoints", SelfStatsKind.ANT);
+        m.put("Bitches", SelfStatsKind.BITCHES);
+        m.put("LightKarma", SelfStatsKind.KARMA_LIGHT);
+        m.put("NeutralKarma", SelfStatsKind.KARMA_NEUTRAL);
+        m.put("DarkKarma", SelfStatsKind.KARMA_DARK);
+        m.put("CelestialKarma", SelfStatsKind.KARMA_CELESTIAL);
+        // 难度骷髅（#Skulls CTT）
+        m.put("CTT", SelfStatsKind.SKULLS);
+        return m;
+    }
+
+    /** 这一行里有没有地图属性用的图形（❤ / 私有区 / ✈ 🗡 那批）。 */
+    static boolean hasStatGlyph(String flat) {
+        if (flat == null || flat.isEmpty()) return false;
+        for (int i = 0; i < flat.length(); ) {
+            int cp = flat.codePointAt(i);
+            i += Character.charCount(cp);
+            if (isStatGlyphCp(cp)) return true;
+        }
+        return false;
+    }
+
     private static java.util.Map<String, SelfStatsKind> buildHoverKinds() {
         java.util.Map<String, SelfStatsKind> m = new java.util.HashMap<>();
         m.put("view_stats_1", SelfStatsKind.HEART_RED);

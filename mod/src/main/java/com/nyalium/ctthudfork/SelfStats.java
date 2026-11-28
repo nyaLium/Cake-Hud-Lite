@@ -58,6 +58,19 @@ public final class SelfStats {
     /** 一次最多攒多少行（地图一趟大约 20~40 行，留点余量）。 */
     private static final int MAX_LINES = 64;
 
+    // ── 临时诊断（排查「某个属性不上面板」用；查完删） ──
+    private static final org.slf4j.Logger DIAG = org.slf4j.LoggerFactory.getLogger("ctt-hud-fork/selfstats");
+    private static int diagBudget = 40;
+    private static int droppedByCap;
+
+    static void diag(String what, String flat, SelfStatsCatalog.Analyzed a, SelfStatsKind kind) {
+        if (diagBudget <= 0) return;
+        diagBudget--;
+        DIAG.info("[SelfStats] {} flat=[{}] objectives={} hover={} keys={} kind={}",
+                what, flat, a == null ? "-" : a.objectives, a == null ? "-" : a.hoverKeys,
+                a == null ? "-" : a.keys, kind);
+    }
+
     /**
      * 进存档 / 进服后的静默时长（毫秒）—— 这之前**不自动发** {@code /trigger ViewStats}。
      *
@@ -360,6 +373,8 @@ public final class SelfStats {
         }
         emptyCaptures = 0;
         SHOWN.clear();
+        DIAG.info("[SelfStats] 收齐一趟：捕获 {} 行，上限丢弃 {} 行", PENDING.size(), droppedByCap);
+        droppedByCap = 0;
         // 去重：同一行文字只保留第一次出现，避免「多重显示」。
         java.util.HashSet<String> seen = new java.util.HashSet<>();
         for (Line line : PENDING) {
@@ -504,6 +519,7 @@ public final class SelfStats {
         if (a.keys.contains(SelfStatsCatalog.TIME_KEY) || isGameTimeLine(flat)) {
             boolean hide = selfTriggered;
             pendingTimeText = flat;
+            if (panelWorthy(a, SelfStatsKind.TIMER) && PENDING.size() >= MAX_LINES) droppedByCap++;
             if (panelWorthy(a, SelfStatsKind.TIMER) && PENDING.size() < MAX_LINES
                     && !containsSameText(PENDING, message)) {
                 PENDING.add(new Line(message, SelfStatsKind.TIMER));
@@ -516,10 +532,18 @@ public final class SelfStats {
         // 草方块那条（一行绿色 □，没有键也没有数字）也属于本模组的内容，
         // 以前它连「像不像属性行」这一关都过不了，被整行丢掉。
         boolean ours = isViewStatsLine(flat) || a.hasKey() || a.unresolvedKey
-                || statGlyphLine(flat) || kind == SelfStatsKind.GRASS;
-        if (!ours) return false;
+                || statGlyphLine(flat) || (a.hasScore && hasStatGlyph(flat))
+                || kind == SelfStatsKind.GRASS;
+        if (!ours) {
+            diag("丢弃", flat, a, kind);
+            return false;
+        }
+        if (kind == SelfStatsKind.MISC) {
+            diag("未识别", flat, a, kind);
+        }
 
         // 提示性文本（标题 / 悬停说明）不上面板；缺地图语言文件时整行原文也不上屏。
+        if (panelWorthy(a, kind) && PENDING.size() >= MAX_LINES) droppedByCap++;
         if (panelWorthy(a, kind) && PENDING.size() < MAX_LINES && !containsSameText(PENDING, message)) {
             PENDING.add(new Line(message, kind));
         }
@@ -611,6 +635,16 @@ public final class SelfStats {
     /**
      * 地图 ViewStats 里「数字 + 图形」那一类行（{@code ["",{score},{text:"🗡",hover}]} 的形态）。
      */
+    /** 计分板目标名 → 分类（实现在 {@link SelfStatsCatalog}，这里只转发）。 */
+    static SelfStatsKind objectiveKind(String objective) {
+        return SelfStatsCatalog.objectiveKind(objective);
+    }
+
+    /** 行里有没有属性图形（实现在 {@link SelfStatsCatalog}，这里只转发）。 */
+    static boolean hasStatGlyph(String flat) {
+        return SelfStatsCatalog.hasStatGlyph(flat);
+    }
+
     static boolean statGlyphLine(String flat) {
         return SelfStatsCatalog.statGlyphLine(flat);
     }
