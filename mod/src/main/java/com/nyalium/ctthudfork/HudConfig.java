@@ -82,7 +82,7 @@ public final class HudConfig {
     public boolean showSelf = false;
         /** 隐藏上方 Boss 栏里「队伍血量」那一条（数据照常读取）。 */
         public boolean hideTeamBossBar = true;
-        /** 玩家血条长度（原版名牌像素），默认 75。 */
+        /** 玩家血条长度（原版名牌像素），50 ~ 150，默认 75；<b>自动长度开启时它是「最长长度」</b>（100% 血量）。 */
         public double teamBarWidth = 75.0;
         /** 玩家血条的缩放比例（界面文案「缩放比例」）。 */
         public double teamScale = 0.9;
@@ -90,7 +90,7 @@ public final class HudConfig {
         public double teamMaxDistance = 48.0;
         /** 超过这个距离（格）不再绘制。 */
         public double maxDistance = 48.0;
-        /** 血条长度（原版名牌像素），50 ~ 150，默认 75。 */
+        /** 血条长度（原版名牌像素），50 ~ 150，默认 75；<b>自动长度开启时它是「最长长度」</b>（100% 血量）。 */
         public double barWidth = 75.0;
         /** 整组 UI 的额外缩放，0.75 ~ 1.50，0.9 = 默认。 */
         public double scale = 0.9;
@@ -143,25 +143,28 @@ public final class HudConfig {
          * 调试功能：**血条不可透视**（默认开）。
          *
          * <p>开：只有「玩家确实看得到这只实体」时才画整组 HUD（名字也一起）—— 判定是相机到实体
-         * 碰撞箱的射线。算「能看过去」的只有：玻璃系建材、植物（<b>不含树叶</b>）、
-         * 无碰撞箱的功能方块、流体；冰类 / 铜格栅 / 台阶 / 栅栏 / 箱子等一律算挡。
-         * 而且半透明方块穿透超过 1 层（有厚度）就按不透明处理。
-         * 看得见时也只画<b>深度测试那一层</b>（与方块一同排序，半透明方块在背后不会混色、
-         * 在近处照常遮挡，和原版名字牌的深度规则一致）。
-         * 关：多补一层文字透视副本（隔墙也能隐约看到数值），血条本身仍只有深度测试那一层。</p>
+         * 碰撞箱的射线。口径（1.6.23 起）：<b>只看碰撞体积</b>。射线打不到的方块（水、熔岩、
+         * 植物、火把、告示牌、按钮、雪层、蜘蛛网…）不算挡；<b>任何有碰撞箱的方块都算挡</b>
+         * （石头、台阶、楼梯、栅栏、箱子、树叶、冰、铜格栅、玻璃、蜂蜜块…）。</p>
+         *
+         * <p>关：不做遮挡判定，HUD 一直画（透视阶段，不会被方块切）。</p>
          */
         public boolean barNoSeeThrough = true;
         /**
          * 1.6.0 调试功能：**血量条长度随血量百分比自动调整**（默认开）。
          *
-         * <p>100% 血量 = 上限长度（默认 75，与默认条长一致），0% = 下限长度（默认 50），
-         * 中间线性插值；上下限可调，都会被夹进
+         * <p>100% 血量 = <b>该组自己的「血条长度」</b>（敌人 {@link #barWidth} / 玩家
+         * {@link #teamBarWidth}，默认 75），0% = 下限 {@link #autoBarMinWidth}（默认 50），
+         * 中间线性插值；下限超过该组长度时按该组长度处理。两者都会被夹进
          * {@link HudLayout#BAR_WIDTH_MIN} ~ {@link HudLayout#BAR_WIDTH_MAX}。</p>
          */
         public boolean autoBarLength = true;
-        /** 自动长度：血量为 0 时的条长（布局像素）。 */
+        /** 自动长度：血量为 0 时的条长（布局像素）。最长长度用该组自己的「血条长度」。 */
         public double autoBarMinWidth = HudLayout.BAR_WIDTH_MIN;
-        /** 自动长度：满血时的条长（布局像素），默认与默认条长 75 一致。 */
+        /**
+         * 历史字段（v24 迁移载体）：旧的「自动长度上限」，现在已由各组的「血条长度」取代，
+         * 渲染不再读取；只为把老配置里调过的值搬进 {@link #barWidth} / {@link #teamBarWidth} 而保留。
+         */
         public double autoBarMaxWidth = 75.0;
         /**
          * 自身属性面板。纯客户端：定时 {@code /trigger ViewStats}，
@@ -313,7 +316,7 @@ public final class HudConfig {
     private static final long RECHECK_MS = 2000L;
 
     /** 当前配置版本。老文件没有 {@code configVersion} 键 → 按 v1 处理并迁移。 */
-    public static final int CURRENT_VERSION = 23;
+    public static final int CURRENT_VERSION = 24;
 
     /** 面板「默认位置」的哨兵值（{@code -1} = 用动态默认，见 {@link #defaultPanelY}）。 */
     public static final int DEFAULT_Y_SENTINEL = -1;
@@ -415,7 +418,6 @@ public final class HudConfig {
         boolean barNoSeeThrough = d.barNoSeeThrough;
         boolean autoBarLength = d.autoBarLength;
         double autoBarMinWidth = d.autoBarMinWidth;
-        double autoBarMaxWidth = d.autoBarMaxWidth;
 
         cfg = new Cfg();
 
@@ -425,7 +427,6 @@ public final class HudConfig {
         cfg.barNoSeeThrough = barNoSeeThrough;
         cfg.autoBarLength = autoBarLength;
         cfg.autoBarMinWidth = autoBarMinWidth;
-        cfg.autoBarMaxWidth = autoBarMaxWidth;
     }
 
     /** 当前显示方式 + 上下文对应的布局；{@code container=true} 取容器界面那一套。 */
@@ -741,6 +742,20 @@ public final class HudConfig {
             // 越界值在 normalize() 里统一夹取，这里只保证版本号被写上。
             cfg.shieldScale = Math.max(SHIELD_SCALE_MIN, Math.min(SHIELD_SCALE_MAX, cfg.shieldScale));
         }
+        if (version < 24) {
+            // v24：血条长度 = **最长长度**，旧的「自动长度上限」（全局一项）被它取代。
+            // 自动长度开着的老配置，实际显示的长度一直是 autoBarMaxWidth（barWidth / teamBarWidth
+            // 被完全忽略），所以把它搬进两组的血条长度，玩家看到的效果不变；
+            // 关掉自动长度的老配置本来就吃 barWidth / teamBarWidth，不动。
+            // 只在 JSON 里真的写过 autoBarLength 时才搬 —— 更老的配置里这个功能还不存在。
+            if (json != null && json.contains("\"autoBarLength\"") && cfg.autoBarLength) {
+                double max = clamp(cfg.autoBarMaxWidth,
+                        HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX);
+                cfg.barWidth = max;
+                cfg.teamBarWidth = max;
+            }
+            cfg.autoBarMaxWidth = cfg.barWidth;
+        }
 
         // ④ 只写版本号、不改字段的版本（保留注释备查）：
         //    v12 删 hideBehindEntities、v14 过滤列表分节、v17 删 teamShowBar、
@@ -860,7 +875,6 @@ public final class HudConfig {
         c.barNoSeeThrough = d.barNoSeeThrough;
         c.autoBarLength = d.autoBarLength;
         c.autoBarMinWidth = d.autoBarMinWidth;
-        c.autoBarMaxWidth = d.autoBarMaxWidth;
         c.hideBelowNameScore = d.hideBelowNameScore;
     }
 
@@ -911,16 +925,10 @@ public final class HudConfig {
         read.teamBarWidth = clamp(read.teamBarWidth, HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX);
         read.teamScale = round2(clamp(read.teamScale, 0.75, 1.5));
         read.teamMaxDistance = clamp(read.teamMaxDistance, 4.0, 256.0);
-        // 1.6.0 调试功能：自动条长的上下限也夹在布局允许的 50~150，并保证 min ≤ max。
+        // 1.6.0 调试功能：自动条长的下限也夹在布局允许的 50~150。
+        // 「最长长度」不再是独立字段（= 各组的血条长度），所以这里没有上下限交换了。
         if (Double.isNaN(read.autoBarMinWidth)) read.autoBarMinWidth = HudLayout.BAR_WIDTH_MIN;
-        if (Double.isNaN(read.autoBarMaxWidth)) read.autoBarMaxWidth = HudLayout.BAR_WIDTH_MAX;
         read.autoBarMinWidth = clamp(read.autoBarMinWidth, HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX);
-        read.autoBarMaxWidth = clamp(read.autoBarMaxWidth, HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX);
-        if (read.autoBarMinWidth > read.autoBarMaxWidth) {
-            double swap = read.autoBarMinWidth;
-            read.autoBarMinWidth = read.autoBarMaxWidth;
-            read.autoBarMaxWidth = swap;
-        }
         // 自身属性面板：间隔 0~600 s，列 1~3，坐标夹进屏幕范围
         read.selfStatsSeconds = (int) clamp(read.selfStatsSeconds, 1.0, 5.0);
         read.selfStatsColumns = (int) clamp(read.selfStatsColumns, 1.0, 3.0);

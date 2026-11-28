@@ -7,6 +7,9 @@
 # 日志（归档里的 *.log.txt 证据文件不受影响）
 *.log
 
+# Gradle / runClient 的运行日志目录（曾经误入库）
+/mod/logs/
+
 # IDE / 系统
 .idea/
 *.iml

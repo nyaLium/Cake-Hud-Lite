@@ -66,23 +66,25 @@ ClientModInitializer.onInitializeClient        CttHudForkClient
 │       ├─ submitRows → collector.submitText(...)          原版世界文字渲染类型
 │       │   ├─ NORMAL        深度测试 + 写深度（solid / texts 阶段）
 │       │   └─ SEE_THROUGH   进 SubmitNodeStorage.seeThrough()，最后单独一遍、无深度附件
-│       └─ submitBar → collector.submitCustomGeometry(...)
-│           ├─ RenderTypes.text(...)            原版世界文字管线（深度测试 + 写深度）
-│           └─ 底板不透明 + 填充按「血条不透明度」；**没有**透视副本（见 §2 规则 3）
+│       └─ submitBar → collector.submitCustomGeometry(...) + SeeThroughQuads.submit(...)
+│           ├─ RenderTypes.text(...)            实心层：深度测试 + 写深度
+│           └─ SeeThroughQuads（textSeeThrough）透视层：塞进 seeThrough 阶段，带原版纹理
 │
 ├─ ③ 方块 HUD
 │   └─ BossHealthOverlay.extractRenderState ── BossBarHudRenderMixin(Redirect Map.values)
 │       └─ 过滤「最近敌人 / 队伍血量」两条上方 Boss 栏
 │
 ├─ ④ 半透明地形（蜂蜜 / 水 / 玻璃）
-│   └─ 血条已写深度 ⇒ 更远的半透明方块被深度测试挡掉；更近的照常盖住血条
+│   └─ 只影响实心层（关掉「血条不可透视」时才提交）：血条已写深度 ⇒ 更远的被挡掉、更近的照常盖住
+│      透视层在这之后画，半透明方块碰不到它
 │
 ├─ ⑤ /title
 │   └─ Hud.extractTitle ── TitleTextMixin(Redirect textWithBackdrop ×2)
 │       └─ 位移 / 不透明度 / 缩放 + 「文字盒不出屏」钳制
 │
-├─ ⑥ See-through features（文字透视副本 / 原版名字的透视层）
-│   └─ 在所有地形之后、一份**没有深度附件**的 render pass 里画 ⇒ 永远压在最上面
+├─ ⑥ See-through features（文字透视副本 / 血条透视副本 / 原版名字的透视层）
+│   ├─ 在所有地形之后、一份**没有深度附件**的 render pass 里画 ⇒ 永远压在最上面
+│   └─ 血条透视层与文字同阶段：`SeeThroughQuads`（自定义 TranslucentSubmit + FeatureRenderer）
 │
 └─ ⑦ GUI（最后画，永远最上层）
     ├─ SelfStatsPanel（HUD 元素）
@@ -95,17 +97,17 @@ ClientModInitializer.onInitializeClient        CttHudForkClient
 
 | 层 | 内容 | 会不会被盖住 |
 | --- | --- | --- |
-| 世界不透明方块 | 墙、地板 | 挡住血条 / 名字 / 面板之外的一切 |
+| 世界不透明方块 | 墙、地板 | 挡住实心层（文字 / 血条）/ 名字；挡不住透视层 |
 | 血条 + 头顶文字（NORMAL） | 名字牌批次，原版 TEXT 管线（`writeDepth = true`） | 被更近的方块挡住；不会被半透明地形冲淡 |
-| 半透明地形 | 蜂蜜 / 水 / 玻璃 | 只能盖住**不写深度**的内容（粒子、以及被误塞进 `translucentCustomGeometry` 的无深度几何） |
-| 文字透视副本（SEE_THROUGH） | `SubmitNodeStorage.seeThrough()` | 单独一遍、无深度附件 ⇒ 什么也盖不住它 |
+| 半透明地形 | 蜂蜜 / 水 / 玻璃 | 只能盖住**不写深度**且画在它之前的几何 |
+| 透视层（文字 / 血条 SEE_THROUGH） | `SubmitNodeStorage.seeThrough()` | 单独一遍、无深度附件 ⇒ 什么也盖不住它 |
 | GUI | 属性面板 / 盾牌条 / 容器面板 | 永远最上层，不受世界深度影响 |
 
 **三条硬规则**
 
-1. **世界内画的东西，一律晚于不透明地形、早于半透明地形**。原版世界文字（TEXT）管线本身就是「深度测试 + 写深度」（`DepthStencilState.DEFAULT = (GREATER_THAN_OR_EQUAL, true)`），所以血条不需要自建渲染类型；真要改深度行为，得换管线，而不是拿同一套管线复制一遍。
+1. **世界内画的东西，一律晚于不透明地形、早于半透明地形**。原版世界文字（TEXT）管线本身就是「深度测试 + 写深度」（`DepthStencilState.DEFAULT = (GREATER_THAN_OR_EQUAL, true)`），所以实心层不需要自建渲染类型；真要改深度行为，得换管线，而不是拿同一套管线复制一遍。
 2. **GUI 层画的东西不看世界深度**，所以「被墙挡住」这类判断必须自己做（`HudTarget` / 射线）。
-3. **「透视」是阶段，不是渲染类型**。`submitText(DisplayMode.SEE_THROUGH)` 会把节点送进 `SubmitNodeStorage.seeThrough()`，由 `LevelRenderer.executeSeeThrough` 在所有地形之后、于一份没有深度附件的 pass 里单独画；`submitCustomGeometry` 没有这个阶段可选（只按 `hasBlending()` 进 `translucentCustomGeometry` 或 `solid`，两者都在半透明地形**之前**），而 `RenderTypes.textSeeThrough` 的管线是 `DepthStencilState(Optional.empty())`（不测深度、**不写深度**）⇒ 拿它提交自定义几何，随后画的蜂蜜 / 水 / 玻璃会直接混上来（1.6.16 就修的是这个）。
+3. **「透视」是阶段，不是渲染类型**。`submitText(DisplayMode.SEE_THROUGH)` 会把节点送进 `SubmitNodeStorage.seeThrough()`，由 `LevelRenderer.executeSeeThrough` 在所有地形之后、于一份没有深度附件的 pass 里单独画。`submitCustomGeometry` 本身没有这个阶段可选（只按 `hasBlending()` 进 `translucentCustomGeometry` 或 `solid`），**但可以把自定义节点直接塞进 `SubmitNodeStorage.seeThrough()`**：需要同时提供一个 `TranslucentSubmit`（记录 pose / 距离 / 各层 `RenderType` + 几何）和一个 `RenderTypeFeatureRenderer` 子类，并在 `FeatureRenderDispatcher` 构造时 `put` 进 `FeatureRendererMap` —— 这就是 `SeeThroughQuads` 做的事。注意这一遍没有深度附件，层里只能用不依赖深度的管线（`RenderTypes.textSeeThrough`），且执行时 `OitStage == null`，不要求 OIT 管线集。
 
 ---
 
@@ -244,6 +246,51 @@ Mod Menu「Config…」 / 游戏内 F8
 1. 白名单加入 `honey_block`（隔着蜂蜜明明看得见，原版也照画名字）；冰类 / 铜格栅 / 树叶仍按用户口径算挡，层数上限仍是 1 层。
 2. `clear()` 跳过**眼睛所在的那一格**：贴墙、站在薄方块边缘、旁观穿模时，射线起点就在方块内部，`clip` 会立刻返回一个距离 0 的命中，把所有实体都判成被挡。现在这一格既不判挡、也不计入层数。
 
+### 6.7 1.6.18：血条重新拥有「透视副本」，而且不再被半透明方块染色
+
+1.6.16 为了修「半透明方块糊到血条上」把血条的透视副本整个删了，代价是：天花板 / 屋檐 / 墙沿会像切实心几何那样把条切掉，而它上方的文字和名字还有透视层 —— 看起来就是「名字还在、血条没了」。1.6.17 之后又把「不可透视」误解成「条不能画在方块上面」，问题仍在。
+
+1.6.18 的做法是把透视层**放回它本来就该在的阶段**：
+
+| | 1.6.15（被冲淡） | 1.6.16 / 1.6.17（被切掉） | 1.6.18（当前） |
+| --- | --- | --- | --- |
+| 血条透视层 | `submitCustomGeometry` + `textSeeThrough` ⇒ `translucentCustomGeometry`，**半透明地形之前** | 没有 | `SeeThroughQuads` ⇒ `SubmitNodeStorage.seeThrough()`，**所有地形之后** |
+| 被方块切掉 | 否 | 是 | 否 |
+| 被蜂蜜 / 水 / 玻璃染色 | 是 | 否 | 否 |
+| 纹理 | 原版 `boss_bar` | 原版 `boss_bar` | 原版 `boss_bar`（**没有**换纯色矩形） |
+
+实现要点：
+
+1. `SeeThroughQuads implements TranslucentSubmit`：节点里存 billboard pose（`pose.last().copy()`）、`computeDistanceToCameraSq` 与若干 `Layer(renderType, geometry)`；一张条把「背景 + 进度」放进同一个节点，绘制顺序不会被阶段的距离排序打乱。
+2. `SeeThroughQuads.Renderer extends RenderTypeFeatureRenderer`：`buildGroup` 里按层 `getVertexBuilder(renderType)` 写同一套 `barSpan` 几何（分段 / UV 规则与实心层共用）。
+3. `FeatureRenderDispatcherMixin` 在 `FeatureRenderDispatcher` 构造 TAIL 处把 renderer `put` 进 `FeatureRendererMap`；不注册的话 `PreparedFrame` 会在 `getOrThrow` 抛异常。
+4. `submitBar` 的行为：**「血条不可透视」开（默认）** ⇒ 只提交透视层（配置的不透明度），「看不看得见实体」完全由 `HudTarget.occludedByBlocks` 的射线决定；**关** ⇒ 实心层 + 约 50% 的透视副本，和原版名字同一套规则。
+
+### 6.9 1.6.22：遮挡射线把 `clip` 的 MISS 当成命中
+
+`BlockGetter.clip` 在「什么都没打中」时**不返回 null**，而是返回 `HitResult.Type.MISS`，
+其 `getBlockPos()` 正是**终点所在的那一格**。`HudTarget.clear()` 原来只判
+`instanceof BlockHitResult`，于是实体站在水里时，终点格 `water` 被当成「挡板」→ 整组 HUD 不画。
+**修复**：先判 `hit.getType() == HitResult.Type.BLOCK` 再取方块。同一版把碰撞上下文从
+`mc.player` 换成 `CollisionContext.empty()`（26.3 的 `LiquidBlock.getCollisionShape` 只在
+「该实体正与流体碰撞」时返回方块形状，玩家游泳会污染判定）。
+
+### 6.10 1.6.23：口径收窄为「只看碰撞体积」
+
+用户决定：**只有无碰撞体积的方块不挡**。射线本来就是 `Block.COLLIDER` + `CollisionContext.empty()`，
+即「能被打中 ⇔ 有碰撞体积」，所以**材质白名单是多余的**：
+
+| | 1.6.0 ~ 1.6.22 | 1.6.23 |
+| --- | --- | --- |
+| 玻璃系（34 个 id） | 不挡（最多 1 层） | **挡** |
+| 蜂蜜块 | 不挡 | **挡** |
+| 植物 / 树叶 | 植物不挡 / 树叶挡 | 无碰撞箱 ⇒ 不挡；树叶有碰撞箱 ⇒ 挡 |
+| 水 / 熔岩 / 火把 / 告示牌 / 按钮 / 雪层 / 蜘蛛网… | 不挡 | 不挡（打不到） |
+| 石头 / 台阶 / 楼梯 / 栅栏 / 箱子 / 冰 / 铜格栅 | 挡 | 挡 |
+
+代码上删掉了 `seeThroughBlock`、`seeThroughId`、`MAX_SEE_THROUGH_DEPTH`：`clear()` 里
+「打中方块且不是眼睛格 ⇒ 挡；MISS ⇒ 通」。
+
 ## 7. 已知但这次没动（留给后续）
 
 | 位置 | 现状 | 建议 |
@@ -254,14 +301,14 @@ Mod Menu「Config…」 / 游戏内 F8
 | 5 个页面的底部按钮对 | 几何完全重复（120×20 于 `width/2-60-128`） | 抽 `footer(reset, back)` |
 | `ScrollPane` 与过滤页滚动条 | 条宽 4 vs 3、滑块最小 12 vs 8、像素 vs 行 | 参数化后合并（直接替换会改变外观） |
 | 关掉「隐藏 below_name 分数」时 | 原版会把名字上抬 10.35 px，与我们的条 / 文字行重叠 | 该组合下整体下移 `TEXT_TOP / BAR_TOP`，或对被接管的实体强制摘分数 |
-| 文字有透视副本、血条没有 | 文字走 `submitText(SEE_THROUGH)` 能在 `seeThrough` 阶段留一层淡影；自定义几何没有这个阶段，`textSeeThrough` 又是不写深度的（1.6.16 已删掉血条那一层） | 1.6.16 后的差异只剩「墙后的条不显示淡影、上方的数值仍然显示」；要补条本体的淡影只能用 `submitTextBackground`（纯色矩形，会丢两端圆角 / 渐变）或等原版给自定义几何开口子 |
+| 文字 / 血条的透视层顺序 | 两者都在同一遍 `seeThrough` 阶段、按距离排序；同一张条的「背景 + 进度」在一个节点里所以内部有序，但不同实体的条之间只按距离排 | 如果出现「近条被远条压住」，给节点一个「同距离时的稳定次序」或把条拆成单个节点并按相机距离反排 |
 | 每帧分配 | `HudLayout.compute` 每实体每帧重建 Row/List、`toComponent` 每行 new Component、`BossBarTexture.slices` 每段 new 数组 | 按「数据版本 + 宽度」缓存；`slices` 用静态数组 |
 
 ## 8. 改代码时的检查清单
 
 1. **新配置字段**：`Cfg` 字段 → `normalize` 夹取 → 对应 `resetXxx` → lang 键（中英）→ 界面。
 2. **新设置页**：`back()` / `onClose()` 都要 `HudConfig.save()`；parent 关系写清楚。
-3. **新渲染内容**：先决定「世界内还是 GUI」；世界内的默认会被半透明地形覆盖，需要不被冲淡就得写深度。想要「透视」只能走 `submitText(DisplayMode.SEE_THROUGH)` —— 自定义几何拿不到 `seeThrough` 阶段，用 `textSeeThrough` 提交只会得到「不写深度、画在半透明地形之前」。
+3. **新渲染内容**：先决定「世界内还是 GUI」；世界内的默认会被半透明地形覆盖，需要不被冲淡就得写深度（`RenderTypes.text`）。想要「透视」：文字直接用 `submitText(DisplayMode.SEE_THROUGH)`；**自定义几何**要进 `seeThrough` 阶段必须像 `SeeThroughQuads` 那样，自带 `TranslucentSubmit` + `RenderTypeFeatureRenderer` 并在 `FeatureRenderDispatcher` 构造时注册 —— 只把 `textSeeThrough` 交给 `submitCustomGeometry` 只会得到「不写深度、画在半透明地形之前」，会被后面的蜂蜜 / 水 / 玻璃染色。
 4. **新 mixin**：注入点全部 `require = 0` 兜底；不要假设原版方法签名长期稳定。
 5. **改默认值**：在 `RULES` / `FLAG_RULES` 加一条「旧默认 → 新默认」，并确认读取顺序仍是「迁移在归一化之前」。
 6. **改完跑**：`gradle build --offline`（会跑 `selfCheck`，5,070 条断言）。

@@ -15,6 +15,7 @@ public final class SelfCheck {
     public static void main(String[] args) {
         layoutCombinations();
         barWidthSweep();
+        autoBarLengthFromOwnWidth();
         barSlicing();
         configNormalization();
         armorEdgeCases();
@@ -42,7 +43,6 @@ public final class SelfCheck {
         scrollbarDrag();
         scopedSettings();
         relativePositions();
-        seeThroughMaterials();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -384,6 +384,61 @@ public final class SelfCheck {
                 check(r.textTop + 9 <= r.barTop, tag + " 文字与血条重叠");
             }
         }
+    }
+
+    // ── 2b. 自动长度：100% = 该组「血条长度」（最长），0% = 下限 ──
+
+    private static void autoBarLengthFromOwnWidth() {
+        HudConfig.Cfg cfg = new HudConfig.Cfg();
+        cfg.barWidth = 120;
+        cfg.teamBarWidth = 80;
+        cfg.autoBarMinWidth = 50;
+        // 满血 = 该组自己的血条长度
+        check(HudWorldRenderer.autoBarWidth(cfg, 1.0f, cfg.barWidth) == 120.0,
+                "满血敌人条应等于「血条长度」120");
+        check(HudWorldRenderer.autoBarWidth(cfg, 1.0f, cfg.teamBarWidth) == 80.0,
+                "满血玩家条应等于玩家组「血条长度」80");
+        // 0% / 读不到比例 = 下限
+        check(HudWorldRenderer.autoBarWidth(cfg, 0.0f, cfg.barWidth) == 50.0, "0% 应等于下限 50");
+        check(HudWorldRenderer.autoBarWidth(cfg, Float.NaN, cfg.barWidth) == 50.0,
+                "比例为 NaN 时应按下限处理");
+        // 中间线性
+        check(HudWorldRenderer.autoBarWidth(cfg, 0.5f, cfg.barWidth) == 85.0,
+                "50% 应插值到 (50+120)/2 = 85");
+        // 下限高于该组长度时不能反向拉长
+        cfg.autoBarMinWidth = 140;
+        check(HudWorldRenderer.autoBarWidth(cfg, 1.0f, cfg.teamBarWidth) == 80.0,
+                "下限高于玩家条长时，满血仍应为 80");
+        check(HudWorldRenderer.autoBarWidth(cfg, 0.0f, cfg.teamBarWidth) == 80.0,
+                "下限高于玩家条长时，0% 也应为 80");
+        // 该组长度越界时按布局范围夹取
+        check(HudWorldRenderer.autoBarWidth(cfg, 1.0f, 9999.0) == HudLayout.BAR_WIDTH_MAX,
+                "条长 9999 应夹到 150");
+        check(HudWorldRenderer.autoBarWidth(cfg, 1.0f, -10.0) == HudLayout.BAR_WIDTH_MIN,
+                "条长 -10 应夹到 50");
+
+        // v24 迁移：自动长度开着的老配置，把旧的「自动长度上限」搬进两组的血条长度
+        HudConfig.Cfg old = new HudConfig.Cfg();
+        old.configVersion = 23;
+        old.autoBarLength = true;
+        old.autoBarMaxWidth = 110;
+        old.barWidth = 75;
+        old.teamBarWidth = 75;
+        HudConfig.migrate("{\"configVersion\":23,\"autoBarLength\":true,\"autoBarMaxWidth\":110}", old);
+        check(old.barWidth == 110 && old.teamBarWidth == 110,
+                "v24 迁移应把旧上限搬进两组血条长度: " + old.barWidth + "/" + old.teamBarWidth);
+        check(old.configVersion == HudConfig.CURRENT_VERSION, "v24 迁移应写上 configVersion");
+
+        // v24 迁移：自动长度关着的老配置不动（它本来就吃 barWidth / teamBarWidth）
+        HudConfig.Cfg off = new HudConfig.Cfg();
+        off.configVersion = 23;
+        off.autoBarLength = false;
+        off.autoBarMaxWidth = 110;
+        off.barWidth = 90;
+        off.teamBarWidth = 60;
+        HudConfig.migrate("{\"configVersion\":23,\"autoBarLength\":false,\"autoBarMaxWidth\":110}", off);
+        check(off.barWidth == 90 && off.teamBarWidth == 60,
+                "自动长度关着时迁移不该动血条长度: " + off.barWidth + "/" + off.teamBarWidth);
     }
 
     // ── 3. 配置归一化 ──
@@ -1562,7 +1617,7 @@ public final class SelfCheck {
         check(c.selfStatsColumns == 3, "selfStatsColumns 9 应夹到 3");
         check(c.selfStatsX == 0, "selfStatsX -100 应夹到 0");
         check(c.selfStatsY == 4000, "selfStatsY 99999 应夹到 4000");
-        check(HudConfig.CURRENT_VERSION == 23, "配置版本应为 23");
+        check(HudConfig.CURRENT_VERSION == 24, "配置版本应为 24");
         HudConfig.Cfg defaults = HudConfig.normalize(new HudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1571,7 +1626,7 @@ public final class SelfCheck {
         v3.configVersion = 3;
         v3.barWidth = 90;
         HudConfig.migrate("{\"configVersion\":3}", v3);
-        check(v3.configVersion == 23, "v3 → v23 应升版本号");
+        check(v3.configVersion == 24, "v3 → v24 应升版本号");
         check(v3.barWidth == 90, "迁移不该动已调过的值");
     }
 
@@ -1768,7 +1823,7 @@ public final class SelfCheck {
 
         // 配置：版本、默认值、粗类展开
         HudConfig.Cfg cfg = new HudConfig.Cfg();
-        check(HudConfig.CURRENT_VERSION == 23, "配置版本应为 23");
+        check(HudConfig.CURRENT_VERSION == 24, "配置版本应为 24");
         HudConfig.Cfg defaults = HudConfig.normalize(new HudConfig.Cfg());
         check(defaults.showSelfStats, "自身属性面板默认开启");
         check(defaults.selfStatsSeconds == 3, "自身属性面板默认 3 s 刷新");
@@ -1821,7 +1876,7 @@ public final class SelfCheck {
         v4.configVersion = 4;
         v4.barWidth = 90;
         HudConfig.migrate("{\"configVersion\":4}", v4);
-        check(v4.configVersion == 23, "v4 → v23 应升版本号");
+        check(v4.configVersion == 24, "v4 → v24 应升版本号");
         check(v4.barWidth == 90, "迁移不该动已调过的值");
 
         // hiddenKinds() 与过滤真的作用到面板
@@ -2401,18 +2456,6 @@ public final class SelfCheck {
      * <p>蜂蜜以前漏了 —— 隔着蜂蜜看实体时整组 HUD 会被判成被墙挡住而直接不画，
      * 但原版名字照样显示，看起来就是「血条被方块挡掉了」。</p>
      */
-    private static void seeThroughMaterials() {
-        check(HudTarget.seeThroughId("glass"), "玻璃应算看得过去");
-        check(HudTarget.seeThroughId("white_stained_glass"), "染色玻璃应算看得过去");
-        check(HudTarget.seeThroughId("glass_pane"), "玻璃板应算看得过去");
-        check(HudTarget.seeThroughId("honey_block"), "蜂蜜块应算看得过去");
-        check(!HudTarget.seeThroughId("ice"), "冰类按用户口径算挡");
-        check(!HudTarget.seeThroughId("blue_ice"), "蓝冰算挡");
-        check(!HudTarget.seeThroughId("oak_leaves"), "树叶算挡");
-        check(!HudTarget.seeThroughId("stone"), "石头算挡");
-        check(!HudTarget.seeThroughId("copper_grate"), "铜格栅算挡");
-        check(!HudTarget.seeThroughId(null), "null 不该当成透明");
-    }
 
     private static final class Data {
         final String name;

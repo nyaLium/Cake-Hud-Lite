@@ -110,9 +110,9 @@ public final class HudWorldRenderer {
         options.armourPage = ArmourCycle.page(data.armor, now, entity.getId());
         // 心数行只显示红心 + 一种其它心，按时间轮换（玩家只在魂/黑之间换）。
         options.cycleKind = HeartCycle.pick(data.hearts, teammate, now, entity.getId());
-        // 血量条长度随当前血量百分比自动调整（100% = 上限、0% = 下限）。
+        // 血量条长度随当前血量百分比自动调整：100% = 该组「血条长度」（最长），0% = 「自动长度下限」。
         if (cfg.autoBarLength) {
-            options.barWidth = autoBarWidth(cfg, data.ratio);
+            options.barWidth = autoBarWidth(cfg, data.ratio, options.barWidth);
         }
         HudLayout.Result layout = HudLayout.compute(
                 data.hp, data.maxHp, data.percentOnly,
@@ -121,11 +121,11 @@ public final class HudWorldRenderer {
 
         Vec3 attachment = state.nameTagAttachment;
         if (attachment == null) attachment = new Vec3(0.0, state.boundingBoxHeight, 0.0);
-        // 1.6.0「血条不可透视」：只有「玩家确实看得到这只实体」时才画整组 HUD。
+        // 「血条不可透视」：只有「玩家确实看得到这只实体」时才画整组 HUD。
         // 判据与「常显敌人名称」共用 HudTarget（同一个缓存），所以名字与血条一定同进同退；
         // 判定打在碰撞箱上（不是那个悬空的 HUD 挂点），所以头顶天花板不会把整只实体判掉。
-        // 看得见时也不再改走「无深度」通道 —— 那条路会被随后画的半透明方块混色
-        // （见 submitBar 的注释）；深度规则与原版名字牌一致。
+        // 这个开关只管「看不看得见实体」，<b>不</b>管「血条能不能画在方块上面」——
+        // 画的时候一律走透视阶段，所以头顶的方块切不掉它、半透明方块也染不上它。
         boolean noDepth = cfg.barNoSeeThrough;
         if (noDepth && HudTarget.occludedByBlocks(mc, entity)) return;
         // HUD 用**全亮**光照，不再取实体所在方块的光照 ——
@@ -154,20 +154,21 @@ public final class HudWorldRenderer {
         double textOpacity = teammate ? cfg.teamTextOpacity : cfg.textOpacity;
         int alpha = (int) Math.round(255.0 * textOpacity);
         int bgAlpha = (int) Math.round(0x40 * textOpacity);   // 原版名牌底色 ≈ 25% 黑
+        boolean seeThroughOk = SeeThroughQuads.passAvailable();
         submitRows(collector, pose, camera, attachment, layout, options.scale,
-                cfg, light, alpha, bgAlpha, noDepth);
+                cfg, light, alpha, bgAlpha, noDepth, seeThroughOk);
 
-        // ③ 血条：同样的 billboard 变换，用原版 boss_bar 纹理自己提交两个四边形。
+        // ③ 血条：同样的 billboard 变换，用原版 boss_bar 纹理自己提交。
         if (layout.barWidth > 0) {
             submitBar(pose, collector, camera, attachment, layout, data, teammate, cfg, light,
-                    (float) options.scale);
+                    (float) options.scale, noDepth, seeThroughOk);
         }
 
         if (pushed) pose.popPose();
     }
 
     /**
-     * 提交所有文字行（两遍，与原版名牌同款）。
+     * 提交所有文字行（与原版名牌同款）。
      *
      * <ol>
      *   <li><b>NORMAL</b>：不透明文字、不带背景、深度测试 —— 正常可见、被墙/模型正常挡住；</li>
@@ -175,13 +176,15 @@ public final class HudWorldRenderer {
      *       这就是原版名牌那层「透视副本」：隔墙也能隐约看到，挡住时也不会整块消失。</li>
      * </ol>
      *
-     * <p>「{@code noDepth} = 血条不可透视」时只提交 NORMAL 那一层（带背景框）。
-     * <b>不能再改成只提交 SEE_THROUGH</b>：26.3 里「透视」不是一个渲染类型属性，
-     * 而是 {@code submitText} 按 {@link Font.DisplayMode} 选的<b>阶段</b>——
-     * SEE_THROUGH 进 {@code SubmitNodeStorage.seeThrough()}，由
-     * {@code LevelRenderer.executeSeeThrough} 在<b>所有地形（含半透明）之后</b>、
-     * 于一份没有深度附件的 render pass 里画。文字因此永远不会被方块或水体混色；
-     * 而 {@code submitCustomGeometry} 没有这个阶段可选（见 {@link #submitBar}）。</p>
+     * <p>「{@code noDepth} = 血条不可透视」时只提交透视那一层（满不透明度 + 背景框）：
+     * 这个开关的语义是「玩家没看到这只实体就整组不画」（判定在 {@link #submit} 开头），
+     * 而不是「文字/血条不能画在方块上面」。所以能画的时候直接进透视阶段，
+     * 头顶的方块、蜂蜜 / 水 / 玻璃都不会切掉或染脏它。</p>
+     *
+     * <p><b>透视是阶段、不是渲染类型</b>：{@code submitText} 按 {@link Font.DisplayMode} 把节点
+     * 放进 {@code SubmitNodeStorage.seeThrough()}，由 {@code LevelRenderer.executeSeeThrough}
+     * 在<b>所有地形（含半透明）之后</b>、于一份没有深度附件的 render pass 里画。
+     * 自定义几何没有这个 API，血条因此另走 {@link SeeThroughQuads}。</p>
      *
      * <p>与原版 {@code submitNameTag} 的差别只有：颜色带 {@code textOpacity} 的 alpha
      * （不透明度生效）、缩放可调。字形阴影（{@code textShadow}）两遍都跟着走。</p>
@@ -190,7 +193,7 @@ public final class HudWorldRenderer {
                                    CameraRenderState camera, Vec3 attachment,
                                    HudLayout.Result layout, double scale,
                                    HudConfig.Cfg cfg, int light, int alpha, int bgAlpha,
-                                   boolean noDepth) {
+                                   boolean noDepth, boolean seeThroughOk) {
         float s = (float) scale;
         int color = (alpha << 24) | 0xFFFFFF;
         // 原版透视副本的文字 alpha ≈ 128，背景 ≈ 64。
@@ -204,9 +207,19 @@ public final class HudWorldRenderer {
         for (HudLayout.Row row : layout.rows) {
             float x = -row.width / 2.0f;
             var text = toComponent(row).getVisualOrderText();
-            collector.submitText(pose, x, row.top, text, cfg.textShadow,
-                    Font.DisplayMode.NORMAL, light, color, noDepth ? background : 0, 0);
-            if (!noDepth) {
+            if (!seeThroughOk) {
+                // 透视阶段在这个环境里不存在（替换了 LevelRenderer 的优化 mod 等）：
+                // 退回实心层，至少能看到 —— 深度规则与原版名字的实心副本一致。
+                collector.submitText(pose, x, row.top, text, cfg.textShadow,
+                        Font.DisplayMode.NORMAL, light, color, background, 0);
+            } else if (noDepth) {
+                // 「血条不可透视」：遮挡由射线负责（submit 开头），这里只负责「别被方块切掉」。
+                // 画在透视阶段 ⇒ 不测深度、也不在深度缓冲里留痕，与名字的透视副本一致。
+                collector.submitText(pose, x, row.top, text, cfg.textShadow,
+                        Font.DisplayMode.SEE_THROUGH, light, color, background, 0);
+            } else {
+                collector.submitText(pose, x, row.top, text, cfg.textShadow,
+                        Font.DisplayMode.NORMAL, light, color, 0, 0);
                 collector.submitText(pose, x, row.top, text, cfg.textShadow,
                         Font.DisplayMode.SEE_THROUGH, light, seeColor, background, 0);
             }
@@ -496,32 +509,42 @@ public final class HudWorldRenderer {
     // ── 血条 ──
 
     /**
-     * 画血条：整条背景 + 进度段，全部走原版 {@code TEXT} 渲染类型。
+     * 画血条：整条背景 + 进度段，纹理仍是原版 {@code boss_bar}（182×5）。
      *
-     * <h2>为什么不能像文字那样补一层「透视副本」</h2>
-     * <p>{@code submitText} 的 {@code DisplayMode.SEE_THROUGH} 进的是
-     * {@code SubmitNodeStorage.seeThrough()} 阶段，由 {@code LevelRenderer.executeSeeThrough}
-     * 在所有地形（含半透明蜂蜜/水/玻璃）<b>之后</b>、于一份没有深度附件的 pass 里画，
-     * 所以它永远压在最上面。</p>
+     * <h2>两层提交，与原版名字牌同构</h2>
+     * <ul>
+     *   <li><b>实心层</b>（{@link RenderTypes#text}）：深度测试 + 写深度 —— 正常可见时
+     *       就是一条实心条，被更近的方块 / 模型挡住时按深度裁掉；</li>
+     *   <li><b>透视层</b>（{@link RenderTypes#textSeeThrough}）：不做深度测试，
+     *       和名字那层「透视副本」一样隔墙也能看到。</li>
+     * </ul>
      *
-     * <p>{@code submitCustomGeometry} 没有这个阶段：它只按
-     * {@code renderType.hasBlending()} 二选一 —— 进 {@code translucentCustomGeometry} 或
-     * {@code solid}，两者都在半透明地形<b>之前</b>执行。而
-     * {@code RenderTypes.textSeeThrough(...)} 的管线是
-     * {@code DepthStencilState(Optional.empty())}（不测深度、<b>不写深度</b>），
-     * 于是随后画的蜂蜜 / 水 / 玻璃深度测试直接放行、混到血条上 ——
-     * 看起来就是「血条变透明了」。同一个类型在「改进的透明（OIT）」下还没有 OIT 管线集，
-     * 会抛 {@code IllegalStateException}。</p>
+     * <h2>透视层为什么必须走 seeThrough 阶段</h2>
+     * <p>{@code submitCustomGeometry} 只按 {@code renderType.hasBlending()} 二选一
+     * （{@code translucentCustomGeometry} 或 {@code solid}），两者都在<b>半透明地形之前</b>
+     * 执行。于是一条「不测深度」的条会被随后画的蜂蜜 / 水 / 玻璃再混一次色 ——
+     * 看起来就是「血条变透明了」（1.6.16 报的就是这个）。</p>
      *
-     * <p>所以血条只用 {@link RenderTypes#text} 提交一次：深度测试 + 写深度，
-     * 更远的半透明方块被深度挡掉，更近的照常遮挡 —— 与方块/水体无关。
-     * 「被墙挡住也能看到一点」由上方文字那层 SEE_THROUGH 副本负责。</p>
+     * <p>26.3 里真正的「透视」是一个<b>阶段</b>：{@code SubmitNodeStorage.seeThrough()}，
+     * 由 {@code LevelRenderer.executeSeeThrough} 在<b>所有地形之后</b>、于一份
+     * <b>没有深度附件</b>的 render pass 里执行。原版只有 {@code submitText} 能进
+     * （它按 {@code DisplayMode} 选阶段），自定义几何没有对应 API —— 所以血条的透视层
+     * 用 {@link SeeThroughQuads} 自己提交一个节点：同样的 billboard 变换、同样的
+     * {@code textSeeThrough} 管线，只是由我们自己的 feature renderer 在同一个阶段里画。</p>
+     *
+     * <p>「血条不可透视」（{@code noDepth}）时只提交透视层，用配置的不透明度：
+     * 此时「玩家看不看得见实体」完全由 {@code HudTarget.occludedByBlocks} 的射线决定
+     * （看不见就整组不画），画的时候不再让方块参与。关掉开关时两层都画 ——
+     * 实心层负责正常可见，半透明的透视层负责「隔墙也能看到一点」。</p>
+     *
+     * <p>兜底：万一透视阶段的节点/渲染器没注册成功（{@link SeeThroughQuads#available()} 为 false），
+     * 不可透视模式退回只画实心层 —— 宁可被方块切一下，也不能一条都不画。</p>
      */
     private static void submitBar(PoseStack pose, SubmitNodeCollector collector,
                                   CameraRenderState camera, Vec3 attachment,
                                   HudLayout.Result layout, EnemyData.Snapshot data,
                                   boolean teammate, HudConfig.Cfg cfg, int light,
-                                  float scale) {
+                                  float scale, boolean noDepth, boolean seeThroughOk) {
         BossBarTexture.Tint tint = teammate
                 ? BossBarTexture.Tint.GREEN
                 : BossBarTexture.tintFor(data.kind);
@@ -529,12 +552,12 @@ public final class HudWorldRenderer {
         double barOpacity = teammate ? cfg.teamBarOpacity : cfg.barOpacity;
         int alpha = (int) Math.round(255.0 * barOpacity);
         int color = BossBarTexture.argb(0xFFFFFF, alpha);
-        // 底板和填充共用「血条不透明度」。
-        // 1.6.13 曾把底板写死成 255 想让「背后的半透明方块糊上来」消失，但那其实是 1.6.16
-        // 修的阶段问题；写死之后滑块的语义就断了 —— 只改面上的进度纹理，外框永远不透明。
-        // 底板照样写深度（TEXT 管线），更远的半透明方块仍被挡掉，底板自己只和背后的
-        // 地形做一次正常的 alpha 混合，这才是「不透明度」该有的样子。
-        int plateColor = BossBarTexture.argb(0xFFFFFF, alpha);
+        int plateColor = color;
+        // 透视层的不透明度：不可透视模式就是配置值（射线已保证看得见实体）；
+        // 否则按原版名字的透视副本那样降到约一半。
+        int seeAlpha = noDepth ? alpha : Math.max(0, alpha * 128 / 255);
+        int seePlate = BossBarTexture.argb(0xFFFFFF, seeAlpha);
+        int seeFill = BossBarTexture.argb(0xFFFFFF, seeAlpha);
 
         float x0 = -layout.barWidth / 2.0f;
         float y0 = layout.barTop;
@@ -542,6 +565,8 @@ public final class HudWorldRenderer {
         float width = layout.barWidth;
         // 改成纯函数，残血（比例小到乘完 <1 px）时至少画 1 px。
         float fill = HudLayout.fillPixels(layout.barWidth, data.ratio);
+        float nativeWidth = BossBarTexture.NATIVE_WIDTH;
+        float uFill = fill > 0.0f ? nativeWidth * Math.min(1.0f, fill / width) : 0.0f;
 
         pose.pushPose();
         pose.translate(attachment.x, attachment.y + 0.5, attachment.z);
@@ -554,50 +579,79 @@ public final class HudWorldRenderer {
         // （两张纹理各裁一半，端盖都对不上）；改成整条背景打底就没有接缝了。
         //
         // 两张四边形共面，所以背景往远处挪 0.02 个名牌像素（原版文字背景也是 -0.01，
-        // 负 z = 更远），这样无论深度写不写、先画谁，进度永远压在背景上面。
-        //
-        // 细节见 {@link #submitBarSpan}：182 纹素不能再整条拉伸 —— 两端 4 纹素的
-        // 渐晕 + 圆角会被压成不到 1 px，条就成了长方形。
+        // 负 z = 更远）—— 实心层靠深度、透视层靠提交顺序，进度永远压在背景上面。
         final float BACKGROUND_Z = -0.02f;
-        final float nativeWidth = BossBarTexture.NATIVE_WIDTH;
+        final float FILL_Z = 0.0f;
 
-        // 用原版世界文字渲染类型：26.3 的 TEXT 管线本来就「深度测试 + 写深度」，
-        // 血条和原版名字牌同一条深度规则；不需要（也不应该）自建管线 ——
-        // 自建 RenderType 在「改进的透明（OIT）」下拿不到 OIT 管线集，会直接抛异常。
+        // 纹理与渲染类型：实心层用 TEXT（深度测试 + 写深度），透视层用 TEXT_SEE_THROUGH
+        // （不测深度、不写深度），与名字的两层完全对应。
         RenderType background = RenderTypes.text(BossBarTexture.backgroundTexture(tint));
         RenderType progress = RenderTypes.text(BossBarTexture.progressTexture(tint));
+        RenderType seeBackground = RenderTypes.textSeeThrough(BossBarTexture.backgroundTexture(tint));
+        RenderType seeProgress = RenderTypes.textSeeThrough(BossBarTexture.progressTexture(tint));
 
-        // ① 整条背景（含空槽）：两端圆角按原尺寸，中段拉伸
-        submitBarSpan(collector, pose, background, x0, x0 + width, 0.0f, nativeWidth,
-                y0, y1, plateColor, light, BACKGROUND_Z);
-
-        // ② 填充段：从左裁到 fill（和原版 blitSprite 的 width 参数一样）。
-        //    裁到满格时 ub 正好是纹理右端，右端盖才会画出来 —— 与原版一致。
+        java.util.List<SeeThroughQuads.Layer> seeLayers = new java.util.ArrayList<>(2);
+        seeLayers.add(new SeeThroughQuads.Layer(seeBackground, (p, vc) ->
+                barSpan(vc, p, x0, x0 + width, 0.0f, nativeWidth,
+                        y0, y1, seePlate, light, BACKGROUND_Z, false)));
         if (fill > 0.0f) {
-            float uFill = nativeWidth * Math.min(1.0f, fill / width);
-            submitBarSpan(collector, pose, progress, x0, x0 + fill, 0.0f, uFill,
-                    y0, y1, color, light, 0.0f);
+            seeLayers.add(new SeeThroughQuads.Layer(seeProgress, (p, vc) ->
+                    barSpan(vc, p, x0, x0 + fill, 0.0f, uFill,
+                            y0, y1, seeFill, light, FILL_Z, false)));
         }
+
+        // 实心层只在「透视副本关掉」或「透视阶段不可用」时提交：
+        // 不可透视模式下本来就不需要它（遮挡交给射线），多画一层只会多一次深度写入。
+        boolean drawSolid = !seeThroughOk || !noDepth;
+        if (drawSolid) {
+            // ① 整条背景（含空槽）：两端圆角按原尺寸，中段拉伸
+            submitBarSpan(collector, pose, background, x0, x0 + width, 0.0f, nativeWidth,
+                    y0, y1, plateColor, light, BACKGROUND_Z);
+            // ② 填充段：从左裁到 fill（和原版 blitSprite 的 width 参数一样）。
+            //    裁到满格时 ub 正好是纹理右端，右端盖才会画出来 —— 与原版一致。
+            if (fill > 0.0f) {
+                submitBarSpan(collector, pose, progress, x0, x0 + fill, 0.0f, uFill,
+                        y0, y1, color, light, FILL_Z);
+            }
+        }
+        // ③ 透视副本：与名字那层一致的条，隔墙 / 挡在方块后面也看得到，且不会被半透明方块染色。
+        if (seeThroughOk) SeeThroughQuads.submit(collector, pose, seeLayers);
         pose.popPose();
     }
 
     /**
-     * 画一条原版 {@code boss_bar} 纹理（182×5），分段规则见 {@link BossBarTexture#slices}：
-     * <b>两端端盖按纹素原尺寸、中段拉伸</b>。
+     * 把一条原版 {@code boss_bar} 纹理（182×5）提交成实心层几何，分段规则见
+     * {@link BossBarTexture#slices}：<b>两端端盖按纹素原尺寸、中段拉伸</b>。
      *
      * @param ua / ub 这段对应的纹理横坐标（纹素，0 ~ 182）
      */
     private static void submitBarSpan(SubmitNodeCollector collector, PoseStack pose, RenderType rt,
                                       float xa, float xb, float ua, float ub,
                                       float y0, float y1, int color, int light, float z) {
+        collector.submitCustomGeometry(pose, rt, (p, vc) ->
+                barSpan(vc, p, xa, xb, ua, ub, y0, y1, color, light, z, true));
+    }
+
+    /**
+     * 直接往 {@link VertexConsumer} 里写一条条的四边形（透视层用，见 {@link SeeThroughQuads}）。
+     *
+     * <p>和 {@link #submitBarSpan} 共用同一套分段与 UV 规则，保证两层的形状逐像素一致。
+     * {@code lit} 决定顶点要不要写 lightmap：实心层走原版世界文字管线
+     * （{@code POSITION_TEX_LIGHTMAP_COLOR}）需要；透视层走 {@code TEXT_SEE_THROUGH}
+     * （{@code POSITION_TEX_COLOR}，没有 lightmap 元素）不能写。</p>
+     */
+    private static void barSpan(VertexConsumer vc, PoseStack.Pose pose,
+                                float xa, float xb, float ua, float ub,
+                                float y0, float y1, int color, int light, float z, boolean lit) {
         final float nw = BossBarTexture.NATIVE_WIDTH;
         for (float[] s : BossBarTexture.slices(xa, xb, ua, ub)) {
-            final float ax = s[0];
-            final float bx = s[1];
-            final float au = s[2] / nw;
-            final float bu = s[3] / nw;
-            collector.submitCustomGeometry(pose, rt, (p, vc) ->
-                    quad(vc, p, ax, y0, bx, y1, au, bu, V_TOP, V_BOTTOM, color, light, z));
+            if (lit) {
+                quad(vc, pose, s[0], y0, s[1], y1, s[2] / nw, s[3] / nw,
+                        V_TOP, V_BOTTOM, color, light, z);
+            } else {
+                quadFlat(vc, pose, s[0], y0, s[1], y1, s[2] / nw, s[3] / nw,
+                        V_TOP, V_BOTTOM, color, z);
+            }
         }
     }
 
@@ -625,6 +679,25 @@ public final class HudWorldRenderer {
         vc.addVertex(pose, x0, y1, z).setColor(r, g, b, a).setUv(u0, v1).setLight(light);
         vc.addVertex(pose, x1, y1, z).setColor(r, g, b, a).setUv(u1, v1).setLight(light);
         vc.addVertex(pose, x1, y0, z).setColor(r, g, b, a).setUv(u1, v0).setLight(light);
+    }
+
+    /**
+     * 同上，但<b>不写 lightmap</b> —— 透视阶段 {@code TEXT_SEE_THROUGH} 的顶点格式是
+     * {@code POSITION_TEX_COLOR}（没有 lightmap 元素），写 light 什么也不会发生，
+     * 真按「世界文字」格式写反而对不上。原版名牌的透视副本也不吃光照。
+     */
+    private static void quadFlat(VertexConsumer vc, PoseStack.Pose pose,
+                                 float x0, float y0, float x1, float y1,
+                                 float u0, float u1, float v0, float v1,
+                                 int argb, float z) {
+        int a = (argb >>> 24) & 0xFF;
+        int r = (argb >>> 16) & 0xFF;
+        int g = (argb >>> 8) & 0xFF;
+        int b = argb & 0xFF;
+        vc.addVertex(pose, x0, y0, z).setColor(r, g, b, a).setUv(u0, v0);
+        vc.addVertex(pose, x0, y1, z).setColor(r, g, b, a).setUv(u0, v1);
+        vc.addVertex(pose, x1, y1, z).setColor(r, g, b, a).setUv(u1, v1);
+        vc.addVertex(pose, x1, y0, z).setColor(r, g, b, a).setUv(u1, v0);
     }
 
     // ── 布局选项 ──
@@ -680,12 +753,16 @@ public final class HudWorldRenderer {
     }
 
     /**
-     * 1.6.0「血量条长度自动调整」：100% 血量 = 上限（默认 75）、0% = 下限（默认 50），中间线性插值。
-     * 上下限已在 {@code HudConfig.normalize} 里夹进 50~150 且保证 min ≤ max。
+     * 「血量条长度自动调整」：100% 血量 = 该组自己的<b>血条长度</b>（{@code maxWidth}，也就是界面上的
+     * 「血条长度」，敌人 / 玩家各一套）、0% = 「自动长度下限」（{@code autoBarMinWidth}），中间线性插值。
+     *
+     * <p>下限高于该组长度时按该组长度处理（自动长度只缩短、不拉长）；两者都由
+     * {@code HudConfig.normalize} / 布局常量夹进 {@link HudLayout#BAR_WIDTH_MIN} ~
+     * {@link HudLayout#BAR_WIDTH_MAX}。</p>
      */
-    static double autoBarWidth(HudConfig.Cfg cfg, float ratio) {
-        double min = Math.min(cfg.autoBarMinWidth, cfg.autoBarMaxWidth);
-        double max = Math.max(cfg.autoBarMinWidth, cfg.autoBarMaxWidth);
+    static double autoBarWidth(HudConfig.Cfg cfg, float ratio, double maxWidth) {
+        double max = Math.max(HudLayout.BAR_WIDTH_MIN, Math.min(HudLayout.BAR_WIDTH_MAX, maxWidth));
+        double min = Math.max(HudLayout.BAR_WIDTH_MIN, Math.min(max, cfg.autoBarMinWidth));
         float r = Float.isNaN(ratio) ? 0.0f : Math.max(0.0f, Math.min(1.0f, ratio));
         return min + (max - min) * r;
     }

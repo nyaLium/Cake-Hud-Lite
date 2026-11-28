@@ -26,8 +26,8 @@ import net.minecraft.server.permissions.Permissions;
  *   <tr><td>隐藏名称下方分数</td><td>{@code hideBelowNameScore}</td><td>默认开</td><td>1.4.7 从「血条设置」挪进来</td></tr>
  *   <tr><td>血条不可透视</td><td>{@code barNoSeeThrough}</td><td>默认开</td><td>隔墙看不到血条</td></tr>
  *   <tr><td>血量条长度自动调整</td><td>{@code autoBarLength}</td><td>默认开</td><td>长度随血量百分比变化</td></tr>
- *   <tr><td>最短 / 最长长度</td><td>{@code autoBarMinWidth} / {@code autoBarMaxWidth}</td><td>默认见配置</td>
- *       <td>自动长度模式下的上下限；自动长度关掉时灰掉</td></tr>
+ *   <tr><td>自动长度下限</td><td>{@code autoBarMinWidth}</td><td>默认见配置</td>
+ *       <td>0% 血量时的长度；最长长度用「血条设置」里各组的「血条长度」，自动长度关掉时灰掉</td></tr>
  * </table>
  *
  * <p>「隐藏上方 Boss 栏（最近敌人 / 队伍血量）」与「常显敌人名称」不是排查开关，已挪回
@@ -155,7 +155,7 @@ public final class DebugSettingsScreen extends Screen {
                         Component.translatable("ctt_hud_fork.config.barNoSeeThrough"),
                         (b, v) -> HudConfig.get().barNoSeeThrough = v));
         y += ROW_GAP;
-        // 血量条长度自动调整：100% = 上限，0% = 下限
+        // 血量条长度自动调整：100% = 该组「血条长度」（最长），0% = 下限
         addRenderableWidget(CycleButton.onOffBuilder(cfg.autoBarLength)
                 .create(x, y, width, ROW_HEIGHT,
                         Component.translatable("ctt_hud_fork.config.autoBarLength"),
@@ -164,6 +164,7 @@ public final class DebugSettingsScreen extends Screen {
                             this.rebuildWidgets();
                         }));
         y += ROW_GAP;
+        // 只剩「下限」：最长长度就是「血条设置」里各组的「血条长度」，不再重复一项。
         AbstractSliderButton minWidth = new ValueSlider(x, y, width, ROW_HEIGHT,
                 HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX, 1, cfg.autoBarMinWidth,
                 v -> Component.translatable("ctt_hud_fork.config.autoBarMinWidth",
@@ -171,14 +172,6 @@ public final class DebugSettingsScreen extends Screen {
                 v -> HudConfig.get().autoBarMinWidth = Math.round(v));
         minWidth.active = cfg.autoBarLength;
         addRenderableWidget(minWidth);
-        y += ROW_GAP;
-        AbstractSliderButton maxWidth = new ValueSlider(x, y, width, ROW_HEIGHT,
-                HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX, 1, cfg.autoBarMaxWidth,
-                v -> Component.translatable("ctt_hud_fork.config.autoBarMaxWidth",
-                        (int) Math.round(v)),
-                v -> HudConfig.get().autoBarMaxWidth = Math.round(v));
-        maxWidth.active = cfg.autoBarLength;
-        addRenderableWidget(maxWidth);
 
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.resetSection"), b -> {
             HudConfig.resetDebug();

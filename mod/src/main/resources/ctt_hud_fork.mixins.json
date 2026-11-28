@@ -7,6 +7,8 @@
     "BossBarHudRenderMixin",
     "BossHealthOverlayAccessor",
     "ContainerPanelMixin",
+    "FeatureRenderDispatcherMixin",
+    "LevelRendererMixin",
     "NameTagHudMixin",
     "NameTagScoreMixin",
     "TitleTextMixin"

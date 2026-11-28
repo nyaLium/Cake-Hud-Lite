@@ -282,7 +282,7 @@ RedHearts = min(RedHearts, MaxHP)          # MaxHP = 红心上限
 | 显示血条（玩家） | `showTeammates` | `HudConfig.Cfg.showTeammates` | 整块开关 |
 | 显示自己的血条 | `showSelf` | `HudConfig.Cfg.showSelf` | 默认关；1.4.0 |
 | 最远显示距离 | `maxDistance` / `teamMaxDistance` | 同上 | 4~128 格，步进 4 |
-| 血条长度 | `barWidth` / `teamBarWidth` | 同上 | 50~150 |
+| 血条长度 | `barWidth` / `teamBarWidth` | 同上 | 50~150；**自动长度开启时是「最长长度」**（100% 血量），0% = 「自动长度下限」 |
 | 缩放比例 | `scale` / `teamScale` | 同上 | 0.75~1.50 |
 | 血条不透明度（敌人） | `barOpacity` | 同上 | **10%~100%，默认 65%**（1.4.6） |
 | 文字不透明度（敌人） | `textOpacity` | 同上 | **10%~100%，默认 100%**（1.4.6） |
@@ -583,7 +583,8 @@ A/B 对照图：`v1.20.2` 归档里的 `bar-caps.png`（旧=方头 / 新=圆头 
 | `teamBarWidth` / `teamScale` | 玩家血条的长度 / 缩放比例 | 50~150 / 0.75~1.50（默认 75 / 0.9） |
 | `teamMaxDistance` | 玩家血条最远显示距离（格） | 4 ~ 256 |
 | `maxDistance` | 敌人血条最远显示距离（格） | 4 ~ 256 |
-| `barWidth` | 敌人血条长度（原版名牌像素） | 50 ~ 150（默认 75） |
+| `barWidth` | 敌人血条长度（原版名牌像素）；**自动长度开启时是「最长长度」** | 50 ~ 150（默认 75） |
+| `autoBarLength` / `autoBarMinWidth` | 血量条长度随血量百分比自动调整（开关）与 **0% 血量时的长度**（满血长度 = 上面那两组的「血条长度」）；`autoBarMaxWidth` 是 v24 迁移载体，已不再读取 | 开关 / 50 ~ 150（默认 50） |
 | `scale` | 敌人缩放比例 | 0.75 ~ 1.50（默认 0.9） |
 | `selfStatsMode` | 属性面板显示方式：0 = 始终显示（HUD），1 = 在容器界面显示，**2 = HUD + 容器都显示（1.0.0 起默认）**；共 4 套配置（`selfStats*` / `container*` / `both*` / `bothContainer*`） | 0~2 |
 | `containerX/Y/Columns/Opacity` | 「在容器界面显示」那一套独立的位置/列数/不透明度 | 0~4000（y 可为 -1）/ 1~3 / 0.2~1.0 |
@@ -819,7 +820,7 @@ gradlew selfCheck      # gradlew build 会自动带上
 | 文字底行 / 血条顶 / 条高 | `TEXT_TOP = -18`、`BAR_TOP = -7`、`BAR_HEIGHT = 5` |
 | 行距 | `ROW_STEP = 10`（`TEXT_BOX_HEIGHT`） |
 | 心与心 / 护甲与元素护甲 | 1 个空格 / **2 个空格**（`HEART_GAP` / `ARMOUR_GAP`） |
-| 血条长度 / 缩放 | 50~150（默认 75）/ 0.75~1.50（默认 0.9） |
+| 血条长度 / 缩放 | 50~150（默认 75，自动长度开启时 = 最长长度）/ 0.75~1.50（默认 0.9） |
 | 显示距离 | 4~256 格，默认 **48** |
 | 血条 / 文字不透明度 | 敌人与玩家**各一套**：`barOpacity` / `textOpacity` / `teamBarOpacity` / `teamTextOpacity`，各自 0.10~1.00，默认 **0.65 / 1.00 / 0.65 / 1.00**（1.4.6 拆血条与文字，1.4.7 再拆敌人与玩家，1.4.8 起两组共用同一套标签） |
 | 文字阴影 | 默认**关**（只管头顶血条；面板独立一项） |

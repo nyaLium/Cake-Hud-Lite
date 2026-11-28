@@ -33,11 +33,11 @@ import java.util.function.DoubleSupplier;
  *   <tr><td>玩家</td><td>血条 / 文字不透明度</td><td>{@code teamBarOpacity} / {@code teamTextOpacity}</td><td>各 10%~100%，默认 65% / 100%；标签与敌人两组共用</td></tr>
  *   <tr><td>敌人</td><td>显示血条</td><td>{@code showBar}</td><td>整块开关</td></tr>
  *   <tr><td>敌人</td><td>最远显示距离</td><td>{@code maxDistance}</td><td>4~256 格，默认 48</td></tr>
- *   <tr><td>敌人</td><td>血条长度</td><td>{@code barWidth}</td><td>50~150，默认 75</td></tr>
+ *   <tr><td>敌人</td><td>血条长度</td><td>{@code barWidth}</td><td>50~150，默认 75；<b>自动长度开启时是「最长长度」</b>（100% 血量）</td></tr>
  *   <tr><td>敌人</td><td>缩放比例</td><td>{@code scale}</td><td>0.75~1.50，默认 0.9</td></tr>
  *   <tr><td>玩家</td><td>显示血条</td><td>{@code showTeammates}</td><td>整块开关；自己永不显示</td></tr>
  *   <tr><td>玩家</td><td>最远显示距离</td><td>{@code teamMaxDistance}</td><td>4~256 格，默认 48</td></tr>
- *   <tr><td>玩家</td><td>血条长度</td><td>{@code teamBarWidth}</td><td>50~150，默认 75</td></tr>
+ *   <tr><td>玩家</td><td>血条长度</td><td>{@code teamBarWidth}</td><td>50~150，默认 75；<b>自动长度开启时是「最长长度」</b>（100% 血量）</td></tr>
  *   <tr><td>玩家</td><td>缩放比例</td><td>{@code teamScale}</td><td>0.75~1.50，默认 0.9</td></tr>
  * </table>
  *
@@ -113,7 +113,7 @@ public final class EntityHudSettingsScreen extends Screen {
         // 最远显示距离：maxDistance（4~128 格，步进 4，默认 48）
         y = slider("maxDistance", y, 4, 256, 4, () -> HudConfig.get().maxDistance,
                 v -> key("maxDistance", (int) Math.round(v)), v -> HudConfig.get().maxDistance = v, 1);
-        // 血条长度：barWidth（50~150 原版名牌像素，默认 75）
+        // 血条长度：barWidth（50~150 原版名牌像素，默认 75）= 自动长度开启时的「最长长度」
         y = slider("barWidth", y, 50, 150, 1, () -> HudConfig.get().barWidth,
                 v -> key("barWidth", (int) Math.round(v)), v -> HudConfig.get().barWidth = v, 1);
         // 缩放比例：scale（0.75~1.50，默认 0.9；整组 UI 缩放）
@@ -138,7 +138,7 @@ public final class EntityHudSettingsScreen extends Screen {
         // 最远显示距离：teamMaxDistance（与敌人同区间，文案共用 maxDistance 那一行）
         y = slider("teamMaxDistance", y, 4, 256, 4, () -> HudConfig.get().teamMaxDistance,
                 v -> key("teamMaxDistance", (int) Math.round(v)), v -> HudConfig.get().teamMaxDistance = v, 2);
-        // 血条长度：teamBarWidth
+        // 血条长度：teamBarWidth（同上，玩家组的「最长长度」）
         y = slider("teamBarWidth", y, 50, 150, 1, () -> HudConfig.get().teamBarWidth,
                 v -> key("teamBarWidth", (int) Math.round(v)), v -> HudConfig.get().teamBarWidth = v, 2);
         // 缩放比例：teamScale

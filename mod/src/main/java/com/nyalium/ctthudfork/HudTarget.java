@@ -3,20 +3,17 @@ package com.nyalium.ctthudfork;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.BushBlock;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -359,12 +356,20 @@ public final class HudTarget {
     }
 
     /**
-     * 一条视线最多允许穿透几层「半透明方块」，超过就按不透明处理
-     * （一层玻璃看得过去，两层叠起来就看不透了 —— 用户口径：「有一定方块深度就不算半透明」）。
+     * 相机 → 目标点这条视线有没有被不透明方块挡住（半透明方块会穿过去继续打）。
+     *
+     * <h2>坑 1：{@code clip} 的「没打中」也是 BlockHitResult</h2>
+     * <p>26.3 的 {@link net.minecraft.world.level.BlockGetter#clip} 在什么都没打中时<b>不返回 null</b>，
+     * 而是返回一个 {@link HitResult.Type#MISS}，其 {@code getBlockPos()} 是<b>终点所在的那一格</b>。
+     * 以前只判 {@code instanceof BlockHitResult} 就当作「打中」，于是实体站在水里时，
+     * 终点格是 {@code water} → 被当成「被水挡住」→ 水里永远看不到血条。
+     * 现在先判 {@code getType() == BLOCK}。</p>
+     *
+     * <h2>坑 2：碰撞上下文不能传玩家</h2>
+     * <p>26.3 的 {@code LiquidBlock.getCollisionShape} 只在「该实体正与流体碰撞」时返回方块形状
+     * （{@code ifMobIsColliding}）；传玩家的话，玩家一泡进水里整片水都变成挡板。
+     * 用 {@link CollisionContext#empty()} 做纯几何判定。</p>
      */
-    static final int MAX_SEE_THROUGH_DEPTH = 1;
-
-    /** 相机 → 目标点这条视线有没有被不透明方块挡住（半透明方块会穿过去继续打）。 */
     private static boolean clear(Minecraft mc, Vec3 from, Vec3 to) {
         try {
             Vec3 start = from;
@@ -375,62 +380,30 @@ public final class HudTarget {
             // 眼睛所在的那一格：贴着墙 / 站在薄方块边缘 / 旁观穿模时，射线会立刻打到自己所在的格子。
             // 它不可能「挡住」自己 —— 跳过它，而且不计入层数。
             BlockPos eye = BlockPos.containing(from);
-            int depth = 0;
             for (int i = 0; i < 8; i++) {
+                // 这里**不能**传玩家：26.3 的 `LiquidBlock.getCollisionShape` 只在
+                // 「该实体正与流体碰撞」时返回方块形状（`ifMobIsColliding`），
+                // 玩家一泡在水里，整片水就变成挡板 → 所有实体被判「被挡」→ 水里看不到血条。
+                // 用空的 CollisionContext 做纯几何判定：流体 / 无碰撞箱方块一律打不到，
+                // 正是「没有实际碰撞体积就不遮挡」。
                 HitResult hit = mc.level.clip(new ClipContext(start, to, ClipContext.Block.COLLIDER,
-                        ClipContext.Fluid.NONE, mc.player));
-                if (!(hit instanceof BlockHitResult blockHit)) return true;   // 没打到方块 = 通畅
+                        ClipContext.Fluid.NONE, CollisionContext.empty()));
+                // 26.3 的 clip 在「什么都没打中」时返回 MISS（不是 null），必须先按类型判掉。
+                if (hit.getType() != HitResult.Type.BLOCK) return true;
+                BlockHitResult blockHit = (BlockHitResult) hit;
                 if (blockHit.getBlockPos().equals(eye)) {
                     start = blockHit.getLocation().add(unit.scale(0.06));
                     if (start.distanceTo(to) <= 0.06) return true;
                     continue;   // 不记层数、不判挡
                 }
-                if (!seeThroughBlock(mc.level.getBlockState(blockHit.getBlockPos()))) return false;
-                // 半透明也有限度：叠得太厚就当作一堵不透明的墙。
-                if (++depth > MAX_SEE_THROUGH_DEPTH) return false;
-                Vec3 next = blockHit.getLocation().add(unit.scale(0.05));
-                if (next.distanceTo(to) <= 0.05 || next.subtract(start).length() < 1.0e-3) return true;
-                start = next;
+                // 只要打中了方块（且不是眼睛所在的那一格）就算被挡：
+                // 射线用 COLLIDER + 空的 CollisionContext，能被打中 ⇒ 有碰撞体积。
+                // 「无碰撞体积的方块不挡」因此是**天然**的，不再需要材质白名单。
+                return false;
             }
             return true;
         } catch (Throwable t) {
             return true;   // 异常按「通畅」处理，宁可多画一帧
         }
     }
-
-    /**
-     * 这个方块能不能「看过去」（1.6.0 口径，用户第二次修订）。
-     *
-     * <table>
-     *   <tr><th>类别</th><th>例子</th><th>是否挡</th></tr>
-     *   <tr><td>透明建材</td><td>玻璃、染色玻璃、玻璃板、染色玻璃板（id 含 {@code glass}）</td><td>不挡</td></tr>
-     *   <tr><td>蜂蜜块</td><td>{@code honey_block}（隔着它明明看得见实体，原版名字也照画）</td><td>不挡</td></tr>
-     *   <tr><td>植物</td><td>草、花、树苗、蘑菇…（{@code BushBlock}）</td><td>不挡</td></tr>
-     *   <tr><td>树叶</td><td>橡木树叶…（{@code LeavesBlock}，<b>不算植物</b>）</td><td>挡</td></tr>
-     *   <tr><td>无碰撞箱的功能方块</td><td>火把、按钮、拉杆、红石线…</td><td>不挡（射线用 COLLIDER 打不到，永远算透明）</td></tr>
-     *   <tr><td>流体</td><td>水、岩浆</td><td>不挡（射线用 {@code Fluid.NONE}）</td></tr>
-     *   <tr><td>冰类 / 铜格栅</td><td>冰、蓝冰、霜冰、铜格栅</td><td><b>挡</b>（按用户要求排除）</td></tr>
-     *   <tr><td>其余一切</td><td>台阶、楼梯、栅栏、门、活板门、箱子、石头…</td><td>挡</td></tr>
-     * </table>
-     *
-     * <p>另外穿透层数受 {@link #MAX_SEE_THROUGH_DEPTH} 限制 —— 一层玻璃算透明，两层就算墙。</p>
-     */
-    static boolean seeThroughBlock(BlockState state) {
-        if (state == null || state.isAir()) return true;
-        Block block = state.getBlock();
-        // 植物（草 / 花 / 树苗 / 蘑菇…）：树叶是 LeavesBlock，刻意不在此列 —— 树叶要挡。
-        if (block instanceof BushBlock) return true;
-        String path = BuiltInRegistries.BLOCK.getKey(block).getPath();
-        // 玻璃系（玻璃 / 染色玻璃 / 玻璃板）+ 蜂蜜块：都是「一眼看得穿」的材质。
-        // 蜂蜜以前漏了 —— 隔着蜂蜜看实体时整组 HUD 会被判成「被墙挡住」而直接不画，
-        // 但原版名字照样显示，看起来就是「血条被方块挡掉了」。
-        // 冰类、铜格栅仍按用户口径算挡；厚度上限见 {@link #MAX_SEE_THROUGH_DEPTH}。
-        return seeThroughId(path);
-    }
-
-    /** 方块 id（不含命名空间）是否属于「能看过去」的材质；抽成纯函数便于自检。 */
-    static boolean seeThroughId(String path) {
-        return path != null && (path.contains("glass") || path.equals("honey_block"));
-    }
-
 }
