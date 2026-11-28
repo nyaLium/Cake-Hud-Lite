@@ -506,6 +506,10 @@ public final class HudWorldRenderer {
         double barOpacity = teammate ? cfg.teamBarOpacity : cfg.barOpacity;
         int alpha = (int) Math.round(255.0 * barOpacity);
         int color = BossBarTexture.argb(0xFFFFFF, alpha);
+        // 底板固定不透明：血条走的是「名字牌」那套世界内渲染，背后若是半透明方块
+        // （蜂蜜 / 水 / 玻璃 / 冰…），半透明底板会和背景混色 —— 看起来就像「血条变透明了」。
+        // 底板按不透明画，观感就与背后方块无关；填充段仍按「血条不透明度」叠加。
+        int plateColor = BossBarTexture.argb(0xFFFFFF, 255);
 
         float x0 = -layout.barWidth / 2.0f;
         float y0 = layout.barTop;
@@ -547,7 +551,7 @@ public final class HudWorldRenderer {
                 y0, y1, seeColor, light, BACKGROUND_Z);
         if (!noDepth) {
             submitBarSpan(collector, pose, background, x0, x0 + width, 0.0f, nativeWidth,
-                    y0, y1, color, light, BACKGROUND_Z);
+                    y0, y1, plateColor, light, BACKGROUND_Z);
         }
 
         // ② 填充段：从左裁到 fill（和原版 blitSprite 的 width 参数一样）。
