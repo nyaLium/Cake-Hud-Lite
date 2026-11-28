@@ -11,7 +11,7 @@
 
 | 版本 | 功能集 | 归档 |
 | --- | --- | --- |
-| **1.6.9**（本地，待发布） | 「血条设置 → 通用」补回三个正常游玩开关：**隐藏上方Boss栏 - 最近敌人的信息**、**隐藏上方Boss栏 - 队伍血量**、**常显敌人名称** —— 它们原来被放在「调试功能」里，需要调试权限才能改；「调试功能」页只保留排查用项（服务端数据 / 实体数量 / 名称下方分数 / 血条不可透视 / 自动长度）；两页的「重置」按钮各自重置自己页面的字段 | 待发布 |
+| **1.6.9**（已发布） | 「血条设置 → 通用」补回三个正常游玩开关：**隐藏上方Boss栏 - 最近敌人的信息**、**隐藏上方Boss栏 - 队伍血量**、**常显敌人名称** —— 它们原来被放在「调试功能」里，需要调试权限才能改；「调试功能」页只保留排查用项（服务端数据 / 实体数量 / 名称下方分数 / 血条不可透视 / 自动长度）；两页的「重置」按钮各自重置自己页面的字段 | [Release](https://github.com/nyaLium/Cake-Team_Towers-Hud-Lite/releases/tag/v1.6.9) |
 | **1.6.8**（已发布） | 「标题设置…」页两处修正：① 滑块的键盘处理回归原版 —— 之前自定义的 `keyPressed` 拦下了左右键，现在删掉，方向键照原版做焦点导航、滑块照原版用 Enter / 空格进入调值；② 标题 / 副标题的位移自动钳制在屏幕内，文字不会被推出屏幕 | [Release](https://github.com/nyaLium/Cake-Team_Towers-Hud-Lite/releases/tag/v1.6.8) |
 | **1.6.7**（本地，未发布） | 修复「标题设置…」入口消失：`HudConfigScreen` 里按钮创建后漏了 `addRenderableWidget`，导致 `/title` 标题 / 副标题的位移与不透明度设置页进不去；键盘导航与位移钳制随后在 1.6.8 一并修正并发布 | 本地（未上传） |
 | **1.6.6**（已发布） | 仓库更名为 `Cake-Team_Towers-Hud-Lite`，mod 元数据与文档链接统一到新地址（`contact`、`tools/archive_audit.py`、README/RELEASES/NOTICE）；无代码改动 | [Release](https://github.com/nyaLium/Cake-Team_Towers-Hud-Lite/releases/tag/v1.6.6) |
