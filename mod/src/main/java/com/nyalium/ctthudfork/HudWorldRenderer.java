@@ -123,8 +123,9 @@ public final class HudWorldRenderer {
         if (attachment == null) attachment = new Vec3(0.0, state.boundingBoxHeight, 0.0);
         // 1.6.0「血条不可透视」：只有「玩家确实看得到这只实体」时才画整组 HUD。
         // 判据与「常显敌人名称」共用 HudTarget（同一个缓存），所以名字与血条一定同进同退；
-        // 判定打在碰撞箱上（不是那个悬空的 HUD 挂点），头顶天花板不会把它判掉；
-        // 绘制时再走无深度通道，方块也就切不掉它。
+        // 判定打在碰撞箱上（不是那个悬空的 HUD 挂点），所以头顶天花板不会把整只实体判掉。
+        // 看得见时也不再改走「无深度」通道 —— 那条路会被随后画的半透明方块混色
+        // （见 submitBar 的注释）；深度规则与原版名字牌一致。
         boolean noDepth = cfg.barNoSeeThrough;
         if (noDepth && HudTarget.occludedByBlocks(mc, entity)) return;
         // HUD 用**全亮**光照，不再取实体所在方块的光照 ——
@@ -158,8 +159,8 @@ public final class HudWorldRenderer {
 
         // ③ 血条：同样的 billboard 变换，用原版 boss_bar 纹理自己提交两个四边形。
         if (layout.barWidth > 0) {
-            submitBar(mc, pose, collector, camera, attachment, layout, data, teammate, cfg, light,
-                    (float) options.scale, noDepth);
+            submitBar(pose, collector, camera, attachment, layout, data, teammate, cfg, light,
+                    (float) options.scale);
         }
 
         if (pushed) pose.popPose();
@@ -173,6 +174,14 @@ public final class HudWorldRenderer {
      *   <li><b>SEE_THROUGH</b>：约 50% 的文字 + 25% 黑的背景框，**不做深度测试** ——
      *       这就是原版名牌那层「透视副本」：隔墙也能隐约看到，挡住时也不会整块消失。</li>
      * </ol>
+     *
+     * <p>「{@code noDepth} = 血条不可透视」时只提交 NORMAL 那一层（带背景框）。
+     * <b>不能再改成只提交 SEE_THROUGH</b>：26.3 里「透视」不是一个渲染类型属性，
+     * 而是 {@code submitText} 按 {@link Font.DisplayMode} 选的<b>阶段</b>——
+     * SEE_THROUGH 进 {@code SubmitNodeStorage.seeThrough()}，由
+     * {@code LevelRenderer.executeSeeThrough} 在<b>所有地形（含半透明）之后</b>、
+     * 于一份没有深度附件的 render pass 里画。文字因此永远不会被方块或水体混色；
+     * 而 {@code submitCustomGeometry} 没有这个阶段可选（见 {@link #submitBar}）。</p>
      *
      * <p>与原版 {@code submitNameTag} 的差别只有：颜色带 {@code textOpacity} 的 alpha
      * （不透明度生效）、缩放可调。字形阴影（{@code textShadow}）两遍都跟着走。</p>
@@ -195,14 +204,9 @@ public final class HudWorldRenderer {
         for (HudLayout.Row row : layout.rows) {
             float x = -row.width / 2.0f;
             var text = toComponent(row).getVisualOrderText();
-            if (noDepth) {
-                // 1.6.0「血条不可透视」：只提交无深度那一层（满不透明度）。
-                // 隔墙不可见由 HudTarget 的射线判定保证，这一层负责「头顶的方块切不掉」。
-                collector.submitText(pose, x, row.top, text, cfg.textShadow,
-                        Font.DisplayMode.SEE_THROUGH, light, color, background, 0);
-            } else {
-                collector.submitText(pose, x, row.top, text, cfg.textShadow,
-                        Font.DisplayMode.NORMAL, light, color, 0, 0);
+            collector.submitText(pose, x, row.top, text, cfg.textShadow,
+                    Font.DisplayMode.NORMAL, light, color, noDepth ? background : 0, 0);
+            if (!noDepth) {
                 collector.submitText(pose, x, row.top, text, cfg.textShadow,
                         Font.DisplayMode.SEE_THROUGH, light, seeColor, background, 0);
             }
@@ -491,11 +495,33 @@ public final class HudWorldRenderer {
 
     // ── 血条 ──
 
-    private static void submitBar(Minecraft mc, PoseStack pose, SubmitNodeCollector collector,
+    /**
+     * 画血条：整条背景 + 进度段，全部走原版 {@code TEXT} 渲染类型。
+     *
+     * <h2>为什么不能像文字那样补一层「透视副本」</h2>
+     * <p>{@code submitText} 的 {@code DisplayMode.SEE_THROUGH} 进的是
+     * {@code SubmitNodeStorage.seeThrough()} 阶段，由 {@code LevelRenderer.executeSeeThrough}
+     * 在所有地形（含半透明蜂蜜/水/玻璃）<b>之后</b>、于一份没有深度附件的 pass 里画，
+     * 所以它永远压在最上面。</p>
+     *
+     * <p>{@code submitCustomGeometry} 没有这个阶段：它只按
+     * {@code renderType.hasBlending()} 二选一 —— 进 {@code translucentCustomGeometry} 或
+     * {@code solid}，两者都在半透明地形<b>之前</b>执行。而
+     * {@code RenderTypes.textSeeThrough(...)} 的管线是
+     * {@code DepthStencilState(Optional.empty())}（不测深度、<b>不写深度</b>），
+     * 于是随后画的蜂蜜 / 水 / 玻璃深度测试直接放行、混到血条上 ——
+     * 看起来就是「血条变透明了」。同一个类型在「改进的透明（OIT）」下还没有 OIT 管线集，
+     * 会抛 {@code IllegalStateException}。</p>
+     *
+     * <p>所以血条只用 {@link RenderTypes#text} 提交一次：深度测试 + 写深度，
+     * 更远的半透明方块被深度挡掉，更近的照常遮挡 —— 与方块/水体无关。
+     * 「被墙挡住也能看到一点」由上方文字那层 SEE_THROUGH 副本负责。</p>
+     */
+    private static void submitBar(PoseStack pose, SubmitNodeCollector collector,
                                   CameraRenderState camera, Vec3 attachment,
                                   HudLayout.Result layout, EnemyData.Snapshot data,
                                   boolean teammate, HudConfig.Cfg cfg, int light,
-                                  float scale, boolean noDepth) {
+                                  float scale) {
         BossBarTexture.Tint tint = teammate
                 ? BossBarTexture.Tint.GREEN
                 : BossBarTexture.tintFor(data.kind);
@@ -503,10 +529,12 @@ public final class HudWorldRenderer {
         double barOpacity = teammate ? cfg.teamBarOpacity : cfg.barOpacity;
         int alpha = (int) Math.round(255.0 * barOpacity);
         int color = BossBarTexture.argb(0xFFFFFF, alpha);
-        // 底板固定不透明：血条走的是「名字牌」那套世界内渲染，背后若是半透明方块
-        // （蜂蜜 / 水 / 玻璃 / 冰…），半透明底板会和背景混色 —— 看起来就像「血条变透明了」。
-        // 底板按不透明画，观感就与背后方块无关；填充段仍按「血条不透明度」叠加。
-        int plateColor = BossBarTexture.argb(0xFFFFFF, 255);
+        // 底板和填充共用「血条不透明度」。
+        // 1.6.13 曾把底板写死成 255 想让「背后的半透明方块糊上来」消失，但那其实是 1.6.16
+        // 修的阶段问题；写死之后滑块的语义就断了 —— 只改面上的进度纹理，外框永远不透明。
+        // 底板照样写深度（TEXT 管线），更远的半透明方块仍被挡掉，底板自己只和背后的
+        // 地形做一次正常的 alpha 混合，这才是「不透明度」该有的样子。
+        int plateColor = BossBarTexture.argb(0xFFFFFF, alpha);
 
         float x0 = -layout.barWidth / 2.0f;
         float y0 = layout.barTop;
@@ -538,33 +566,17 @@ public final class HudWorldRenderer {
         // 自建 RenderType 在「改进的透明（OIT）」下拿不到 OIT 管线集，会直接抛异常。
         RenderType background = RenderTypes.text(BossBarTexture.backgroundTexture(tint));
         RenderType progress = RenderTypes.text(BossBarTexture.progressTexture(tint));
-        // 血条也补一层「透视副本」，和文字一致 —— 被天花板/方块挡住时不会整条消失，
-        // 只会变成半透明的一条（以前只有文字有这层，条会被直接裁掉）。
-        RenderType seeBackground = RenderTypes.textSeeThrough(BossBarTexture.backgroundTexture(tint));
-        RenderType seeProgress = RenderTypes.textSeeThrough(BossBarTexture.progressTexture(tint));
-        // 「无深度」模式（血条不可透视 = 关）只画透视副本这一层：底板仍然用不透明底板，
-        // 填充用配置的不透明度 —— 否则这个模式下底板会退回半透明，半透明方块又会糊上来。
-        int seePlate = noDepth ? plateColor : (Math.max(0, alpha * 128 / 255) << 24) | 0xFFFFFF;
-        int seeFill = noDepth ? color : seePlate;
 
         // ① 整条背景（含空槽）：两端圆角按原尺寸，中段拉伸
-        submitBarSpan(collector, pose, seeBackground, x0, x0 + width, 0.0f, nativeWidth,
-                y0, y1, seePlate, light, BACKGROUND_Z);
-        if (!noDepth) {
-            submitBarSpan(collector, pose, background, x0, x0 + width, 0.0f, nativeWidth,
-                    y0, y1, plateColor, light, BACKGROUND_Z);
-        }
+        submitBarSpan(collector, pose, background, x0, x0 + width, 0.0f, nativeWidth,
+                y0, y1, plateColor, light, BACKGROUND_Z);
 
         // ② 填充段：从左裁到 fill（和原版 blitSprite 的 width 参数一样）。
         //    裁到满格时 ub 正好是纹理右端，右端盖才会画出来 —— 与原版一致。
         if (fill > 0.0f) {
             float uFill = nativeWidth * Math.min(1.0f, fill / width);
-            submitBarSpan(collector, pose, seeProgress, x0, x0 + fill, 0.0f, uFill,
-                    y0, y1, seeFill, light, 0.01f);
-            if (!noDepth) {
-                submitBarSpan(collector, pose, progress, x0, x0 + fill, 0.0f, uFill,
-                        y0, y1, color, light, 0.0f);
-            }
+            submitBarSpan(collector, pose, progress, x0, x0 + fill, 0.0f, uFill,
+                    y0, y1, color, light, 0.0f);
         }
         pose.popPose();
     }
