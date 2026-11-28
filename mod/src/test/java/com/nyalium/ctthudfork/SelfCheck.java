@@ -42,6 +42,7 @@ public final class SelfCheck {
         scrollbarDrag();
         scopedSettings();
         relativePositions();
+        seeThroughMaterials();
 
         System.out.println();
         System.out.println("checks=" + checks + " failures=" + failures.size());
@@ -2392,6 +2393,25 @@ public final class SelfCheck {
 
     private static void fail(String message) {
         failures.add(message);
+    }
+
+    /**
+     * 「血条不可透视」的材质口径：玻璃系 + 蜂蜜块算「看得过去」，冰类 / 树叶 / 石头算挡。
+     *
+     * <p>蜂蜜以前漏了 —— 隔着蜂蜜看实体时整组 HUD 会被判成被墙挡住而直接不画，
+     * 但原版名字照样显示，看起来就是「血条被方块挡掉了」。</p>
+     */
+    private static void seeThroughMaterials() {
+        check(HudTarget.seeThroughId("glass"), "玻璃应算看得过去");
+        check(HudTarget.seeThroughId("white_stained_glass"), "染色玻璃应算看得过去");
+        check(HudTarget.seeThroughId("glass_pane"), "玻璃板应算看得过去");
+        check(HudTarget.seeThroughId("honey_block"), "蜂蜜块应算看得过去");
+        check(!HudTarget.seeThroughId("ice"), "冰类按用户口径算挡");
+        check(!HudTarget.seeThroughId("blue_ice"), "蓝冰算挡");
+        check(!HudTarget.seeThroughId("oak_leaves"), "树叶算挡");
+        check(!HudTarget.seeThroughId("stone"), "石头算挡");
+        check(!HudTarget.seeThroughId("copper_grate"), "铜格栅算挡");
+        check(!HudTarget.seeThroughId(null), "null 不该当成透明");
     }
 
     private static final class Data {

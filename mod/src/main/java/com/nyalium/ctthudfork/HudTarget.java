@@ -2,6 +2,7 @@ package com.nyalium.ctthudfork;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
@@ -371,11 +372,19 @@ public final class HudTarget {
             double length = dir.length();
             if (length < 1.0e-4) return true;
             Vec3 unit = dir.scale(1.0 / length);
+            // 眼睛所在的那一格：贴着墙 / 站在薄方块边缘 / 旁观穿模时，射线会立刻打到自己所在的格子。
+            // 它不可能「挡住」自己 —— 跳过它，而且不计入层数。
+            BlockPos eye = BlockPos.containing(from);
             int depth = 0;
             for (int i = 0; i < 8; i++) {
                 HitResult hit = mc.level.clip(new ClipContext(start, to, ClipContext.Block.COLLIDER,
                         ClipContext.Fluid.NONE, mc.player));
                 if (!(hit instanceof BlockHitResult blockHit)) return true;   // 没打到方块 = 通畅
+                if (blockHit.getBlockPos().equals(eye)) {
+                    start = blockHit.getLocation().add(unit.scale(0.06));
+                    if (start.distanceTo(to) <= 0.06) return true;
+                    continue;   // 不记层数、不判挡
+                }
                 if (!seeThroughBlock(mc.level.getBlockState(blockHit.getBlockPos()))) return false;
                 // 半透明也有限度：叠得太厚就当作一堵不透明的墙。
                 if (++depth > MAX_SEE_THROUGH_DEPTH) return false;
@@ -395,6 +404,7 @@ public final class HudTarget {
      * <table>
      *   <tr><th>类别</th><th>例子</th><th>是否挡</th></tr>
      *   <tr><td>透明建材</td><td>玻璃、染色玻璃、玻璃板、染色玻璃板（id 含 {@code glass}）</td><td>不挡</td></tr>
+     *   <tr><td>蜂蜜块</td><td>{@code honey_block}（隔着它明明看得见实体，原版名字也照画）</td><td>不挡</td></tr>
      *   <tr><td>植物</td><td>草、花、树苗、蘑菇…（{@code BushBlock}）</td><td>不挡</td></tr>
      *   <tr><td>树叶</td><td>橡木树叶…（{@code LeavesBlock}，<b>不算植物</b>）</td><td>挡</td></tr>
      *   <tr><td>无碰撞箱的功能方块</td><td>火把、按钮、拉杆、红石线…</td><td>不挡（射线用 COLLIDER 打不到，永远算透明）</td></tr>
@@ -410,8 +420,17 @@ public final class HudTarget {
         Block block = state.getBlock();
         // 植物（草 / 花 / 树苗 / 蘑菇…）：树叶是 LeavesBlock，刻意不在此列 —— 树叶要挡。
         if (block instanceof BushBlock) return true;
-        // 只认玻璃系（玻璃 / 染色玻璃 / 玻璃板）；冰类、铜格栅按用户要求不再算透明。
-        return BuiltInRegistries.BLOCK.getKey(block).getPath().contains("glass");
+        String path = BuiltInRegistries.BLOCK.getKey(block).getPath();
+        // 玻璃系（玻璃 / 染色玻璃 / 玻璃板）+ 蜂蜜块：都是「一眼看得穿」的材质。
+        // 蜂蜜以前漏了 —— 隔着蜂蜜看实体时整组 HUD 会被判成「被墙挡住」而直接不画，
+        // 但原版名字照样显示，看起来就是「血条被方块挡掉了」。
+        // 冰类、铜格栅仍按用户口径算挡；厚度上限见 {@link #MAX_SEE_THROUGH_DEPTH}。
+        return seeThroughId(path);
+    }
+
+    /** 方块 id（不含命名空间）是否属于「能看过去」的材质；抽成纯函数便于自检。 */
+    static boolean seeThroughId(String path) {
+        return path != null && (path.contains("glass") || path.equals("honey_block"));
     }
 
 }
