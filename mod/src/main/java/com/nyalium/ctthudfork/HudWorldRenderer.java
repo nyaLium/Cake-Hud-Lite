@@ -536,8 +536,9 @@ public final class HudWorldRenderer {
         final float BACKGROUND_Z = -0.02f;
         final float nativeWidth = BossBarTexture.NATIVE_WIDTH;
 
-        RenderType background = RenderTypes.text(BossBarTexture.backgroundTexture(tint));
-        RenderType progress = RenderTypes.text(BossBarTexture.progressTexture(tint));
+        // 写深度的版本：名字牌之后绘制的半透明方块（蜂蜜 / 水 / 玻璃）不会再糊到血条上
+        RenderType background = BarRenderTypes.forTexture(BossBarTexture.backgroundTexture(tint));
+        RenderType progress = BarRenderTypes.forTexture(BossBarTexture.progressTexture(tint));
         // 血条也补一层「透视副本」，和文字一致 —— 被天花板/方块挡住时不会整条消失，
         // 只会变成半透明的一条（以前只有文字有这层，条会被直接裁掉）。
         RenderType seeBackground = RenderTypes.textSeeThrough(BossBarTexture.backgroundTexture(tint));

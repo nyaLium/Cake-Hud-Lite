@@ -9,6 +9,7 @@
     "ContainerPanelMixin",
     "NameTagHudMixin",
     "NameTagScoreMixin",
+    "RenderTypeAccessor",
     "TitleTextMixin"
   ],
   "injectors": {
