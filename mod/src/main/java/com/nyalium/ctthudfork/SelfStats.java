@@ -154,12 +154,22 @@ public final class SelfStats {
     static final class Line {
         final Component text;
         final SelfStatsKind kind;
+        /**
+         * 去重用的身份串：<b>不能只看 {@code getString()}</b>。
+         *
+         * <p>数值行的分数是 {@code ScoreContents}，摊平时不产生文本（{@code getString()} 里也没有），
+         * 于是「速度 ✈」「跳跃 ✈」「二段跳 ✈」这几行会得到同一个 {@code "✈"} —— 按文字去重就会
+         * 只留下第一条，后面几条整行被当成「重复」丢掉（跳跃不上面板就是这么来的）。
+         * 这里把分类、目标名、hover 键、逐字符颜色一起拼进去，同图标不同属性也能区分。</p>
+         */
+        final String signature;
         /** 这一行在 ViewStats 聊天里带的 hover 文本（官方属性名/说明），没有则 null。 */
         final Component hover;
 
-        Line(Component text, SelfStatsKind kind) {
+        Line(Component text, SelfStatsKind kind, String signature) {
             this.text = text;
             this.kind = kind;
+            this.signature = signature;
             this.hover = findHover(text);
         }
     }
@@ -378,7 +388,7 @@ public final class SelfStats {
         // 去重：同一行文字只保留第一次出现，避免「多重显示」。
         java.util.HashSet<String> seen = new java.util.HashSet<>();
         for (Line line : PENDING) {
-            if (seen.add(line.text.getString())) SHOWN.add(line);
+            if (seen.add(line.signature)) SHOWN.add(line);
         }
         System.arraycopy(PENDING_HEARTS, 0, HEARTS, 0, HEARTS.length);
         updateTimeFrozen(now);
@@ -416,10 +426,26 @@ public final class SelfStats {
     }
 
     /** 面板里是否已有文字完全相同的行。 */
-    private static boolean containsSameText(java.util.List<Line> lines, Component message) {
-        String text = message.getString();
+    /**
+     * 一行的去重身份（见 {@link Line#signature}）：分类 + 摊平文本 + 计分板目标名 + hover 键 + 颜色。
+     *
+     * <p>地图不会把同一行发两遍；真重复时这五样一定都一样，所以拿它当「同一行」的判据。</p>
+     */
+    static String signature(SelfStatsCatalog.Analyzed a, SelfStatsKind kind) {
+        StringBuilder sb = new StringBuilder(64);
+        sb.append(kind.id).append('\u0001');
+        if (a != null) {
+            sb.append(a.text()).append('\u0001')
+              .append(a.objectives).append('\u0001')
+              .append(a.hoverKeys).append('\u0001')
+              .append(a.colors);
+        }
+        return sb.toString();
+    }
+
+    private static boolean containsSameText(java.util.List<Line> lines, String signature) {
         for (Line line : lines) {
-            if (line.text.getString().equals(text)) return true;
+            if (line.signature.equals(signature)) return true;
         }
         return false;
     }
@@ -519,10 +545,11 @@ public final class SelfStats {
         if (a.keys.contains(SelfStatsCatalog.TIME_KEY) || isGameTimeLine(flat)) {
             boolean hide = selfTriggered;
             pendingTimeText = flat;
+            String signature = signature(a, SelfStatsKind.TIMER);
             if (panelWorthy(a, SelfStatsKind.TIMER) && PENDING.size() >= MAX_LINES) droppedByCap++;
             if (panelWorthy(a, SelfStatsKind.TIMER) && PENDING.size() < MAX_LINES
-                    && !containsSameText(PENDING, message)) {
-                PENDING.add(new Line(message, SelfStatsKind.TIMER));
+                    && !containsSameText(PENDING, signature)) {
+                PENDING.add(new Line(message, SelfStatsKind.TIMER, signature));
             }
             endCapture(nowMs);
             return hide;
@@ -543,9 +570,11 @@ public final class SelfStats {
         }
 
         // 提示性文本（标题 / 悬停说明）不上面板；缺地图语言文件时整行原文也不上屏。
+        String signature = signature(a, kind);
         if (panelWorthy(a, kind) && PENDING.size() >= MAX_LINES) droppedByCap++;
-        if (panelWorthy(a, kind) && PENDING.size() < MAX_LINES && !containsSameText(PENDING, message)) {
-            PENDING.add(new Line(message, kind));
+        if (panelWorthy(a, kind) && PENDING.size() < MAX_LINES && !containsSameText(PENDING, signature)) {
+            PENDING.add(new Line(message, kind, signature));
+            diag("收下", flat, a, kind);
         }
         addHearts(a, PENDING_HEARTS);
         return selfTriggered;

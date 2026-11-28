@@ -29,6 +29,7 @@ public final class SelfCheck {
         teamBarTitles();
         selfStatsAndPanel();
         viewStatsObjectiveNames();
+        statsDedupeSignature();
         selfStatsFineKinds();
         percentOnlyText();
         lobbyTriggerGuard();
@@ -2361,6 +2362,32 @@ public final class SelfCheck {
         check(SelfStats.hasStatGlyph("3\u2708"), "带数字的 ✈ 行应算属性行");
         check(SelfStats.hasStatGlyph("\u2708"), "没有数字（分数没摊平成文本）时也应算属性行");
         check(!SelfStats.hasStatGlyph("hello"), "普通聊天不该算属性行");
+    }
+
+
+    /**
+     * 去重身份必须能区分「同图标、同英文文本、不同属性」的行。
+     *
+     * <p>速度 / 跳跃 / 二段跳都是 ✈，而分数在摊平文本里不出现，所以以前
+     * {@code getString()} 全都是 {@code "✈"}，按文字去重会把后两条当重复丢掉。</p>
+     */
+    private static void statsDedupeSignature() {
+        SelfStatsCatalog.Analyzed speed = new SelfStatsCatalog.Analyzed();
+        speed.flat.append("\u2708");
+        speed.colors.add(0x55FFFF);
+        speed.hoverKeys.add("view_stats_35");
+        speed.objectives.add("MaxSpeed");
+
+        SelfStatsCatalog.Analyzed jump = new SelfStatsCatalog.Analyzed();
+        jump.flat.append("\u2708");
+        jump.colors.add(0x55FF55);
+        jump.hoverKeys.add("view_stats_42");
+        jump.objectives.add("Jump");
+
+        String a = SelfStats.signature(speed, SelfStatsKind.MAX_SPEED);
+        String b = SelfStats.signature(jump, SelfStatsKind.JUMP);
+        check(!a.equals(b), "速度与跳跃的 ✈ 行不能算同一行");
+        check(a.equals(SelfStats.signature(speed, SelfStatsKind.MAX_SPEED)), "同一行的身份串应稳定");
     }
 
     private static void fail(String message) {
