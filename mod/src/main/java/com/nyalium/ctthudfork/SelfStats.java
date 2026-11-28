@@ -58,19 +58,6 @@ public final class SelfStats {
     /** 一次最多攒多少行（地图一趟大约 20~40 行，留点余量）。 */
     private static final int MAX_LINES = 64;
 
-    // ── 临时诊断（排查「某个属性不上面板」用；查完删） ──
-    private static final org.slf4j.Logger DIAG = org.slf4j.LoggerFactory.getLogger("ctt-hud-fork/selfstats");
-    private static int diagBudget = 40;
-    private static int droppedByCap;
-
-    static void diag(String what, String flat, SelfStatsCatalog.Analyzed a, SelfStatsKind kind) {
-        if (diagBudget <= 0) return;
-        diagBudget--;
-        DIAG.info("[SelfStats] {} flat=[{}] objectives={} hover={} keys={} kind={}",
-                what, flat, a == null ? "-" : a.objectives, a == null ? "-" : a.hoverKeys,
-                a == null ? "-" : a.keys, kind);
-    }
-
     /**
      * 进存档 / 进服后的静默时长（毫秒）—— 这之前**不自动发** {@code /trigger ViewStats}。
      *
@@ -383,8 +370,6 @@ public final class SelfStats {
         }
         emptyCaptures = 0;
         SHOWN.clear();
-        DIAG.info("[SelfStats] 收齐一趟：捕获 {} 行，上限丢弃 {} 行", PENDING.size(), droppedByCap);
-        droppedByCap = 0;
         // 去重：同一行文字只保留第一次出现，避免「多重显示」。
         java.util.HashSet<String> seen = new java.util.HashSet<>();
         for (Line line : PENDING) {
@@ -546,7 +531,6 @@ public final class SelfStats {
             boolean hide = selfTriggered;
             pendingTimeText = flat;
             String signature = signature(a, SelfStatsKind.TIMER);
-            if (panelWorthy(a, SelfStatsKind.TIMER) && PENDING.size() >= MAX_LINES) droppedByCap++;
             if (panelWorthy(a, SelfStatsKind.TIMER) && PENDING.size() < MAX_LINES
                     && !containsSameText(PENDING, signature)) {
                 PENDING.add(new Line(message, SelfStatsKind.TIMER, signature));
@@ -561,20 +545,12 @@ public final class SelfStats {
         boolean ours = isViewStatsLine(flat) || a.hasKey() || a.unresolvedKey
                 || statGlyphLine(flat) || (a.hasScore && hasStatGlyph(flat))
                 || kind == SelfStatsKind.GRASS;
-        if (!ours) {
-            diag("丢弃", flat, a, kind);
-            return false;
-        }
-        if (kind == SelfStatsKind.MISC) {
-            diag("未识别", flat, a, kind);
-        }
+        if (!ours) return false;
 
         // 提示性文本（标题 / 悬停说明）不上面板；缺地图语言文件时整行原文也不上屏。
         String signature = signature(a, kind);
-        if (panelWorthy(a, kind) && PENDING.size() >= MAX_LINES) droppedByCap++;
         if (panelWorthy(a, kind) && PENDING.size() < MAX_LINES && !containsSameText(PENDING, signature)) {
             PENDING.add(new Line(message, kind, signature));
-            diag("收下", flat, a, kind);
         }
         addHearts(a, PENDING_HEARTS);
         return selfTriggered;
