@@ -26,9 +26,14 @@ import java.util.function.DoubleFunction;
  *   <tr><td>筛选实体数量</td><td>{@code payloadLimit}</td><td>1 ~ {@link MobHealthPayload#MAX_ENTRIES}，默认 64</td>
  *       <td>客户端只保留 payload 的前 N 条（服务端已按「玩家优先、其余按距离」排好序）</td></tr>
  *   <tr><td>隐藏名称下方分数</td><td>{@code hideBelowNameScore}</td><td>默认开</td><td>1.4.7 从「血条设置」挪进来</td></tr>
- *   <tr><td>隐藏上方 Boss 栏（最近敌人）</td><td>{@code hideEnemyBossBar}</td><td>默认开</td><td>同上</td></tr>
- *   <tr><td>隐藏上方 Boss 栏（队伍血量）</td><td>{@code hideTeamBossBar}</td><td>默认开</td><td>同上（数据照常读取）</td></tr>
+ *   <tr><td>血条不可透视</td><td>{@code barNoSeeThrough}</td><td>默认开</td><td>隔墙看不到血条</td></tr>
+ *   <tr><td>血量条长度自动调整</td><td>{@code autoBarLength}</td><td>默认开</td><td>长度随血量百分比变化</td></tr>
+ *   <tr><td>最短 / 最长长度</td><td>{@code autoBarMinWidth} / {@code autoBarMaxWidth}</td><td>默认见配置</td>
+ *       <td>自动长度模式下的上下限；自动长度关掉时灰掉</td></tr>
  * </table>
+ *
+ * <p>「隐藏上方 Boss 栏（最近敌人 / 队伍血量）」与「常显敌人名称」不是排查开关，已挪回
+ * 「血条设置 → 通用」，这一页不再提供。</p>
  *
  * <p>「优先使用服务端数据」关掉时，「筛选实体数量」灰掉 —— 都不读 payload 了，条数没有意义。</p>
  */
@@ -137,30 +142,15 @@ public final class DebugSettingsScreen extends Screen {
         addRenderableWidget(limit);
         y += ROW_GAP;
 
-        // 原来在「血条设置 → 通用」里的三个隐藏开关，挪到调试功能页。
+        // 只有「隐藏名称下方分数」还留在这一页；两个 Boss 栏开关与「常显敌人名称」
+        // 已挪回「血条设置 → 通用」（它们不是排查开关）。
         addRenderableWidget(CycleButton.onOffBuilder(cfg.hideBelowNameScore)
                 .create(x, y, width, ROW_HEIGHT,
                         Component.translatable("ctt_hud_fork.config.hideBelowNameScore"),
                         (b, v) -> HudConfig.get().hideBelowNameScore = v));
         y += ROW_GAP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideEnemyBossBar)
-                .create(x, y, width, ROW_HEIGHT,
-                        Component.translatable("ctt_hud_fork.config.hideEnemyBossBar"),
-                        (b, v) -> HudConfig.get().hideEnemyBossBar = v));
-        y += ROW_GAP;
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.hideTeamBossBar)
-                .create(x, y, width, ROW_HEIGHT,
-                        Component.translatable("ctt_hud_fork.config.hideTeamBossBar"),
-                        (b, v) -> HudConfig.get().hideTeamBossBar = v));
-        y += ROW_GAP;
 
-        // ── 1.6.0 新增三项 ──
-        // 常显敌人名称：原版只在「近 / 准星对着」时画名牌，开了就任何距离都画
-        addRenderableWidget(CycleButton.onOffBuilder(cfg.alwaysShowEnemyName)
-                .create(x, y, width, ROW_HEIGHT,
-                        Component.translatable("ctt_hud_fork.config.alwaysShowEnemyName"),
-                        (b, v) -> HudConfig.get().alwaysShowEnemyName = v));
-        y += ROW_GAP;
+        // ── 血条渲染的排查开关 ──
         // 血条不可透视：隔墙看不到，但头顶的方块也切不掉
         addRenderableWidget(CycleButton.onOffBuilder(cfg.barNoSeeThrough)
                 .create(x, y, width, ROW_HEIGHT,

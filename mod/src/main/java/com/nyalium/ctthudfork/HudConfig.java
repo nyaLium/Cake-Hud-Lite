@@ -131,7 +131,7 @@ public final class HudConfig {
         // ── 杂项 ──
 
                 /**
-         * 调试功能：**常显敌人名称**（默认开）。
+         * **常显敌人名称**（默认开；「血条设置 → 通用」）。
          *
          * <p>原版只在自己愿意的时候（近处 / 准星正对着）才填 {@code state.nameTag}，
          * 这里把名字补上，之后仍然由<b>原版</b> {@code submitNameTag} 绘制 ——
@@ -140,7 +140,7 @@ public final class HudConfig {
          */
         public boolean alwaysShowEnemyName = true;
         /**
-         * 1.6.0 调试功能：**血条不可透视**（默认开）。
+         * 调试功能：**血条不可透视**（默认开）。
          *
          * <p>开：只有「玩家确实看得到这只实体」时才画整组 HUD（名字也一起）—— 判定是相机到实体
          * 碰撞箱的射线。算「能看过去」的只有：玻璃系建材、植物（<b>不含树叶</b>）、
@@ -804,6 +804,10 @@ public final class HudConfig {
         c.teamBarWidth = d.teamBarWidth;
         c.teamScale = d.teamScale;
         c.teamMaxDistance = d.teamMaxDistance;
+        // 「通用」里这三项和血条一起重置（它们已经不在调试页）
+        c.hideEnemyBossBar = d.hideEnemyBossBar;
+        c.hideTeamBossBar = d.hideTeamBossBar;
+        c.alwaysShowEnemyName = d.alwaysShowEnemyName;
     }
 
     /** 重置「属性面板」这一页的设置。 */
@@ -832,14 +836,11 @@ public final class HudConfig {
         Cfg c = get();
         c.preferServerData = d.preferServerData;
         c.payloadLimit = d.payloadLimit;
-        c.alwaysShowEnemyName = d.alwaysShowEnemyName;
         c.barNoSeeThrough = d.barNoSeeThrough;
         c.autoBarLength = d.autoBarLength;
         c.autoBarMinWidth = d.autoBarMinWidth;
         c.autoBarMaxWidth = d.autoBarMaxWidth;
         c.hideBelowNameScore = d.hideBelowNameScore;
-        c.hideEnemyBossBar = d.hideEnemyBossBar;
-        c.hideTeamBossBar = d.hideTeamBossBar;
     }
 
     /** 重置「盾牌指示器」这一页的设置。 */

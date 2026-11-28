@@ -25,9 +25,9 @@ import java.util.function.DoubleSupplier;
  * <table>
  *   <tr><th>组</th><th>行</th><th>字段</th><th>说明</th></tr>
  *   <tr><td>通用</td><td>文字阴影</td><td>{@code textShadow}</td><td>只管头顶血条；默认关</td></tr>
- *   <tr><td>通用</td><td>隐藏名称下方分数</td><td>{@code hideBelowNameScore}</td><td>—</td></tr>
  *   <tr><td>通用</td><td>隐藏上方 Boss 栏（最近敌人）</td><td>{@code hideEnemyBossBar}</td><td>数据照常读取</td></tr>
  *   <tr><td>通用</td><td>隐藏上方 Boss 栏（队伍血量）</td><td>{@code hideTeamBossBar}</td><td>队友数据源</td></tr>
+ *   <tr><td>通用</td><td>常显敌人名称</td><td>{@code alwaysShowEnemyName}</td><td>勾上后任何距离都画名牌</td></tr>
  *   <tr><td>敌人</td><td>血条不透明度</td><td>{@code barOpacity}</td><td>10%~100%，1% 一档，默认 65%</td></tr>
  *   <tr><td>敌人</td><td>文字不透明度</td><td>{@code textOpacity}</td><td>10%~100%，1% 一档，默认 100%</td></tr>
  *   <tr><td>玩家</td><td>血条 / 文字不透明度</td><td>{@code teamBarOpacity} / {@code teamTextOpacity}</td><td>各 10%~100%，默认 65% / 100%；标签与敌人两组共用</td></tr>
@@ -97,8 +97,15 @@ public final class EntityHudSettingsScreen extends Screen {
         y = header("ctt_hud_fork.config.header.general", y);
         // 文字阴影：textShadow（只管头顶血条，默认关；面板有自己的一项）
         y = toggle("textShadow", y, 0, () -> HudConfig.get().textShadow, v -> HudConfig.get().textShadow = v);
-        // 三个「隐藏」开关移到「调试功能」页（hideBelowNameScore / hideEnemyBossBar /
-        // hideTeamBossBar），实体页的「通用」只留文字阴影。
+        // 两个「隐藏上方 Boss 栏」开关与「常显敌人名称」都是正常游玩选项（不是排查开关），
+        // 所以放在「通用」里直接可调，不再受调试权限限制。
+        y = toggle("hideEnemyBossBar", y, 0,
+                () -> HudConfig.get().hideEnemyBossBar, v -> HudConfig.get().hideEnemyBossBar = v);
+        y = toggle("hideTeamBossBar", y, 0,
+                () -> HudConfig.get().hideTeamBossBar, v -> HudConfig.get().hideTeamBossBar = v);
+        // 常显敌人名称：原版只在「近 / 准星对着」时画名牌，开了就任何距离都画
+        y = toggle("alwaysShowEnemyName", y, 0,
+                () -> HudConfig.get().alwaysShowEnemyName, v -> HudConfig.get().alwaysShowEnemyName = v);
         // ── 敌人 ──
         y = header("ctt_hud_fork.config.header.enemy", y);
         // 显示血条：showBar（整块开关：关掉后血条 + 心数/护甲文字都不画，只剩原版名字）
