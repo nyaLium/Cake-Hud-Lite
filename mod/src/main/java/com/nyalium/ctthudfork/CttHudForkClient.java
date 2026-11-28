@@ -61,6 +61,8 @@ public final class CttHudForkClient implements ClientModInitializer {
                 new ShieldIndicatorHud());
         // 每 tick 检查是否该刷新属性面板（内部自己节流），顺便处理设置快捷键。
         ClientTickEvents.END_CLIENT_TICK.register(SelfStats::tick);
+        // 队伍条自动开关：以前在渲染线程的 refresh() 里发命令，现在统一到 tick。
+        ClientTickEvents.END_CLIENT_TICK.register(CttHudForkClient::tickTeamBar);
         ClientTickEvents.END_CLIENT_TICK.register(CttHudForkClient::tickKeys);
         openConfig = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.ctt_hud_fork.open_config",
@@ -93,6 +95,12 @@ public final class CttHudForkClient implements ClientModInitializer {
             HudWorldRenderer.resetPercentCache();
             SelfStats.reset();
         });
+    }
+
+    private static void tickTeamBar(Minecraft mc) {
+        if (mc == null || mc.level == null || mc.player == null) return;
+        if (!HudConfig.get().showTeammates) return;
+        PartyBossbarAutoToggle.tick(mc, BossBarTracker.hasTeamBar(mc), BossBarTracker.hasPersonalBar(mc));
     }
 
     private static void tickKeys(Minecraft mc) {

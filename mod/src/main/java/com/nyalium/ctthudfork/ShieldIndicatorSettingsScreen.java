@@ -8,8 +8,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.util.Locale;
-import java.util.function.DoubleConsumer;
-import java.util.function.DoubleFunction;
 
 /**
  * 盾牌指示器设置（位置改为拖动定位 + 不透明度）。
@@ -106,38 +104,4 @@ public final class ShieldIndicatorSettingsScreen extends Screen {
         back();
     }
 
-    private static final class ValueSlider extends AbstractSliderButton {
-        private final double min;
-        private final double max;
-        private final double step;
-        private final DoubleFunction<Component> label;
-        private final DoubleConsumer onChange;
-
-        ValueSlider(int x, int y, int width, int height, double min, double max, double step, double initial,
-                    DoubleFunction<Component> label, DoubleConsumer onChange) {
-            super(x, y, width, height, Component.empty(), (initial - min) / (max - min));
-            this.min = min;
-            this.max = max;
-            this.step = step;
-            this.label = label;
-            this.onChange = onChange;
-            updateMessage();
-        }
-
-        private double currentValue() {
-            double raw = this.min + (this.max - this.min) * this.value;
-            double snapped = Math.round(raw / this.step) * this.step;
-            return Math.max(this.min, Math.min(this.max, snapped));
-        }
-
-        @Override
-        protected void updateMessage() {
-            if (this.label != null) setMessage(this.label.apply(currentValue()));
-        }
-
-        @Override
-        protected void applyValue() {
-            if (this.onChange != null) this.onChange.accept(currentValue());
-        }
-    }
 }

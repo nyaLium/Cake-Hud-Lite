@@ -177,15 +177,21 @@ public final class SelfStatsFilterScreen extends Screen {
     }
 
     private void toggle(SelfStatsKind kind) {
+        // 每次从配置重新取：配置每 2 s 会热加载并整体替换 Cfg 对象，
+        // 缓存下来的 list 引用可能已经指向旧对象（勾了却写不进盘）。
+        this.hidden = HudConfig.hiddenList();
         if (this.hidden.contains(kind.id)) {
             this.hidden.remove(kind.id);
         } else {
             this.hidden.add(kind.id);
         }
+        HudConfig.save();
         this.rebuildWidgets();
     }
 
     private void back() {
+        // 和其它设置页一致：离开就写盘（过滤列表也属于面板配置）。
+        HudConfig.save();
         this.minecraft.gui.setScreen(this.parent);
     }
 

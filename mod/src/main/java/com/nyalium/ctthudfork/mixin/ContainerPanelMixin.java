@@ -1,8 +1,7 @@
 package com.nyalium.ctthudfork.mixin;
 
-import com.nyalium.ctthudfork.SelfStatsPanelAccess;
+import com.nyalium.ctthudfork.SelfStatsPanel;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,14 +17,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <p>仅为客户端 mixin，见 {@code ctt_hud_fork.mixins.json}。</p>
  */
-@Mixin(Screen.class)
+@Mixin(AbstractContainerScreen.class)
 public abstract class ContainerPanelMixin {
 
     @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void cttHudFork$drawSelfStatsOnContainer(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
                                                       float partialTick, CallbackInfo ci) {
-        if ((Object) this instanceof AbstractContainerScreen<?>) {
-            SelfStatsPanelAccess.drawOnContainer(graphics, mouseX, mouseY);
-        }
+        // 直接挂 AbstractContainerScreen：容器界面的 extractRenderState 会先调 extractContents
+        // 画槽位 / 物品名 / 高亮，TAIL 才是「这些都画完之后」—— 面板才真的在它们之上。
+        // （以前挂在 Screen 上，对容器界面而言落点在 extractContents 的开头，面板会被物品压住。）
+        SelfStatsPanel.drawOnContainer(graphics, mouseX, mouseY);
     }
 }

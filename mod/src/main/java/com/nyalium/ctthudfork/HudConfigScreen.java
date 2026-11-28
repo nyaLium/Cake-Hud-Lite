@@ -23,7 +23,7 @@ import net.minecraft.network.chat.Component;
  * </pre>
  *
  * <p>一纵排布、从 {@code TOP} 起排列；总开关关闭时三个入口灰掉。
- * 子界面各有自己的「返回」；写盘只发生在总界面的「完成」（或 ESC）。</p>
+ * 子界面各有自己的「返回」；每页的「返回 / ESC / 完成」都会写盘（含拖动、过滤这类子页）。</p>
  *
  * <p>「完成」= 归一化后写盘并关闭；总界面 ESC 等同「完成」。</p>
  */
@@ -106,7 +106,13 @@ public final class HudConfigScreen extends Screen {
         int resetWidth = 60;
         int resetX = Math.max(0, x - 8 - resetWidth);
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.resetAll"), b -> {
-            HudConfig.reset();
+            // 调试页本来就要求 op≥2 + DEBUG 标签才能改；总重置不能绕过这道门，
+            // 否则没权限的玩家一按就把调试字段也清掉了。
+            if (DebugSettingsScreen.canAdjust()) {
+                HudConfig.reset();
+            } else {
+                HudConfig.resetPreservingDebug();
+            }
             HudConfig.save();
             this.rebuildWidgets();
         }).bounds(resetX, bottomY, resetWidth, ROW_HEIGHT).build());

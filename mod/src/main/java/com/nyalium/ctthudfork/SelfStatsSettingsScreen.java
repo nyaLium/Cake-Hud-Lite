@@ -26,7 +26,7 @@ import java.util.function.DoubleFunction;
  *   <tr><td>显示方式</td><td>{@code selfStatsMode}</td><td>0 HUD / 1 容器 / 2 两者，默认 2</td></tr>
  *   <tr><td>编辑对象</td><td>（仅模式 2）</td><td>HUD 那套 ↔ 容器那套</td></tr>
  *   <tr><td>调整位置…</td><td>{@code *X / *Y} + {@code layoutGuiW/H}</td><td>拖到哪存哪；{@code -1} = 屏幕高 ÷ 3</td></tr>
- *   <tr><td>显示内容过滤…</td><td>{@code selfStatsHidden}</td><td>88 项，默认全显示</td></tr>
+ *   <tr><td>显示内容过滤…</td><td>{@code selfStatsHidden}</td><td>96 项，默认全显示</td></tr>
  * </table>
  */
 public final class SelfStatsSettingsScreen extends Screen {
@@ -82,7 +82,7 @@ public final class SelfStatsSettingsScreen extends Screen {
         // 不再有「编辑对象」—— 模式 2 的两套位置在「调整位置…」里各自摆。
         // 调整位置…：进 SelfStatsLayoutScreen（拖动 / 方向键，写 *X/*Y + layoutGuiW/H）
         y = button("selfStatsMove", y, "move");
-        // 显示内容过滤…：进 SelfStatsFilterScreen（88 项，三节；写 selfStatsHidden）
+        // 显示内容过滤…：进 SelfStatsFilterScreen（96 项，三节；写 selfStatsHidden）
         y = button("selfStatsFilter", y, "filter");
         contentHeight = y;
     }
@@ -157,10 +157,13 @@ public final class SelfStatsSettingsScreen extends Screen {
         boolean editContainer = mode == 1;
         boolean enabled = cfg.showSelfStats;
         boolean forced = SelfStats.forcedByServer(this.minecraft);
-        HudConfig.Panel panel = HudConfig.panel(mode, editContainer, this.width, this.height);
+        // 注意：这里**不要**顺手调 HudConfig.panel(...)。它会经 withLayoutRef 把「位置基准尺寸」
+        // 记成当前 GUI 尺寸 —— 只是打开设置页就会改掉拖动的基准，位置会跟着窗口漂移。
         int width = Math.max(140, Math.min(WIDTH_MAX, this.width - 60));
         int x = this.width / 2 - width / 2;
         List<AbstractWidget> dependent = new ArrayList<>();
+        // 面板关着也允许先调「显示方式 / 过滤」这两项（它们不依赖面板正在绘制）
+        List<AbstractWidget> alwaysActive = new ArrayList<>();
 
         for (Row row : rows) {
             // 整行都在可视区外的行不建控件
@@ -213,7 +216,7 @@ public final class SelfStatsSettingsScreen extends Screen {
                                 HudConfig.Cfg c = HudConfig.get();
                                 c.selfStatsMode = nextMode(c.selfStatsMode);
                                 this.editContainer = false;
-                                rows.clear();      // 模式 2 多一行「编辑对象」，行表要重建
+                                rows.clear();      // 行表里有依赖模式的值（如列数上限），重建一次最稳
                                 buildRows();
                                 this.rebuildWidgets();
                             }
@@ -230,9 +233,19 @@ public final class SelfStatsSettingsScreen extends Screen {
             if (widget == null) continue;
             addWidget(widget);
             this.contentRows.add(widget);
-            if (!row.kind.equals(Kind.TOGGLE)) dependent.add(widget);
+            if (!row.kind.equals(Kind.TOGGLE)) {
+                dependent.add(widget);
+                if (row.kind == Kind.BUTTON) {
+                    String action = (String) row.payload;
+                    if ("mode".equals(action) || "filter".equals(action)) alwaysActive.add(widget);
+                }
+            }
         }
-        if (!enabled) for (AbstractWidget w : dependent) w.active = false;
+        if (!enabled) {
+            for (AbstractWidget w : dependent) {
+                if (!alwaysActive.contains(w)) w.active = false;
+            }
+        }
 
         addRenderableWidget(Button.builder(Component.translatable("ctt_hud_fork.config.resetSection"), b -> {
             HudConfig.resetPanel();
@@ -327,38 +340,4 @@ public final class SelfStatsSettingsScreen extends Screen {
         back();
     }
 
-    private static final class ValueSlider extends net.minecraft.client.gui.components.AbstractSliderButton {
-        private final double min;
-        private final double max;
-        private final double step;
-        private final DoubleFunction<Component> label;
-        private final DoubleConsumer onChange;
-
-        ValueSlider(int x, int y, int width, int height, double min, double max, double step, double initial,
-                    DoubleFunction<Component> label, DoubleConsumer onChange) {
-            super(x, y, width, height, Component.empty(), (initial - min) / (max - min));
-            this.min = min;
-            this.max = max;
-            this.step = step;
-            this.label = label;
-            this.onChange = onChange;
-            updateMessage();
-        }
-
-        private double currentValue() {
-            double raw = this.min + (this.max - this.min) * this.value;
-            double snapped = Math.round(raw / this.step) * this.step;
-            return Math.max(this.min, Math.min(this.max, snapped));
-        }
-
-        @Override
-        protected void updateMessage() {
-            if (this.label != null) setMessage(this.label.apply(currentValue()));
-        }
-
-        @Override
-        protected void applyValue() {
-            if (this.onChange != null) this.onChange.accept(currentValue());
-        }
-    }
 }

@@ -28,7 +28,7 @@ import java.util.List;
  * {@code layoutGuiW × layoutGuiH} 那套 GUI 下的坐标，这里按当前 {@code guiWidth/guiHeight}
  * 换算（{@link HudConfig#panel(int, boolean, int, int)}），窗口大小或 GUI 缩放变化时不会错位。</p>
  */
-final class SelfStatsPanel implements HudElement {
+public final class SelfStatsPanel implements HudElement {
 
     /** 行高（字体 8 px + 2 px 行距，和原版聊天行距一致）。 */
     static final int ROW_HEIGHT = 10;
@@ -57,7 +57,7 @@ final class SelfStatsPanel implements HudElement {
     }
 
     /** 在容器界面上画属性面板（「在容器界面显示」模式），并在光标下显示该属性的官方名称。 */
-    static void drawOnContainer(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+    public static void drawOnContainer(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null) return;
         HudConfig.Cfg cfg = HudConfig.get();

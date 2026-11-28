@@ -126,6 +126,8 @@ final class ShieldIndicatorHud implements HudElement {
         if (!cfg.enabled || !cfg.shieldEnabled) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.player == null) return;
+        // 和血条 / 属性面板走同一个闸门：未知诅咒期间整组 HUD 都不画。
+        if (HudRenderGate.suppressAll(mc)) return;
         ItemStack offhand = mc.player.getOffhandItem();
         if (offhand == null || offhand.isEmpty() || !hasShieldFlag(offhand)) return;
         int maxDamage = offhand.getMaxDamage();

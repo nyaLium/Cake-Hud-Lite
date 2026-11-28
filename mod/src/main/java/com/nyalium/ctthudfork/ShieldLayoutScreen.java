@@ -89,6 +89,8 @@ public final class ShieldLayoutScreen extends Screen {
     }
 
     private void back() {
+        // 和其它设置页一致：离开就写盘（见 SelfStatsLayoutScreen 的同一条说明）。
+        HudConfig.save();
         this.minecraft.gui.setScreen(this.parent);
     }
 

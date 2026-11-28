@@ -73,6 +73,11 @@ public abstract class TitleTextMixin {
     private void cttHudFork$title(GuiGraphicsExtractor graphics, Font font, Component text,
                                   int x, int y, int width, int argb) {
         HudConfig.Cfg cfg = HudConfig.get();
+        if (!cfg.enabled) {
+            // 总开关关掉 = 本模组完全不干预：位置 / 缩放 / 不透明度全部交还原版
+            graphics.textWithBackdrop(font, text, x, y, width, argb);
+            return;
+        }
         int[] offset = HudConfig.titleOffset(graphics.guiWidth(), graphics.guiHeight());
         drawItem(graphics, font, text, x, y, width, argb,
                 TITLE_POSE_SCALE, offset, cfg.titleOpacity, cfg.titleScale);
@@ -83,6 +88,10 @@ public abstract class TitleTextMixin {
     private void cttHudFork$subtitle(GuiGraphicsExtractor graphics, Font font, Component text,
                                      int x, int y, int width, int argb) {
         HudConfig.Cfg cfg = HudConfig.get();
+        if (!cfg.enabled) {
+            graphics.textWithBackdrop(font, text, x, y, width, argb);
+            return;
+        }
         int[] offset = HudConfig.subtitleOffset(graphics.guiWidth(), graphics.guiHeight());
         drawItem(graphics, font, text, x, y, width, argb,
                 SUBTITLE_POSE_SCALE, offset, cfg.subtitleOpacity, cfg.subtitleScale);

@@ -1,13 +1,11 @@
 package com.nyalium.ctthudfork;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.util.function.DoubleConsumer;
-import java.util.function.DoubleFunction;
 
 /**
  * 「标题设置」：{@code /title} 的<b>标题</b>与<b>副标题</b>的整体位移，
@@ -24,10 +22,11 @@ import java.util.function.DoubleFunction;
  * <h2>行 ↔ 配置字段</h2>
  * <table>
  *   <tr><th>行</th><th>字段</th><th>范围 / 默认</th></tr>
- *   <tr><td>标题不透明度</td><td>{@code titleOpacity}</td><td>0.10~1.00，默认 1.00</td></tr>
- *   <tr><td>副标题不透明度</td><td>{@code subtitleOpacity}</td><td>0.10~1.00，默认 1.00</td></tr>
- *   <tr><td>水平位移</td><td>{@code titleOffsetX}</td><td>-300~300 px，默认 0（正 = 右）</td></tr>
- *   <tr><td>垂直位移</td><td>{@code titleOffsetY}</td><td>-300~300 px，默认 0（正 = 下）</td></tr>
+ *   <tr><td>标题不透明度</td><td>{@code titleOpacity}</td><td>0.10~1.00，默认 <b>0.60</b></td></tr>
+ *   <tr><td>副标题不透明度</td><td>{@code subtitleOpacity}</td><td>0.10~1.00，默认 <b>0.60</b></td></tr>
+ *   <tr><td>水平位移</td><td>{@code titleOffsetX} / {@code subtitleOffsetX}</td><td>-300~300 px，默认 0（正 = 右）</td></tr>
+ *   <tr><td>垂直位移</td><td>{@code titleOffsetY} / {@code subtitleOffsetY}</td><td>-300~300 px，默认 <b>-135</b>（正 = 下）</td></tr>
+ *   <tr><td>缩放</td><td>{@code titleScale} / {@code subtitleScale}</td><td>0.50~3.00，默认 1.00</td></tr>
  * </table>
  */
 public final class TitleSettingsScreen extends Screen {
@@ -145,39 +144,4 @@ public final class TitleSettingsScreen extends Screen {
         back();
     }
 
-    /** 与其它设置页同款的滑块（步进吸附 + 自定义文案 + 变化回调）。 */
-    private static final class ValueSlider extends AbstractSliderButton {
-        private final double min;
-        private final double max;
-        private final double step;
-        private final DoubleFunction<Component> label;
-        private final DoubleConsumer onChange;
-
-        ValueSlider(int x, int y, int width, int height, double min, double max, double step, double initial,
-                    DoubleFunction<Component> label, DoubleConsumer onChange) {
-            super(x, y, width, height, Component.empty(), (initial - min) / (max - min));
-            this.min = min;
-            this.max = max;
-            this.step = step;
-            this.label = label;
-            this.onChange = onChange;
-            updateMessage();
-        }
-
-        private double currentValue() {
-            double raw = this.min + (this.max - this.min) * this.value;
-            double snapped = Math.round(raw / this.step) * this.step;
-            return Math.max(this.min, Math.min(this.max, snapped));
-        }
-
-        @Override
-        protected void updateMessage() {
-            if (this.label != null) setMessage(this.label.apply(currentValue()));
-        }
-
-        @Override
-        protected void applyValue() {
-            if (this.onChange != null) this.onChange.accept(currentValue());
-        }
-    }
 }

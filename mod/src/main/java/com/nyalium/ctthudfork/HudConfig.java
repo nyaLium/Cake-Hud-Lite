@@ -188,24 +188,30 @@ public final class HudConfig {
         /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}；1.20.42）。 */
         public int containerY = DEFAULT_Y_SENTINEL;
         /** 容器那套的列数（1~3）。 */
+        /** 历史字段（v7 迁移载体）：当前渲染只读全局 {@link #selfStatsColumns}，这里不再生效。 */
         public int containerColumns = 2;
         /** 容器那套的不透明度（0.20~1.00）。 */
+        /** 历史字段（v7 迁移载体）：当前渲染只读全局 {@link #selfStatsOpacity}。 */
         public double containerOpacity = 1.0;
         /** 模式 2 在 HUD 上的那一套配置。 */
         public int bothX = 4;
         /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}）。 */
         public int bothY = DEFAULT_Y_SENTINEL;
         /** 模式 2 HUD 那套的列数（1~3）。 */
+        /** 历史字段（v8 迁移载体）：同 {@link #containerColumns}。 */
         public int bothColumns = 2;
         /** 模式 2 HUD 那套的不透明度（0.20~1.00）。 */
+        /** 历史字段（v8 迁移载体）：同 {@link #containerOpacity}。 */
         public double bothOpacity = 1.0;
         /** 模式 2 在容器界面上的那一套配置（独立）。 */
         public int bothContainerX = 4;
         /** 同 {@link #selfStatsY}：{@code -1} = 动态默认位置（屏幕高 ÷ {@value #DEFAULT_Y_DENOM}）。 */
         public int bothContainerY = DEFAULT_Y_SENTINEL;
         /** 模式 2 容器那套的列数（1~3）。 */
+        /** 历史字段（v9 迁移载体）：同 {@link #containerColumns}。 */
         public int bothContainerColumns = 2;
         /** 模式 2 容器那套的不透明度（0.20~1.00）。 */
+        /** 历史字段（v9 迁移载体）：同 {@link #containerOpacity}。 */
         public double bothContainerOpacity = 1.0;
         /** 属性面板不透明度，0.20 ~ 1.00（可调；界面文案叫「不透明度」）。 */
         public double selfStatsOpacity = 1.0;
@@ -394,11 +400,34 @@ public final class HudConfig {
         cfg = new Cfg();
     }
 
-    /** 当前显示方式 + 上下文对应的布局；{@code container=true} 取容器界面那一套。 */
-    public static Panel panel(int mode, boolean container) {
-        return panel(mode, container, 0, 0);
+    /**
+     * 恢复默认，但**保留调试页字段**。
+     *
+     * <p>调试页的入口本来就有「op ≥ 2 且带 DEBUG 标签」的门槛，可根页的「总重置」原来会顺手把那些
+     * 字段也冲掉 —— 等于绕过了权限模型。没权限的玩家点总重置时走这条。</p>
+     */
+    public static void resetPreservingDebug() {
+        Cfg d = get();
+        boolean preferServerData = d.preferServerData;
+        int payloadLimit = d.payloadLimit;
+        boolean hideBelowNameScore = d.hideBelowNameScore;
+        boolean barNoSeeThrough = d.barNoSeeThrough;
+        boolean autoBarLength = d.autoBarLength;
+        double autoBarMinWidth = d.autoBarMinWidth;
+        double autoBarMaxWidth = d.autoBarMaxWidth;
+
+        cfg = new Cfg();
+
+        cfg.preferServerData = preferServerData;
+        cfg.payloadLimit = payloadLimit;
+        cfg.hideBelowNameScore = hideBelowNameScore;
+        cfg.barNoSeeThrough = barNoSeeThrough;
+        cfg.autoBarLength = autoBarLength;
+        cfg.autoBarMinWidth = autoBarMinWidth;
+        cfg.autoBarMaxWidth = autoBarMaxWidth;
     }
 
+    /** 当前显示方式 + 上下文对应的布局；{@code container=true} 取容器界面那一套。 */
     /**
      * 当前显示方式 + 上下文对应的布局，位置按当前 GUI 尺寸换算。
      *
@@ -571,6 +600,10 @@ public final class HudConfig {
      */
     public static void resetPanelPosition(int mode, boolean container) {
         Cfg c = get();
+        // 基准尺寸一起清掉：默认位置存的是哨兵 / 固定 4 px，不该再按「上一次拖动的窗口尺寸」缩放，
+        // 否则在大窗口里点「回到初始位置」会得到 8 px 并随窗口漂移。
+        c.layoutGuiW = 0;
+        c.layoutGuiH = 0;
         switch (mode) {
             case 1 -> {
                 c.containerX = DEFAULT_X;
@@ -589,32 +622,6 @@ public final class HudConfig {
                 c.selfStatsX = DEFAULT_X;
                 c.selfStatsY = DEFAULT_Y_SENTINEL;
             }
-        }
-    }
-
-    /** 写当前显示方式 + 上下文那一套的列数（1~3）。 */
-    public static void setPanelColumns(int mode, boolean container, int columns) {
-        Cfg c = get();
-        switch (mode) {
-            case 1 -> c.containerColumns = columns;
-            case 2 -> {
-                if (container) c.bothContainerColumns = columns;
-                else c.bothColumns = columns;
-            }
-            default -> c.selfStatsColumns = columns;
-        }
-    }
-
-    /** 写当前显示方式 + 上下文那一套的不透明度（0.20~1.00）。 */
-    public static void setPanelOpacity(int mode, boolean container, double opacity) {
-        Cfg c = get();
-        switch (mode) {
-            case 1 -> c.containerOpacity = opacity;
-            case 2 -> {
-                if (container) c.bothContainerOpacity = opacity;
-                else c.bothOpacity = opacity;
-            }
-            default -> c.selfStatsOpacity = opacity;
         }
     }
 
@@ -656,8 +663,11 @@ public final class HudConfig {
         try {
             String json = Files.readString(file, StandardCharsets.UTF_8);
             Cfg read = GSON.fromJson(json, Cfg.class);
+            // 顺序：解析 → 迁移 → 归一化。
+            // 反过来（先归一化）会把「旧默认值」提前夹到新范围里，迁移规则就再也匹配不到 ——
+            // 迁移规则全是「仍等于旧默认值才改」。
+            migrate(json, read);
             cfg = normalize(read);
-            migrate(json, cfg);
         } catch (Exception e) {
             // 手改坏了（类型不对 / JSON 写错）时**保留上一份可用配置**，不要静默恢复默认值
             // ——否则玩家以为自己只改错了一行，实际整套设置被清空。
@@ -828,6 +838,16 @@ public final class HudConfig {
         c.bothY = d.bothY;
         c.bothContainerX = d.bothContainerX;
         c.bothContainerY = d.bothContainerY;
+        // 面板页的列数 / 不透明度 / 隐藏项：以前「重置」漏了这几项，点了重置还在
+        c.selfStatsHidden = new java.util.ArrayList<>(d.selfStatsHidden);
+        c.containerColumns = d.containerColumns;
+        c.containerOpacity = d.containerOpacity;
+        c.bothColumns = d.bothColumns;
+        c.bothOpacity = d.bothOpacity;
+        c.bothContainerColumns = d.bothContainerColumns;
+        c.bothContainerOpacity = d.bothContainerOpacity;
+        c.layoutGuiW = 0;
+        c.layoutGuiH = 0;
     }
 
     /** 重置「调试功能」这一页的设置。 */
@@ -869,9 +889,6 @@ public final class HudConfig {
         c.subtitleScale = d.subtitleScale;
     }
 
-
-
-
     /**
      * 把任意（含非法 / 缺省 / NaN）配置夹到安全范围。
      *
@@ -880,18 +897,18 @@ public final class HudConfig {
     static Cfg normalize(Cfg read) {
         if (read == null) read = new Cfg();
         // 血条与文字的不透明度分开；敌人 / 玩家再各一套（各自 0.10 ~ 1.00）
-        read.barOpacity = clamp(read.barOpacity, 0.1, 1.0);
-        read.textOpacity = clamp(read.textOpacity, 0.1, 1.0);
-        read.teamBarOpacity = clamp(read.teamBarOpacity, 0.1, 1.0);
-        read.teamTextOpacity = clamp(read.teamTextOpacity, 0.1, 1.0);
-        read.scale = clamp(read.scale, 0.75, 1.5);
+        read.barOpacity = round2(clamp(read.barOpacity, 0.1, 1.0));
+        read.textOpacity = round2(clamp(read.textOpacity, 0.1, 1.0));
+        read.teamBarOpacity = round2(clamp(read.teamBarOpacity, 0.1, 1.0));
+        read.teamTextOpacity = round2(clamp(read.teamTextOpacity, 0.1, 1.0));
+        read.scale = round2(clamp(read.scale, 0.75, 1.5));
         read.maxDistance = clamp(read.maxDistance, 4.0, 256.0);
         // 血条长度：非法值回落默认 75，其余夹在 50~150。
         if (Double.isNaN(read.barWidth)) read.barWidth = HudLayout.BAR_WIDTH_DEFAULT;
         read.barWidth = clamp(read.barWidth, HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX);
         if (Double.isNaN(read.teamBarWidth)) read.teamBarWidth = HudLayout.BAR_WIDTH_DEFAULT;
         read.teamBarWidth = clamp(read.teamBarWidth, HudLayout.BAR_WIDTH_MIN, HudLayout.BAR_WIDTH_MAX);
-        read.teamScale = clamp(read.teamScale, 0.75, 1.5);
+        read.teamScale = round2(clamp(read.teamScale, 0.75, 1.5));
         read.teamMaxDistance = clamp(read.teamMaxDistance, 4.0, 256.0);
         // 1.6.0 调试功能：自动条长的上下限也夹在布局允许的 50~150，并保证 min ≤ max。
         if (Double.isNaN(read.autoBarMinWidth)) read.autoBarMinWidth = HudLayout.BAR_WIDTH_MIN;
@@ -910,21 +927,21 @@ public final class HudConfig {
         // y = -1 是「动态默认位置」的哨兵，允许保留。
         read.selfStatsY = (int) clamp(read.selfStatsY, -1.0, 4000.0);
         // 不透明度、内容过滤（「文字大小」在 1.0.0 删掉，面板固定 1.0 倍）
-        read.selfStatsOpacity = clamp(read.selfStatsOpacity, 0.2, 1.0);
+        read.selfStatsOpacity = round2(clamp(read.selfStatsOpacity, 0.2, 1.0));
         // 显示方式（0=始终显示 HUD，1=在容器界面显示）+ 容器那一套配置
         read.selfStatsMode = (int) clamp(read.selfStatsMode, 0.0, 2.0);
         read.containerColumns = (int) clamp(read.containerColumns, 1.0, 3.0);
         read.containerX = (int) clamp(read.containerX, 0.0, 4000.0);
         read.containerY = (int) clamp(read.containerY, -1.0, 4000.0);
-        read.containerOpacity = clamp(read.containerOpacity, 0.2, 1.0);
+        read.containerOpacity = round2(clamp(read.containerOpacity, 0.2, 1.0));
         read.bothColumns = (int) clamp(read.bothColumns, 1.0, 3.0);
         read.bothX = (int) clamp(read.bothX, 0.0, 4000.0);
         read.bothY = (int) clamp(read.bothY, -1.0, 4000.0);
-        read.bothOpacity = clamp(read.bothOpacity, 0.2, 1.0);
+        read.bothOpacity = round2(clamp(read.bothOpacity, 0.2, 1.0));
         read.bothContainerColumns = (int) clamp(read.bothContainerColumns, 1.0, 3.0);
         read.bothContainerX = (int) clamp(read.bothContainerX, 0.0, 4000.0);
         read.bothContainerY = (int) clamp(read.bothContainerY, -1.0, 4000.0);
-        read.bothContainerOpacity = clamp(read.bothContainerOpacity, 0.2, 1.0);
+        read.bothContainerOpacity = round2(clamp(read.bothContainerOpacity, 0.2, 1.0));
         read.selfStatsHidden = sanitizeKinds(read.selfStatsHidden);
         // 盾牌指示器（可拖动定位 + 不透明度；缩放 0.5~1.5 小数倍）
         read.shieldX = (int) clamp(read.shieldX, -1.0, 4000.0);
@@ -936,8 +953,8 @@ public final class HudConfig {
             read.layoutGuiW = 0;
             read.layoutGuiH = 0;
         }
-        read.shieldScale = clamp(read.shieldScale, SHIELD_SCALE_MIN, SHIELD_SCALE_MAX);
-        read.shieldOpacity = clamp(read.shieldOpacity, 0.1, 1.0);
+        read.shieldScale = round2(clamp(read.shieldScale, SHIELD_SCALE_MIN, SHIELD_SCALE_MAX));
+        read.shieldOpacity = round2(clamp(read.shieldOpacity, 0.1, 1.0));
         // /title 的标题 / 副标题（不透明度  ~ ，位移 ±4000 px）
         // 标题与副标题的位移 / 缩放各自独立（缩放  ~ ）
         read.titleOpacity = round2(clamp(read.titleOpacity, 0.1, 1.0));

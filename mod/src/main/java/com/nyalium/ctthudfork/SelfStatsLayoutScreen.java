@@ -93,6 +93,9 @@ public final class SelfStatsLayoutScreen extends Screen {
 
     private void back() {
         if (this.parent != null) this.parent.setEditContainer(this.containerConfig);
+        // 和其它设置页一致：离开就写盘。以前只有父页的「返回」才保存，
+        // 拖完位置直接关游戏（或崩了）改动就全丢了。
+        HudConfig.save();
         this.minecraft.gui.setScreen(this.parent);
     }
 
@@ -169,7 +172,7 @@ public final class SelfStatsLayoutScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
         // 先让按钮/滑块吃事件，别把「返回」「回到初始位置」的点击吞成拖动。
         if (super.mouseClicked(event, doubled)) return true;
-        if (!acceptButton(event)) return false;
+        if (!Pointer.accept(event)) return false;
         int[] bounds = currentBounds();
         double[] gui = toGui(event);
         // 只允许在面板（含 4 px 余量）上按下开始抓；点空白处什么都不做。
@@ -203,7 +206,7 @@ public final class SelfStatsLayoutScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        if (this.dragging && acceptButton(event)) {
+        if (this.dragging && Pointer.accept(event)) {
             this.dragging = false;
             return true;
         }
@@ -241,10 +244,6 @@ public final class SelfStatsLayoutScreen extends Screen {
                 this.width, this.height);
     }
 
-    /** 左键（0）为主；部分 SDL/新输入链会把左键报成 1，一并接受。 */
-    private static boolean acceptButton(MouseButtonEvent event) {
-        return event != null && (event.button() == 0 || event.button() == 1);
-    }
 
     /**
      * 事件坐标 → GUI 坐标。

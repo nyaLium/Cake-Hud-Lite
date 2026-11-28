@@ -2,12 +2,8 @@
   "modmenu.nameTranslation.ctt-hud-fork": "Cake Team Towers HUD - Fork",
   "modmenu.descriptionTranslation.ctt-hud-fork": "Built for the Cake Team Towers map:\nhealth bars and info above enemies and players, a shield cooldown indicator, and a stats panel (/trigger ViewStats).\nClient-side only; server component optional.",
   "ctt_hud_fork.config.title": "CTT HUD - Fork Settings",
-  "ctt_hud_fork.config.section.general": "General settings",
-  "ctt_hud_fork.config.section.enemy": "Enemy settings",
-  "ctt_hud_fork.config.section.player": "Player settings",
   "ctt_hud_fork.config.section.self_stats": "Stats panel settings…",
   "ctt_hud_fork.config.back": "Back",
-  "ctt_hud_fork.config.reset": "Reset settings",
   "ctt_hud_fork.config.enabled": "Enabled",
   "ctt_hud_fork.config.textShadow": "Text shadow",
   "ctt_hud_fork.config.barOpacity": "Bar opacity: %s",
@@ -128,7 +124,6 @@
   "ctt_hud_fork.config.kind.status_76": "Observed",
   "key.ctt_hud_fork.open_config": "Open CTT settings",
   "ctt_hud_fork.config.selfStatsMode.both": "HUD + container",
-  "ctt_hud_fork.config.selfStatsTarget": "Editing: %s",
   "ctt_hud_fork.config.selfStatsTarget.hud": "HUD",
   "ctt_hud_fork.config.selfStatsTarget.container": "Container screen",
   "ctt_hud_fork.config.section.entity": "Bar settings...",
@@ -184,5 +179,10 @@
   "ctt_hud_fork.config.subtitleScale": "Subtitle scale: %s",
   "ctt_hud_fork.config.titleHint": "Left column = title, right = subtitle (actionbar excluded) · scale is around the text centre",
   "ctt_hud_fork.config.titlePage": "Titles",
-  "ctt_hud_fork.config.resetAll": "Reset all"
+  "ctt_hud_fork.config.resetAll": "Reset all",
+  "ctt_hud_fork.config.teamMaxDistance": "Max display distance: %s blocks",
+  "ctt_hud_fork.config.teamBarWidth": "Bar length: %s",
+  "ctt_hud_fork.config.teamScale": "Scale: %s",
+  "ctt_hud_fork.config.teamBarOpacity": "Bar opacity: %s",
+  "ctt_hud_fork.config.teamTextOpacity": "Text opacity: %s"
 }

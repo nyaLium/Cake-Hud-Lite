@@ -314,7 +314,7 @@ public final class SelfCheck {
             HudConfig.movePanel(1, false, 33, 44, 320, 240);
             check(c.containerX == 33 && c.containerY == 44, "容器模式下移动应写 container*");
             check(c.selfStatsX == 11, "HUD 那一套不该被改");
-            HudConfig.setPanelColumns(1, false, 2);
+            c.containerColumns = 2;   // 历史字段：直接写（对应的 setter 已删）
             check(c.containerColumns == 2 && c.selfStatsColumns == 3, "setPanelColumns 应只改当前模式");
 
             // 模式 2 有自己的一套（v8）
@@ -2098,10 +2098,10 @@ public final class SelfCheck {
         check(live.bothX == 4 && live.bothY == -1, "模式 2 的 HUD 那套不该被带动（y 仍是动态默认）");
         check(live.selfStatsX == 4 && live.selfStatsY == -1, "模式 0 那套不该被带动（y 仍是动态默认）");
         check(live.containerX == 4 && live.containerY == -1, "模式 1 那套不该被带动（y 仍是动态默认）");
-        HudConfig.setPanelColumns(2, false, 3);
+        live.bothColumns = 3;   // 历史字段：直接写（对应的 setter 已删）
         check(live.bothColumns == 3, "模式 2 HUD 列数应写入");
         check(live.bothContainerColumns == 2, "模式 2 容器列数不该被带动");
-        HudConfig.setPanelOpacity(2, true, 0.5);
+        live.bothContainerOpacity = 0.5;   // 历史字段：直接写（对应的 setter 已删）
         check(live.bothContainerOpacity == 0.5 && live.bothOpacity == 1.0, "不透明度只写当前对象");
 
         // ③ 两种文字阴影互不影响，且都不碰盾牌

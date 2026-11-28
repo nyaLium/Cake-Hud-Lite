@@ -111,7 +111,7 @@ public final class EntityHudSettingsScreen extends Screen {
         // 显示血条：showBar（整块开关：关掉后血条 + 心数/护甲文字都不画，只剩原版名字）
         y = toggle("showBar", y, 0, () -> HudConfig.get().showBar, v -> HudConfig.get().showBar = v);
         // 最远显示距离：maxDistance（4~128 格，步进 4，默认 48）
-        y = slider("maxDistance", y, 4, 128, 4, () -> HudConfig.get().maxDistance,
+        y = slider("maxDistance", y, 4, 256, 4, () -> HudConfig.get().maxDistance,
                 v -> key("maxDistance", (int) Math.round(v)), v -> HudConfig.get().maxDistance = v, 1);
         // 血条长度：barWidth（50~150 原版名牌像素，默认 75）
         y = slider("barWidth", y, 50, 150, 1, () -> HudConfig.get().barWidth,
@@ -136,21 +136,21 @@ public final class EntityHudSettingsScreen extends Screen {
         y = toggle("showSelf", y, 0, () -> HudConfig.get().showSelf,
                 v -> HudConfig.get().showSelf = v);
         // 最远显示距离：teamMaxDistance（与敌人同区间，文案共用 maxDistance 那一行）
-        y = slider("teamMaxDistance", y, 4, 128, 4, () -> HudConfig.get().teamMaxDistance,
-                v -> key("maxDistance", (int) Math.round(v)), v -> HudConfig.get().teamMaxDistance = v, 2);
+        y = slider("teamMaxDistance", y, 4, 256, 4, () -> HudConfig.get().teamMaxDistance,
+                v -> key("teamMaxDistance", (int) Math.round(v)), v -> HudConfig.get().teamMaxDistance = v, 2);
         // 血条长度：teamBarWidth
         y = slider("teamBarWidth", y, 50, 150, 1, () -> HudConfig.get().teamBarWidth,
-                v -> key("barWidth", (int) Math.round(v)), v -> HudConfig.get().teamBarWidth = v, 2);
+                v -> key("teamBarWidth", (int) Math.round(v)), v -> HudConfig.get().teamBarWidth = v, 2);
         // 缩放比例：teamScale
         y = slider("teamScale", y, 0.75, 1.5, 0.05, () -> HudConfig.get().teamScale,
-                v -> key("scale", String.format(Locale.ROOT, "%.2f", v)), v -> HudConfig.get().teamScale = v, 2);
+                v -> key("teamScale", String.format(Locale.ROOT, "%.2f", v)), v -> HudConfig.get().teamScale = v, 2);
         // 玩家（含自己）的血条 / 文字不透明度（各 10~100%）
         // 标签与敌人那两条共用（所在分组已经写明「玩家设置」，不必再写「玩家」前缀）
-        y = slider("barOpacity", y, 10, 100, 1, () -> HudConfig.get().teamBarOpacity * 100,
-                v -> key("barOpacity", Math.round(v) + "%"),
+        y = slider("teamBarOpacity", y, 10, 100, 1, () -> HudConfig.get().teamBarOpacity * 100,
+                v -> key("teamBarOpacity", Math.round(v) + "%"),
                 v -> HudConfig.get().teamBarOpacity = v / 100.0, 2);
-        y = slider("textOpacity", y, 10, 100, 1, () -> HudConfig.get().teamTextOpacity * 100,
-                v -> key("textOpacity", Math.round(v) + "%"),
+        y = slider("teamTextOpacity", y, 10, 100, 1, () -> HudConfig.get().teamTextOpacity * 100,
+                v -> key("teamTextOpacity", Math.round(v) + "%"),
                 v -> HudConfig.get().teamTextOpacity = v / 100.0, 2);
         lastY = y;
     }
@@ -326,38 +326,4 @@ public final class EntityHudSettingsScreen extends Screen {
         return Component.translatable("ctt_hud_fork.config." + id, args);
     }
 
-    private static final class ValueSlider extends net.minecraft.client.gui.components.AbstractSliderButton {
-        private final double min;
-        private final double max;
-        private final double step;
-        private final DoubleFunction<Component> label;
-        private final DoubleConsumer onChange;
-
-        ValueSlider(int x, int y, int width, int height, double min, double max, double step, double initial,
-                    DoubleFunction<Component> label, DoubleConsumer onChange) {
-            super(x, y, width, height, Component.empty(), (initial - min) / (max - min));
-            this.min = min;
-            this.max = max;
-            this.step = step;
-            this.label = label;
-            this.onChange = onChange;
-            updateMessage();
-        }
-
-        private double currentValue() {
-            double raw = this.min + (this.max - this.min) * this.value;
-            double snapped = Math.round(raw / this.step) * this.step;
-            return Math.max(this.min, Math.min(this.max, snapped));
-        }
-
-        @Override
-        protected void updateMessage() {
-            if (this.label != null) setMessage(this.label.apply(currentValue()));
-        }
-
-        @Override
-        protected void applyValue() {
-            if (this.onChange != null) this.onChange.accept(currentValue());
-        }
-    }
 }

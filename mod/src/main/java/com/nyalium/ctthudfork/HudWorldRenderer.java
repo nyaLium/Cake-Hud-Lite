@@ -483,10 +483,7 @@ public final class HudWorldRenderer {
         cacheStamp = now;
         HudConfig.Cfg cfg = HudConfig.get();
         exactBars = BossBarTracker.resolve(mc, BossBarTracker.snapshot(mc));
-        if (cfg.showTeammates) {
-            PartyBossbarAutoToggle.tick(mc, BossBarTracker.hasTeamBar(mc),
-                    BossBarTracker.hasPersonalBar(mc));
-        }
+        // 队伍条的自动开关放在 tick 里跑（见 CttHudForkClient）：渲染线程不发命令、不记状态。
         teamEntries = cfg.showTeammates
                 ? BossBarTracker.resolveTeam(mc, BossBarTracker.teamEntriesCached(mc))
                 : Map.of();
@@ -536,20 +533,23 @@ public final class HudWorldRenderer {
         final float BACKGROUND_Z = -0.02f;
         final float nativeWidth = BossBarTexture.NATIVE_WIDTH;
 
-        // 写深度的版本：名字牌之后绘制的半透明方块（蜂蜜 / 水 / 玻璃）不会再糊到血条上
-        RenderType background = BarRenderTypes.forTexture(BossBarTexture.backgroundTexture(tint));
-        RenderType progress = BarRenderTypes.forTexture(BossBarTexture.progressTexture(tint));
+        // 用原版世界文字渲染类型：26.3 的 TEXT 管线本来就「深度测试 + 写深度」，
+        // 血条和原版名字牌同一条深度规则；不需要（也不应该）自建管线 ——
+        // 自建 RenderType 在「改进的透明（OIT）」下拿不到 OIT 管线集，会直接抛异常。
+        RenderType background = RenderTypes.text(BossBarTexture.backgroundTexture(tint));
+        RenderType progress = RenderTypes.text(BossBarTexture.progressTexture(tint));
         // 血条也补一层「透视副本」，和文字一致 —— 被天花板/方块挡住时不会整条消失，
         // 只会变成半透明的一条（以前只有文字有这层，条会被直接裁掉）。
         RenderType seeBackground = RenderTypes.textSeeThrough(BossBarTexture.backgroundTexture(tint));
         RenderType seeProgress = RenderTypes.textSeeThrough(BossBarTexture.progressTexture(tint));
-        int seeColor = noDepth
-                ? color                                  // 无深度模式下只画这一层，用满不透明度
-                : (Math.max(0, alpha * 128 / 255) << 24) | 0xFFFFFF;
+        // 「无深度」模式（血条不可透视 = 关）只画透视副本这一层：底板仍然用不透明底板，
+        // 填充用配置的不透明度 —— 否则这个模式下底板会退回半透明，半透明方块又会糊上来。
+        int seePlate = noDepth ? plateColor : (Math.max(0, alpha * 128 / 255) << 24) | 0xFFFFFF;
+        int seeFill = noDepth ? color : seePlate;
 
         // ① 整条背景（含空槽）：两端圆角按原尺寸，中段拉伸
         submitBarSpan(collector, pose, seeBackground, x0, x0 + width, 0.0f, nativeWidth,
-                y0, y1, seeColor, light, BACKGROUND_Z);
+                y0, y1, seePlate, light, BACKGROUND_Z);
         if (!noDepth) {
             submitBarSpan(collector, pose, background, x0, x0 + width, 0.0f, nativeWidth,
                     y0, y1, plateColor, light, BACKGROUND_Z);
@@ -560,7 +560,7 @@ public final class HudWorldRenderer {
         if (fill > 0.0f) {
             float uFill = nativeWidth * Math.min(1.0f, fill / width);
             submitBarSpan(collector, pose, seeProgress, x0, x0 + fill, 0.0f, uFill,
-                    y0, y1, seeColor, light, 0.01f);
+                    y0, y1, seeFill, light, 0.01f);
             if (!noDepth) {
                 submitBarSpan(collector, pose, progress, x0, x0 + fill, 0.0f, uFill,
                         y0, y1, color, light, 0.0f);

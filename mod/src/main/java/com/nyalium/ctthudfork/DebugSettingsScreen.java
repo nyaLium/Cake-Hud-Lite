@@ -10,8 +10,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permission;
 import net.minecraft.server.permissions.Permissions;
 
-import java.util.function.DoubleConsumer;
-import java.util.function.DoubleFunction;
 
 /**
  * 「调试功能」：把排查用的特殊开关集中到一页，正常游玩保持默认即可。
@@ -210,38 +208,4 @@ public final class DebugSettingsScreen extends Screen {
         back();
     }
 
-    private static final class ValueSlider extends AbstractSliderButton {
-        private final double min;
-        private final double max;
-        private final double step;
-        private final DoubleFunction<Component> label;
-        private final DoubleConsumer onChange;
-
-        ValueSlider(int x, int y, int width, int height, double min, double max, double step, double initial,
-                    DoubleFunction<Component> label, DoubleConsumer onChange) {
-            super(x, y, width, height, Component.empty(), (initial - min) / (max - min));
-            this.min = min;
-            this.max = max;
-            this.step = step;
-            this.label = label;
-            this.onChange = onChange;
-            updateMessage();
-        }
-
-        private double currentValue() {
-            double raw = this.min + (this.max - this.min) * this.value;
-            double snapped = Math.round(raw / this.step) * this.step;
-            return Math.max(this.min, Math.min(this.max, snapped));
-        }
-
-        @Override
-        protected void updateMessage() {
-            if (this.label != null) setMessage(this.label.apply(currentValue()));
-        }
-
-        @Override
-        protected void applyValue() {
-            if (this.onChange != null) this.onChange.accept(currentValue());
-        }
-    }
 }
